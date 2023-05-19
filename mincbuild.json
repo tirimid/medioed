@@ -1,0 +1,30 @@
+{
+	"tc": {
+		"cc": "/usr/bin/gcc",
+		"ld": "/usr/bin/gcc",
+		"cflags": "-std=c99 -pedantic",
+		"ldflags": ""
+	},
+	"tc-info": {
+		"cc-conly-flag": "-c ",
+		"cc-inc-flag": "-I",
+		"cc-cobj-flag": "-o ",
+		"ld-lib-flag": "-l",
+		"ld-lbin-flag": "-o ",
+		"cc-success-rc": 0,
+		"ld-success-rc": 0
+	},
+	"proj": {
+		"src-dir": "src",
+		"inc-dir": "include",
+		"lib-dir": "lib",
+		"produce-output": true,
+		"output": "medioed",
+		"src-exts": ["c"],
+		"hdr-exts": ["h"]
+	},
+	"deps": {
+		"incs": [],
+		"libs": ["ncurses"]
+	}
+}
