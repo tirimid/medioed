@@ -1,16 +1,11 @@
-#include <ncurses.h>
+#include "editor.h"
 
 int
 main(void)
 {
-	initscr();
-	raw();
-	noecho();
+	editor_init();
+	editor_main_loop();
+	editor_quit();
 	
-	printw("hello world");
-	refresh();
-	getch();
-	
-	endwin();
 	return 0;
 }

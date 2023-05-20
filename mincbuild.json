@@ -25,6 +25,6 @@
 	},
 	"deps": {
 		"incs": [],
-		"libs": ["ncurses"]
+		"libs": ["ncurses", "tmcul"]
 	}
 }
