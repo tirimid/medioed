@@ -8,7 +8,7 @@
 
 #include <unistd.h>
 #include <ncurses.h>
-#include <libtmcul/tmcul.h>
+#include <libtmcul/ds/arraylist.h>
 
 struct keybind {
 	char *keyseq;
@@ -66,7 +66,7 @@ keybd_unbind(char const *keyseq)
 int
 keybd_await_input(void)
 {
-	int k = getch();
+	int k = getch(), retk = k;
 	char const *kname = keyname(k);
 	size_t kname_len = strlen(kname);
 	
@@ -77,6 +77,7 @@ keybd_await_input(void)
 		
 		cur_bind = i;
 		cur_bind_off += kname_len;
+		retk = KEYBD_IGNORE;
 		if (cur_bind_off == strlen(bind->keyseq)) {
 			bind->fn();
 			break;
@@ -89,7 +90,7 @@ keybd_await_input(void)
 	// in-use bind completed.
 	cur_bind = -1;
 	cur_bind_off = 0;
+	
 bind_progress:
-
-	return cur_bind == -1 ? k : KEYBD_IGNORE;
+	return retk;
 }
