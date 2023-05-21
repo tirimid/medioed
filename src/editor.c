@@ -97,7 +97,6 @@ editor_main_loop(void)
 		case KEYBD_IGNORE:
 			break;
 		default:
-			addch(key);
 			break;
 		}
 	}

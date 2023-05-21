@@ -21,6 +21,7 @@ struct frame_theme {
 };
 
 struct frame {
+	char *name;
 	unsigned pos_x, pos_y;
 	unsigned size_x, size_y;
 	struct buf *buf;

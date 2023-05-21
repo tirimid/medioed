@@ -1,5 +1,7 @@
 #include "frame.h"
 
+#include <ncurses.h>
+
 struct frame_theme
 frame_theme_load(char const *theme_path)
 {
