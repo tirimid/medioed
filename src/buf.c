@@ -63,7 +63,7 @@ buf_write_str(struct buf *b, size_t ind, char const *s)
 	size_t len = strlen(s);
 	size_t new_cap = b->cap;
 	
-	for (size_t i = 1; i <= len; ++s) {
+	for (size_t i = 1; i <= len; ++i) {
 		if (b->size + i > new_cap)
 			new_cap += SIZE_ADD - new_cap % SIZE_ADD;
 	}

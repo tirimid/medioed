@@ -77,13 +77,13 @@ keybd_await_input(void)
 		
 		cur_bind = i;
 		cur_bind_off += kname_len;
-		retk = KEYBD_IGNORE;
+		retk = KEYBD_IGNORE_BIND;
+		
 		if (cur_bind_off == strlen(bind->keyseq)) {
 			bind->fn();
 			break;
-		}
-		
-		goto bind_progress;
+		} else
+			goto bind_progress;
 	}
 
 	// reset bind information if no progress on a bind was made or the currently

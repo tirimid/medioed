@@ -1,7 +1,7 @@
 #ifndef KEYBD_H__
 #define KEYBD_H__
 
-#define KEYBD_IGNORE 0xfedc1234
+#define KEYBD_IGNORE_BIND 0xfedc1234
 
 void keybd_init(void);
 void keybd_quit(void);
