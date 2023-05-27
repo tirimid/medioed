@@ -74,6 +74,11 @@ bind_navln_end(void)
 static void
 bind_del(void)
 {
+	struct frame *f = frames.data[cur_frame];
+	if (f->cursor > 0) {
+		buf_erase(f->buf, f->cursor - 1, f->cursor);
+		--f->cursor;
+	}
 }
 
 void
@@ -138,8 +143,11 @@ editor_main_loop(void)
 		switch (key) {
 		case KEYBD_IGNORE_BIND:
 			break;
-		default:
+		default: {
+			struct frame *f = frames.data[cur_frame];
+			buf_write_ch(f->buf, f->cursor++, key);
 			break;
+		}
 		}
 	}
 }

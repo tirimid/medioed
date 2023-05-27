@@ -54,14 +54,6 @@ frame_destroy(struct frame *f)
 	free(f->name);
 }
 
-static void
-set_attr_at(int attr, unsigned x, unsigned y)
-{
-	char ch = mvinch(y, x);
-	attron(attr);
-	mvaddch(y, x, ch);
-}
-
 void
 frame_draw(struct frame const *f)
 {
@@ -76,15 +68,13 @@ frame_draw(struct frame const *f)
 	
 	// set coloration, attributes, etc.
 	init_pair(1, f->theme->norm_fg, f->theme->norm_bg);
-	for (size_t i = 0; i < f->size_x; ++i) {
-		for (size_t j = 0; j < f->size_y; ++j)
-			set_attr_at(COLOR_PAIR(1), f->pos_x + i, f->pos_y + j);
-	}
+	for (size_t i = 0; i < f->size_y; ++i)
+		mvchgat(f->pos_y + i, f->pos_x, f->size_x, 0, 1, NULL);
 
 	unsigned csrx, csry;
 	frame_cursor_pos(f, &csrx, &csry);
 	init_pair(2, f->theme->cursor_fg, f->theme->cursor_bg);
-	set_attr_at(COLOR_PAIR(2), f->pos_x + csrx, f->pos_y + csry);
+	mvchgat(f->pos_y + csry, f->pos_x + csrx, 1, 0, 2, NULL);
 }
 
 void
