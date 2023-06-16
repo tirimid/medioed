@@ -6,11 +6,11 @@
 		"ldflags": ""
 	},
 	"tc-info": {
-		"cc-conly-flag": "-c ",
-		"cc-inc-flag": "-I",
-		"cc-cobj-flag": "-o ",
-		"ld-lib-flag": "-l",
-		"ld-lbin-flag": "-o ",
+		"cc-cmd-fmt": "%c %f -o %o -c %s %i",
+		"cc-inc-fmt": "-I%i",
+		"ld-obj-fmt": "%o",
+		"ld-lib-fmt": "-l%l",
+		"ld-cmd-fmt": "%c %f -o %b %o %l",
 		"cc-success-rc": 0,
 		"ld-success-rc": 0
 	},

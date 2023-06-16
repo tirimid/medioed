@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 #include <ncurses.h>
-#include <libtmcul/ds/arraylist.h>
+#include <tmcul/ds/arraylist.h>
 
 #include "keybd.h"
 #include "frame.h"
@@ -64,11 +64,17 @@ bind_navup(void)
 static void
 bind_navln_start(void)
 {
+	struct frame *f = frames.data[cur_frame];
+	while (f->cursor > 0 && f->buf->conts[f->cursor - 1] != '\n')
+		--f->cursor;
 }
 
 static void
 bind_navln_end(void)
 {
+	struct frame *f = frames.data[cur_frame];
+	while (f->cursor < f->buf->size && f->buf->conts[f->cursor] != '\n')
+		++f->cursor;
 }
 
 static void

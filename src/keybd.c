@@ -8,7 +8,7 @@
 
 #include <unistd.h>
 #include <ncurses.h>
-#include <libtmcul/ds/arraylist.h>
+#include <tmcul/ds/arraylist.h>
 
 struct keybind {
 	char *keyseq;

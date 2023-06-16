@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include <libtmcul/ds/arraylist.h>
+#include <tmcul/ds/arraylist.h>
 
 #include "buf.h"
 
@@ -17,11 +17,16 @@ struct frame_theme_highlight {
 	uint8_t fg, bg;
 };
 
-// this only allows for indexed-color terminals with up to 256 colors.
 struct frame_theme {
+	// coloration options.
+	// this only allows for indexed-color terminals with up to 256 colors.
 	uint8_t norm_fg, norm_bg;
 	uint8_t cursor_fg, cursor_bg;
+	uint8_t linum_fg, linum_bg;
 	struct arraylist highlights;
+
+	// other text rendering options.
+	unsigned tabsize;
 };
 
 struct frame {
