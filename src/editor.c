@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <limits.h>
 
 #include <ncurses.h>
 #include <tmcul/ds/arraylist.h>
@@ -29,6 +30,7 @@ static void
 bind_navfwd_ch(void)
 {
 	struct frame *f = frames.data[cur_frame];
+	
 	if (f->cursor < f->buf->size)
 		++f->cursor;
 }
@@ -42,6 +44,7 @@ static void
 bind_navback_ch(void)
 {
 	struct frame *f = frames.data[cur_frame];
+	
 	if (f->cursor > 0)
 		--f->cursor;
 }
@@ -54,33 +57,48 @@ bind_navback_word(void)
 static void
 bind_navdown(void)
 {
+	struct frame *f = frames.data[cur_frame];
+
+	unsigned csrx, csry;
+	frame_actual_cursor_pos(f, &csrx, &csry);
+	frame_move_cursor(f, csrx, csry + 1);
 }
 
 static void
 bind_navup(void)
 {
+	struct frame *f = frames.data[cur_frame];
+
+	unsigned csrx, csry;
+	frame_actual_cursor_pos(f, &csrx, &csry);
+	frame_move_cursor(f, csry == 0 ? 0 : csrx, csry == 0 ? 0 : csry - 1);
 }
 
 static void
 bind_navln_start(void)
 {
 	struct frame *f = frames.data[cur_frame];
-	while (f->cursor > 0 && f->buf->conts[f->cursor - 1] != '\n')
-		--f->cursor;
+	
+	unsigned csrx, csry;
+	frame_actual_cursor_pos(f, &csrx, &csry);
+	frame_move_cursor(f, 0, csry);
 }
 
 static void
 bind_navln_end(void)
 {
 	struct frame *f = frames.data[cur_frame];
-	while (f->cursor < f->buf->size && f->buf->conts[f->cursor] != '\n')
-		++f->cursor;
+
+	unsigned csrx, csry;
+	frame_actual_cursor_pos(f, &csrx, &csry);
+	frame_move_cursor(f, UINT_MAX, csry);
 }
 
 static void
 bind_del(void)
 {
 	struct frame *f = frames.data[cur_frame];
+	
 	if (f->cursor > 0) {
 		buf_erase(f->buf, f->cursor - 1, f->cursor);
 		--f->cursor;
@@ -116,13 +134,13 @@ editor_init(void)
 
 	// create dummy frame for testing.
 	struct buf dbuf = buf_create();
-	buf_write_str(&dbuf, 0, "hello world");
+	buf_write_str(&dbuf, 0, "#include <stdio.h>\n\nint\nmain(void)\n{\n\tprintf(\"hi\\n\");\n\treturn 0;\n}\n");
 	arraylist_add(&bufs, &dbuf, sizeof(dbuf));
 	
 	struct frame_theme dtheme = frame_theme_default();
 	arraylist_add(&frame_themes, &dtheme, sizeof(dtheme));
 	
-	struct frame dframe = frame_create("*dummy*", 0, 0, 20, 20, bufs.data[0],
+	struct frame dframe = frame_create("*dummy*", 4, 4, 20, 20, bufs.data[0],
 	                                   frame_themes.data[0]);
 	arraylist_add(&frames, &dframe, sizeof(dframe));
 }

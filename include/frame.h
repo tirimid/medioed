@@ -46,6 +46,10 @@ struct frame frame_create(char const *name, unsigned px, unsigned py,
                           struct frame_theme const *theme);
 void frame_destroy(struct frame *f);
 void frame_draw(struct frame const *f);
-void frame_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y);
+void frame_actual_cursor_pos(struct frame const *f, unsigned *out_x,
+                             unsigned *out_y);
+void frame_visual_cursor_pos(struct frame const *f, unsigned *out_x,
+                             unsigned *out_y);
+void frame_move_cursor(struct frame *f, unsigned x, unsigned y);
 
 #endif

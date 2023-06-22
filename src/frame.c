@@ -95,7 +95,7 @@ frame_draw(struct frame const *f)
 
 	// set cursor coloration.
 	unsigned csrx, csry;
-	frame_cursor_pos(f, &csrx, &csry);
+	frame_visual_cursor_pos(f, &csrx, &csry);
 	init_pair(2, f->theme->cursor_fg, f->theme->cursor_bg);
 	mvchgat(f->pos_y + csry, f->pos_x + csrx, 1, 0, 2, NULL);
 
@@ -103,7 +103,20 @@ frame_draw(struct frame const *f)
 }
 
 void
-frame_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y)
+frame_actual_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y)
+{
+	*out_x = *out_y = 0;
+	for (size_t i = f->buf_start; i < f->cursor; ++i) {
+		++*out_x;
+		if (f->buf->conts[i] == '\n' || *out_x > f->size_x - 1) {
+			++*out_y;
+			*out_x = 0;
+		}
+	}
+}
+
+void
+frame_visual_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y)
 {
 	*out_x = *out_y = 0;
 	for (size_t i = f->buf_start; i < f->cursor; ++i) {
@@ -117,4 +130,19 @@ frame_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y)
 			*out_x = 0;
 		}
 	}
+}
+
+void
+frame_move_cursor(struct frame *f, unsigned x, unsigned y)
+{
+	size_t *csr = &f->cursor;
+	*csr = 0;
+	
+	for (; *csr < f->buf->size && y > 0; ++*csr) {
+		if (f->buf->conts[*csr] == '\n')
+			--y;
+	}
+
+	for (; *csr < f->buf->size && f->buf->conts[*csr] != '\n' && x > 0; --x)
+		++*csr;
 }
