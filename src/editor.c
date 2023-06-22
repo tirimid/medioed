@@ -9,6 +9,7 @@
 
 #include "keybd.h"
 #include "frame.h"
+#include "buf.h"
 
 static bool running;
 static size_t cur_frame;
@@ -60,7 +61,7 @@ bind_navdown(void)
 	struct frame *f = frames.data[cur_frame];
 
 	unsigned csrx, csry;
-	frame_actual_cursor_pos(f, &csrx, &csry);
+	buf_pos(f->buf, f->cursor, &csrx, &csry);
 	frame_move_cursor(f, csrx, csry + 1);
 }
 
@@ -70,7 +71,7 @@ bind_navup(void)
 	struct frame *f = frames.data[cur_frame];
 
 	unsigned csrx, csry;
-	frame_actual_cursor_pos(f, &csrx, &csry);
+	buf_pos(f->buf, f->cursor, &csrx, &csry);
 	frame_move_cursor(f, csry == 0 ? 0 : csrx, csry == 0 ? 0 : csry - 1);
 }
 
@@ -78,9 +79,9 @@ static void
 bind_navln_start(void)
 {
 	struct frame *f = frames.data[cur_frame];
-	
+
 	unsigned csrx, csry;
-	frame_actual_cursor_pos(f, &csrx, &csry);
+	buf_pos(f->buf, f->cursor, &csrx, &csry);
 	frame_move_cursor(f, 0, csry);
 }
 
@@ -90,7 +91,7 @@ bind_navln_end(void)
 	struct frame *f = frames.data[cur_frame];
 
 	unsigned csrx, csry;
-	frame_actual_cursor_pos(f, &csrx, &csry);
+	buf_pos(f->buf, f->cursor, &csrx, &csry);
 	frame_move_cursor(f, UINT_MAX, csry);
 }
 

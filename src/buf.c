@@ -84,3 +84,17 @@ buf_erase(struct buf *b, size_t lb, size_t ub)
 	memmove(b->conts + lb, b->conts + ub, b->size - ub);
 	b->size -= ub - lb;
 }
+
+void
+buf_pos(struct buf const *b, size_t pos, unsigned *out_x, unsigned *out_y)
+{
+	*out_x = *out_y = 0;
+	
+	for (size_t i = 0; i < pos; ++i) {
+		++*out_x;
+		if (b->conts[i] == '\n') {
+			*out_x = 0;
+			++*out_y;
+		}
+	}
+}
