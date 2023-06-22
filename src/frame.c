@@ -5,6 +5,8 @@
 
 #include <ncurses.h>
 
+#include "def.h"
+
 // padding size around line numbers.
 #define GUTTER_LEFT 1
 #define GUTTER_RIGHT 1
@@ -15,11 +17,11 @@ frame_theme_default(void)
 {
 	return (struct frame_theme){
 		.norm_fg = COLOR_WHITE,
-		.norm_bg = COLOR_BLACK,
+		.norm_bg = COLOR_BLUE,
 		.cursor_fg = COLOR_BLACK,
 		.cursor_bg = COLOR_WHITE,
 		.linum_fg = COLOR_YELLOW,
-		.linum_bg = COLOR_BLUE,
+		.linum_bg = COLOR_BLACK,
 		.highlights = arraylist_create(),
 		.tabsize = 4,
 	};
@@ -64,16 +66,48 @@ frame_destroy(struct frame *f)
 	free(f->name);
 }
 
+static void
+draw_line(struct frame const *f, unsigned *line, size_t *dcsr, size_t redge,
+          unsigned linumw)
+{
+	char const *bconts = f->buf->conts;
+	size_t bsiz = f->buf->size;
+
+	for (unsigned i = 0; *dcsr < bsiz && bconts[*dcsr] != '\n'; ++i, ++*dcsr) {
+		char ch = bconts[*dcsr];
+
+		if (i > redge - 1) {
+			i = 0;
+			++*line;
+		}
+		
+		switch (ch) {
+		case '\t':
+			i += f->theme->tabsize - i % f->theme->tabsize - 1;
+			break;
+		default:
+			mvaddch(f->pos_y + *line, f->pos_x + GUTTER + linumw + i, ch);
+			break;
+		}
+	}
+
+	++*dcsr;
+}
+
 void
 frame_draw(struct frame const *f)
 {
 	// get linum properties required for rendering frame contents.
-	unsigned bsx, bsy;
-	unsigned linum_width = 0;
+	unsigned bsx, bsy, bex, bey;
+	unsigned linum_width = 0, right_edge;
 
 	buf_pos(f->buf, f->buf_start, &bsx, &bsy);
-	for (unsigned bey = bsy + f->size_y; bey > 0; bey /= 10)
+	buf_pos(f->buf, f->buf->size, &bex, &bey);
+	for (unsigned i = bsy + MIN(bey - bsy, f->size_y); i > 0; i /= 10)
 		++linum_width;
+
+	linum_width += linum_width == 0 ? 1 : 0;
+	right_edge = f->size_x - GUTTER - linum_width;
 	
 	// clear frame.
 	for (size_t i = 0; i < f->size_y; ++i) {
@@ -81,34 +115,18 @@ frame_draw(struct frame const *f)
 			mvaddch(f->pos_y + i, f->pos_x + j, ' ');
 	}
 	
-	// write frame content characters.
+	// write lines and linums.
 	size_t drawcsr = f->buf_start;
-	for (size_t i = 0; i < f->size_y; ++i) {
-		for (size_t j = 0; j < f->size_x - GUTTER - linum_width; ++j) {
-			char ch = drawcsr >= f->buf->size ? ' ' : f->buf->conts[drawcsr++];
-			
-			switch (ch) {
-			case '\t':
-				j += f->theme->tabsize - j % f->theme->tabsize - 1;
-				break;
-			case '\n':
-				goto skip_x;
-			case '\r':
-				--j;
-				break;
-			default:
-				mvaddch(f->pos_y + i, f->pos_x + GUTTER + linum_width + j, ch);
-				break;
-			}
-		}
-	skip_x:;
-	}
-
-	// write linum characters.
+	unsigned linum_ind = 0;
+	
 	for (unsigned i = 0; i < f->size_y; ++i) {
-		char linum[16];
-		snprintf(linum, 16, "%u", bsy + i + 1);
-		mvaddstr(f->pos_y + i, f->pos_x + GUTTER_LEFT, linum);
+		if (linum_ind++ <= bey - bsy) {
+			char linum_text[16];
+			snprintf(linum_text, 16, "%u", bsy + linum_ind);
+			mvaddstr(f->pos_y + i, f->pos_x + GUTTER_LEFT, linum_text);
+		}
+
+		draw_line(f, &i, &drawcsr, right_edge, linum_width);
 	}
 	
 	// set normal coloration.
@@ -133,26 +151,31 @@ frame_draw(struct frame const *f)
 void
 frame_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y)
 {
-	unsigned bsx, bsy;
-	unsigned linum_width = 0;
+	unsigned bsx, bsy, bex, bey;
+	unsigned linum_width = 0, right_edge;
 
 	buf_pos(f->buf, f->buf_start, &bsx, &bsy);
-	for (unsigned bey = bsy + f->size_y; bey > 0; bey /= 10)
+	buf_pos(f->buf, f->buf->size, &bex, &bey);
+	for (unsigned i = bsy + MIN(bey - bsy, f->size_y); i > 0; i /= 10)
 		++linum_width;
+
+	linum_width += linum_width == 0 ? 1 : 0;
+	right_edge = f->size_x - GUTTER - linum_width;
+	*out_x = *out_y = 0;
 	
-	*out_x = GUTTER + linum_width;
-	*out_y = 0;
 	for (size_t i = f->buf_start; i < f->cursor; ++i) {
 		++*out_x;
 
 		if (f->buf->conts[i] == '\t')
 			*out_x += f->theme->tabsize - *out_x % f->theme->tabsize;
 		
-		if (f->buf->conts[i] == '\n' || *out_x > f->size_x - 1) {
-			*out_x = GUTTER + linum_width;
+		if (f->buf->conts[i] == '\n' || *out_x > right_edge - 1) {
+			*out_x = 0;
 			++*out_y;
 		}
 	}
+
+	*out_x += GUTTER + linum_width;
 }
 
 void
