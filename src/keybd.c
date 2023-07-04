@@ -72,11 +72,15 @@ keybd_await_input(void)
 	
 	for (size_t i = 0; i < binds.size; ++i) {
 		struct keybind const *bind = binds.data[i];
+		
 		if (strncmp(bind->keyseq + cur_bind_off, kname, kname_len))
+			continue;
+
+		if (bind->keyseq[cur_bind_off + kname_len] != '\a')
 			continue;
 		
 		cur_bind = i;
-		cur_bind_off += kname_len;
+		cur_bind_off += kname_len + 1;
 		retk = KEYBD_IGNORE_BIND;
 		
 		if (cur_bind_off == strlen(bind->keyseq)) {

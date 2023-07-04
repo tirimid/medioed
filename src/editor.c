@@ -30,10 +30,7 @@ bind_chg_frame(void)
 static void
 bind_navfwd_ch(void)
 {
-	struct frame *f = frames.data[cur_frame];
-	
-	if (f->cursor < f->buf->size)
-		++f->cursor;
+	frame_relmove_cursor(frames.data[cur_frame], 1, 0, true);
 }
 
 static void
@@ -44,10 +41,7 @@ bind_navfwd_word(void)
 static void
 bind_navback_ch(void)
 {
-	struct frame *f = frames.data[cur_frame];
-	
-	if (f->cursor > 0)
-		--f->cursor;
+	frame_relmove_cursor(frames.data[cur_frame], -1, 0, true);
 }
 
 static void
@@ -58,41 +52,25 @@ bind_navback_word(void)
 static void
 bind_navdown(void)
 {
-	struct frame *f = frames.data[cur_frame];
-
-	unsigned csrx, csry;
-	buf_pos(f->buf, f->cursor, &csrx, &csry);
-	frame_move_cursor(f, csrx, csry + 1);
+	frame_relmove_cursor(frames.data[cur_frame], 0, 1, false);
 }
 
 static void
 bind_navup(void)
 {
-	struct frame *f = frames.data[cur_frame];
-
-	unsigned csrx, csry;
-	buf_pos(f->buf, f->cursor, &csrx, &csry);
-	frame_move_cursor(f, csry == 0 ? 0 : csrx, csry == 0 ? 0 : csry - 1);
+	frame_relmove_cursor(frames.data[cur_frame], 0, -1, false);
 }
 
 static void
 bind_navln_start(void)
 {
-	struct frame *f = frames.data[cur_frame];
-
-	unsigned csrx, csry;
-	buf_pos(f->buf, f->cursor, &csrx, &csry);
-	frame_move_cursor(f, 0, csry);
+	frame_relmove_cursor(frames.data[cur_frame], -INT_MAX, 0, false);
 }
 
 static void
 bind_navln_end(void)
 {
-	struct frame *f = frames.data[cur_frame];
-
-	unsigned csrx, csry;
-	buf_pos(f->buf, f->cursor, &csrx, &csry);
-	frame_move_cursor(f, UINT_MAX, csry);
+	frame_relmove_cursor(frames.data[cur_frame], INT_MAX, 0, false);
 }
 
 static void
@@ -102,7 +80,7 @@ bind_del(void)
 	
 	if (f->cursor > 0) {
 		buf_erase(f->buf, f->cursor - 1, f->cursor);
-		--f->cursor;
+		frame_relmove_cursor(f, -1, 0, true);
 	}
 }
 
@@ -116,17 +94,17 @@ editor_init(void)
 	curs_set(0);
 
 	keybd_init();
-	keybd_bind("^X^C", bind_quit);
-	keybd_bind("^Xb", bind_chg_frame);
-	keybd_bind("^F", bind_navfwd_ch);
-	keybd_bind("^[f", bind_navfwd_word);
-	keybd_bind("^B", bind_navback_ch);
-	keybd_bind("^[b", bind_navback_word);
-	keybd_bind("^N", bind_navdown);
-	keybd_bind("^P", bind_navup);
-	keybd_bind("^A", bind_navln_start);
-	keybd_bind("^E", bind_navln_end);
-	keybd_bind("^?", bind_del);
+	keybd_bind("^X\a^C\a", bind_quit);
+	keybd_bind("^X\ab\a", bind_chg_frame);
+	keybd_bind("^F\a", bind_navfwd_ch);
+	keybd_bind("^[f\a", bind_navfwd_word);
+	keybd_bind("^B\a", bind_navback_ch);
+	keybd_bind("^[b\a", bind_navback_word);
+	keybd_bind("^N\a", bind_navdown);
+	keybd_bind("^P\a", bind_navup);
+	keybd_bind("^A\a", bind_navln_start);
+	keybd_bind("^E\a", bind_navln_end);
+	keybd_bind("^?\a", bind_del);
 
 	frames = arraylist_create();
 	frame_themes = arraylist_create();
@@ -170,7 +148,8 @@ editor_main_loop(void)
 			break;
 		default: {
 			struct frame *f = frames.data[cur_frame];
-			buf_write_ch(f->buf, f->cursor++, key);
+			buf_write_ch(f->buf, f->cursor, key);
+			frame_relmove_cursor(f, 1, 0, true);
 			break;
 		}
 		}

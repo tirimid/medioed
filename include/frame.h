@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #include <tmcul/ds/arraylist.h>
 
@@ -34,7 +35,11 @@ struct frame {
 	unsigned pos_x, pos_y;
 	unsigned size_x, size_y;
 	struct buf *buf;
-	size_t buf_start, cursor;
+	
+	// use `frame_(rel)move_cursor()` instead of writing directly, otherwise
+	// visual frame effects will be messed up (scrolling, wrapping, etc.).
+	size_t buf_start, cursor; 
+	
 	struct frame_theme const *theme;
 };
 
@@ -48,5 +53,6 @@ void frame_destroy(struct frame *f);
 void frame_draw(struct frame const *f);
 void frame_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y);
 void frame_move_cursor(struct frame *f, unsigned x, unsigned y);
+void frame_relmove_cursor(struct frame *f, int x, int y, bool lwrap);
 
 #endif

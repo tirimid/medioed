@@ -71,15 +71,19 @@ draw_line(struct frame const *f, unsigned *line, size_t *dcsr, size_t redge,
           unsigned linumw)
 {
 	char const *bconts = f->buf->conts;
-	size_t bsiz = f->buf->size;
+	size_t bsize = f->buf->size;
+	unsigned i;
 
-	for (unsigned i = 0; *dcsr < bsiz && bconts[*dcsr] != '\n'; ++i, ++*dcsr) {
+	for (i = 0; *dcsr < bsize && bconts[*dcsr] != '\n'; ++i, ++*dcsr) {
 		char ch = bconts[*dcsr];
 
-		if (i > redge - 1) {
+		if (i >= redge) {
 			i = 0;
 			++*line;
 		}
+
+		if (*line >= f->size_y)
+			break;
 		
 		switch (ch) {
 		case '\t':
@@ -90,6 +94,9 @@ draw_line(struct frame const *f, unsigned *line, size_t *dcsr, size_t redge,
 			break;
 		}
 	}
+
+	if (i >= redge)
+		++*line;
 
 	++*dcsr;
 }
@@ -103,10 +110,9 @@ frame_draw(struct frame const *f)
 
 	buf_pos(f->buf, f->buf_start, &bsx, &bsy);
 	buf_pos(f->buf, f->buf->size, &bex, &bey);
-	for (unsigned i = bsy + MIN(bey - bsy, f->size_y); i > 0; i /= 10)
+	for (unsigned i = bsy + MIN(bey - bsy, f->size_y) + 1; i > 0; i /= 10)
 		++linum_width;
 
-	linum_width += linum_width == 0 ? 1 : 0;
 	right_edge = f->size_x - GUTTER - linum_width;
 	
 	// clear frame.
@@ -156,10 +162,9 @@ frame_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y)
 
 	buf_pos(f->buf, f->buf_start, &bsx, &bsy);
 	buf_pos(f->buf, f->buf->size, &bex, &bey);
-	for (unsigned i = bsy + MIN(bey - bsy, f->size_y); i > 0; i /= 10)
+	for (unsigned i = bsy + MIN(bey - bsy, f->size_y) + 1; i > 0; i /= 10)
 		++linum_width;
 
-	linum_width += linum_width == 0 ? 1 : 0;
 	right_edge = f->size_x - GUTTER - linum_width;
 	*out_x = *out_y = 0;
 	
@@ -181,7 +186,7 @@ frame_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y)
 void
 frame_move_cursor(struct frame *f, unsigned x, unsigned y)
 {
-	size_t *csr = &f->cursor;
+	size_t *csr = &f->cursor, *bs = &f->buf_start;
 	*csr = 0;
 	
 	for (; *csr < f->buf->size && y > 0; ++*csr) {
@@ -191,4 +196,33 @@ frame_move_cursor(struct frame *f, unsigned x, unsigned y)
 
 	for (; *csr < f->buf->size && f->buf->conts[*csr] != '\n' && x > 0; --x)
 		++*csr;
+	
+	unsigned fcsrx, fcsry;
+	frame_cursor_pos(f, &fcsrx, &fcsry);
+	if (fcsry >= f->size_y) {
+		for (; *bs < f->buf->size && f->buf->conts[*bs] != '\n'; ++*bs);
+	}
+}
+
+void
+frame_relmove_cursor(struct frame *f, int x, int y, bool lwrap)
+{
+	if (lwrap) {
+		int dir = SIGN(x);
+		long bs_dst = -(long)f->cursor;
+		long be_dst = f->buf->size - f->cursor;
+		
+		x = dir == -1 ? MAX(x, bs_dst) : MIN(x, be_dst);
+		
+		for (; f->cursor >= 0 && f->cursor <= f->buf->size && x != 0; x -= dir)
+			f->cursor += dir;
+	}
+
+	unsigned csrx, csry;
+
+	buf_pos(f->buf, f->cursor, &csrx, &csry);
+	csrx = (long)csrx + x < 0 ? 0 : csrx + x;
+	csry = (long)csry + y < 0 ? 0 : csry + y;
+	
+	frame_move_cursor(f, csrx, csry);
 }
