@@ -18,6 +18,7 @@ struct frame_theme_highlight {
 	uint8_t fg, bg;
 };
 
+// frames use non-global configuration.
 struct frame_theme {
 	// coloration options.
 	// this only allows for indexed-color terminals with up to 256 colors.

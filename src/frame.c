@@ -134,22 +134,22 @@ frame_draw(struct frame const *f)
 
 		draw_line(f, &i, &drawcsr, right_edge, linum_width);
 	}
-	
+
 	// set normal coloration.
-	init_pair(1, f->theme->norm_fg, f->theme->norm_bg);
+	init_pair(2, f->theme->norm_fg, f->theme->norm_bg);
 	for (size_t i = 0; i < f->size_y; ++i)
-		mvchgat(f->pos_y + i, f->pos_x, f->size_x, 0, 1, NULL);
+		mvchgat(f->pos_y + i, f->pos_x, f->size_x, 0, 2, NULL);
 
 	// set cursor coloration.
 	unsigned csrx, csry;
 	frame_cursor_pos(f, &csrx, &csry);
-	init_pair(2, f->theme->cursor_fg, f->theme->cursor_bg);
-	mvchgat(f->pos_y + csry, f->pos_x + csrx, 1, 0, 2, NULL);
+	init_pair(3, f->theme->cursor_fg, f->theme->cursor_bg);
+	mvchgat(f->pos_y + csry, f->pos_x + csrx, 1, 0, 3, NULL);
 
 	// set linum coloration.
-	init_pair(3, f->theme->linum_fg, f->theme->linum_bg);
+	init_pair(4, f->theme->linum_fg, f->theme->linum_bg);
 	for (size_t i = 0; i < f->size_y; ++i)
-		mvchgat(f->pos_y + i, f->pos_x, GUTTER + linum_width, 0, 3, NULL);
+		mvchgat(f->pos_y + i, f->pos_x, GUTTER + linum_width, 0, 4, NULL);
 
 	// TODO: set highlight coloration.
 }
@@ -196,12 +196,6 @@ frame_move_cursor(struct frame *f, unsigned x, unsigned y)
 
 	for (; *csr < f->buf->size && f->buf->conts[*csr] != '\n' && x > 0; --x)
 		++*csr;
-	
-	unsigned fcsrx, fcsry;
-	frame_cursor_pos(f, &fcsrx, &fcsry);
-	if (fcsry >= f->size_y) {
-		for (; *bs < f->buf->size && f->buf->conts[*bs] != '\n'; ++*bs);
-	}
 }
 
 void

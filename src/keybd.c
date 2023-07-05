@@ -16,8 +16,7 @@ struct keybind {
 };
 
 static struct arraylist binds;
-static ssize_t cur_bind = -1;
-static size_t cur_bind_off = 0;
+static char cur_bind[128];
 
 void
 keybd_init(void)
@@ -36,6 +35,7 @@ keybd_bind(char const *keyseq, void (*fn)(void))
 {
 	for (size_t i = 0; i < binds.size; ++i) {
 		struct keybind *ex = binds.data[i];
+		
 		if (!strcmp(ex->keyseq, keyseq)) {
 			ex->fn = fn;
 			return;
@@ -55,6 +55,7 @@ keybd_unbind(char const *keyseq)
 {
 	for (size_t i = 0; i < binds.size; ++i) {
 		struct keybind *bind = binds.data[i];
+		
 		if (!strcmp(bind->keyseq, keyseq)) {
 			free(bind->keyseq);
 			arraylist_rm(&binds, i);
@@ -66,35 +67,24 @@ keybd_unbind(char const *keyseq)
 int
 keybd_await_input(void)
 {
-	int k = getch(), retk = k;
+	int k = getch();
 	char const *kname = keyname(k);
-	size_t kname_len = strlen(kname);
+
+	sprintf(cur_bind, "%s%s ", cur_bind, kname);
 	
 	for (size_t i = 0; i < binds.size; ++i) {
 		struct keybind const *bind = binds.data[i];
 		
-		if (strncmp(bind->keyseq + cur_bind_off, kname, kname_len))
-			continue;
-
-		if (bind->keyseq[cur_bind_off + kname_len] != '\a')
-			continue;
-		
-		cur_bind = i;
-		cur_bind_off += kname_len + 1;
-		retk = KEYBD_IGNORE_BIND;
-		
-		if (cur_bind_off == strlen(bind->keyseq)) {
+		if (!strcmp(bind->keyseq, cur_bind)) {
 			bind->fn();
-			break;
-		} else
-			goto bind_progress;
+			cur_bind[0] = 0;
+			return KEYBD_IGNORE_BIND;
+		}
+
+		if (!strncmp(bind->keyseq, cur_bind, strlen(cur_bind)))
+			return KEYBD_IGNORE_BIND;
 	}
 
-	// reset bind information if no progress on a bind was made or the currently
-	// in-use bind completed.
-	cur_bind = -1;
-	cur_bind_off = 0;
-	
-bind_progress:
-	return retk;
+	cur_bind[0] = 0;
+	return k;
 }

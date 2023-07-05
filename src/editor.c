@@ -10,6 +10,8 @@
 #include "keybd.h"
 #include "frame.h"
 #include "buf.h"
+#include "prompt.h"
+#include "def.h"
 
 static bool running;
 static size_t cur_frame;
@@ -28,6 +30,12 @@ bind_chg_frame(void)
 }
 
 static void
+bind_open_file(void)
+{
+	prompt_ask("open file in frame");
+}
+
+static void
 bind_navfwd_ch(void)
 {
 	frame_relmove_cursor(frames.data[cur_frame], 1, 0, true);
@@ -36,6 +44,7 @@ bind_navfwd_ch(void)
 static void
 bind_navfwd_word(void)
 {
+	prompt_show("this keybind is not implemented yet!oenarsoteinaosienarsoitenarsoientaorisentaroiesntarosietnarrosientarsoitenarstoien");
 }
 
 static void
@@ -47,6 +56,7 @@ bind_navback_ch(void)
 static void
 bind_navback_word(void)
 {
+	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
@@ -93,18 +103,23 @@ editor_init(void)
 	noecho();
 	curs_set(0);
 
+	init_pair(1, GLOBAL_FG, GLOBAL_BG);
+
 	keybd_init();
-	keybd_bind("^X\a^C\a", bind_quit);
-	keybd_bind("^X\ab\a", bind_chg_frame);
-	keybd_bind("^F\a", bind_navfwd_ch);
-	keybd_bind("^[f\a", bind_navfwd_word);
-	keybd_bind("^B\a", bind_navback_ch);
-	keybd_bind("^[b\a", bind_navback_word);
-	keybd_bind("^N\a", bind_navdown);
-	keybd_bind("^P\a", bind_navup);
-	keybd_bind("^A\a", bind_navln_start);
-	keybd_bind("^E\a", bind_navln_end);
-	keybd_bind("^?\a", bind_del);
+	keybd_bind("^X ^C ", bind_quit);
+	keybd_bind("^X b ", bind_chg_frame);
+	keybd_bind("^X ^F ", bind_open_file);
+	keybd_bind("^F ", bind_navfwd_ch);
+	keybd_bind("^[ f ", bind_navfwd_word);
+	keybd_bind("^B ", bind_navback_ch);
+	keybd_bind("^[ b ", bind_navback_word);
+	keybd_bind("^N ", bind_navdown);
+	keybd_bind("^P ", bind_navup);
+	keybd_bind("^A ", bind_navln_start);
+	keybd_bind("^E ", bind_navln_end);
+	keybd_bind("^? ", bind_del);
+
+	prompt_init();
 
 	frames = arraylist_create();
 	frame_themes = arraylist_create();
