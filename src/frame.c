@@ -29,6 +29,8 @@ frame_theme_default(void)
 	ft.norm_pair = alloc_pair(ft.norm_fg, ft.norm_bg);
 	ft.cursor_pair = alloc_pair(ft.cursor_fg, ft.cursor_bg);
 	ft.linum_pair = alloc_pair(ft.linum_fg, ft.linum_bg);
+
+	return ft;
 }
 
 struct frame_theme
