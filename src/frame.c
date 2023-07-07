@@ -15,7 +15,7 @@
 struct frame_theme
 frame_theme_default(void)
 {
-	return (struct frame_theme){
+	struct frame_theme ft = {
 		.norm_fg = COLOR_WHITE,
 		.norm_bg = COLOR_BLUE,
 		.cursor_fg = COLOR_BLACK,
@@ -25,6 +25,10 @@ frame_theme_default(void)
 		.highlights = arraylist_create(),
 		.tabsize = 4,
 	};
+
+	ft.norm_pair = alloc_pair(ft.norm_fg, ft.norm_bg);
+	ft.cursor_pair = alloc_pair(ft.cursor_fg, ft.cursor_bg);
+	ft.linum_pair = alloc_pair(ft.linum_fg, ft.linum_bg);
 }
 
 struct frame_theme
@@ -37,9 +41,17 @@ frame_theme_load(char const *theme_path)
 void
 frame_theme_destroy(struct frame_theme *ft)
 {
-	for (size_t i = 0; i < ft->highlights.size; ++i)
-		free(((struct frame_theme_highlight *)ft->highlights.data[i])->regex);
+	free_pair(ft->norm_pair);
+	free_pair(ft->cursor_pair);
+	free_pair(ft->linum_pair);
 	
+	for (size_t i = 0; i < ft->highlights.size; ++i) {
+		struct frame_theme_highlight *highlight = ft->highlights.data[i];
+		
+		free(highlight->regex);
+		free_pair(highlight->pair);
+	}
+
 	arraylist_destroy(&ft->highlights);
 }
 
@@ -135,21 +147,22 @@ frame_draw(struct frame const *f)
 		draw_line(f, &i, &drawcsr, right_edge, linum_width);
 	}
 
+	struct frame_theme const *ft = f->theme;
+
 	// set normal coloration.
-	init_pair(2, f->theme->norm_fg, f->theme->norm_bg);
 	for (size_t i = 0; i < f->size_y; ++i)
-		mvchgat(f->pos_y + i, f->pos_x, f->size_x, 0, 2, NULL);
+		mvchgat(f->pos_y + i, f->pos_x, f->size_x, 0, ft->norm_pair, NULL);
 
 	// set cursor coloration.
 	unsigned csrx, csry;
 	frame_cursor_pos(f, &csrx, &csry);
-	init_pair(3, f->theme->cursor_fg, f->theme->cursor_bg);
-	mvchgat(f->pos_y + csry, f->pos_x + csrx, 1, 0, 3, NULL);
+	mvchgat(f->pos_y + csry, f->pos_x + csrx, 1, 0, ft->cursor_pair, NULL);
 
 	// set linum coloration.
-	init_pair(4, f->theme->linum_fg, f->theme->linum_bg);
-	for (size_t i = 0; i < f->size_y; ++i)
-		mvchgat(f->pos_y + i, f->pos_x, GUTTER + linum_width, 0, 4, NULL);
+	for (size_t i = 0; i < f->size_y; ++i) {
+		mvchgat(f->pos_y + i, f->pos_x, GUTTER + linum_width, 0, ft->linum_pair,
+		        NULL);
+	}
 
 	// TODO: set highlight coloration.
 }

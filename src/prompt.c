@@ -7,11 +7,6 @@
 #include <ncurses.h>
 #include <sys/ioctl.h>
 
-void
-prompt_init(void)
-{
-}
-
 static void
 drawbox(char const *text)
 {

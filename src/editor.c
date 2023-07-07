@@ -104,7 +104,7 @@ editor_init(void)
 	curs_set(0);
 
 	init_pair(1, GLOBAL_FG, GLOBAL_BG);
-
+	
 	keybd_init();
 	keybd_bind("^X ^C ", bind_quit);
 	keybd_bind("^X b ", bind_chg_frame);
@@ -118,8 +118,6 @@ editor_init(void)
 	keybd_bind("^A ", bind_navln_start);
 	keybd_bind("^E ", bind_navln_end);
 	keybd_bind("^? ", bind_del);
-
-	prompt_init();
 
 	frames = arraylist_create();
 	frame_themes = arraylist_create();
@@ -182,6 +180,9 @@ editor_quit(void)
 
 	for (size_t i = 0; i < bufs.size; ++i)
 		buf_destroy(bufs.data[i]);
+
+	endwin();
+	return;
 	
 	arraylist_destroy(&frames);
 	arraylist_destroy(&frame_themes);

@@ -16,6 +16,7 @@
 struct frame_theme_highlight {
 	char *regex;
 	uint8_t fg, bg;
+	short pair;
 };
 
 // frames use non-global configuration.
@@ -23,8 +24,12 @@ struct frame_theme {
 	// coloration options.
 	// this only allows for indexed-color terminals with up to 256 colors.
 	uint8_t norm_fg, norm_bg;
+	short norm_pair;
 	uint8_t cursor_fg, cursor_bg;
+	short cursor_pair;
 	uint8_t linum_fg, linum_bg;
+	short linum_pair;
+	
 	struct arraylist highlights;
 
 	// other text rendering options.
