@@ -6,6 +6,7 @@
 
 #include <ncurses.h>
 #include <tmcul/ds/arraylist.h>
+#include <sys/ioctl.h>
 
 #include "keybd.h"
 #include "frame.h"
@@ -27,12 +28,13 @@ bind_quit(void)
 static void
 bind_chg_frame(void)
 {
+	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
 bind_open_file(void)
 {
-	prompt_ask("open file in frame");
+	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
@@ -44,7 +46,7 @@ bind_navfwd_ch(void)
 static void
 bind_navfwd_word(void)
 {
-	prompt_show("this keybind is not implemented yet!oenarsoteinaosienarsoitenarsoientaorisentaroiesntarosietnarrosientarsoitenarstoien");
+	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
@@ -103,7 +105,8 @@ editor_init(void)
 	noecho();
 	curs_set(0);
 
-	init_pair(1, GLOBAL_FG, GLOBAL_BG);
+	init_pair(GLOBAL_NORM_PAIR, GLOBAL_NORM_FG, GLOBAL_NORM_BG);
+	init_pair(GLOBAL_HIGHLIGHT_PAIR, GLOBAL_HIGHLIGHT_FG, GLOBAL_HIGHLIGHT_BG);
 	
 	keybd_init();
 	keybd_bind("^X ^C ", bind_quit);
@@ -131,8 +134,11 @@ editor_init(void)
 	
 	struct frame_theme dtheme = frame_theme_default();
 	arraylist_add(&frame_themes, &dtheme, sizeof(dtheme));
-	
-	struct frame dframe = frame_create("*dummy*", 4, 4, 20, 20, bufs.data[0],
+
+	struct winsize tty_size;
+	ioctl(0, TIOCGWINSZ, &tty_size);
+	struct frame dframe = frame_create("*dummy*", 0, 0, tty_size.ws_col,
+	                                   tty_size.ws_row, bufs.data[0],
 	                                   frame_themes.data[0]);
 	arraylist_add(&frames, &dframe, sizeof(dframe));
 }
