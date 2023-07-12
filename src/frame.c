@@ -184,15 +184,16 @@ frame_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y)
 	*out_x = *out_y = 0;
 	
 	for (size_t i = f->buf_start; i < f->cursor; ++i) {
-		++*out_x;
-
 		if (f->buf->conts[i] == '\t')
-			*out_x += f->theme->tabsize - *out_x % f->theme->tabsize;
+			*out_x += f->theme->tabsize - *out_x % f->theme->tabsize - 1;
 		
 		if (f->buf->conts[i] == '\n' || *out_x > right_edge - 1) {
 			*out_x = 0;
 			++*out_y;
+			continue;
 		}
+
+		++*out_x;
 	}
 
 	*out_x += GUTTER + linum_width;
