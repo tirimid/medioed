@@ -1,18 +1,18 @@
 #include "editor.h"
 
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <limits.h>
 
 #include <ncurses.h>
-#include <tmcul/ds/arraylist.h>
 #include <sys/ioctl.h>
 
-#include "keybd.h"
-#include "frame.h"
 #include "buf.h"
-#include "prompt.h"
 #include "def.h"
+#include "frame.h"
+#include "keybd.h"
+#include "prompt.h"
+#include "util.h"
 
 static bool running;
 static size_t cur_frame;
@@ -33,6 +33,12 @@ bind_chg_frame(void)
 
 static void
 bind_open_file(void)
+{
+	prompt_show("this keybind is not implemented yet!");
+}
+
+static void
+bind_save_file(void)
 {
 	prompt_show("this keybind is not implemented yet!");
 }
@@ -86,6 +92,12 @@ bind_navln_end(void)
 }
 
 static void
+bind_navgoto(void)
+{
+	prompt_show("this keybind is not implemented yet!");
+}
+
+static void
 bind_del(void)
 {
 	struct frame *f = frames.data[cur_frame];
@@ -112,6 +124,7 @@ editor_init(void)
 	keybd_bind("^X ^C ", bind_quit);
 	keybd_bind("^X b ", bind_chg_frame);
 	keybd_bind("^X ^F ", bind_open_file);
+	keybd_bind("^X ^S ", bind_save_file);
 	keybd_bind("^F ", bind_navfwd_ch);
 	keybd_bind("^[ f ", bind_navfwd_word);
 	keybd_bind("^B ", bind_navback_ch);
@@ -120,6 +133,7 @@ editor_init(void)
 	keybd_bind("^P ", bind_navup);
 	keybd_bind("^A ", bind_navln_start);
 	keybd_bind("^E ", bind_navln_end);
+	keybd_bind("^[ g ^[ g ", bind_navgoto);
 	keybd_bind("^? ", bind_del);
 
 	frames = arraylist_create();

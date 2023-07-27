@@ -47,10 +47,7 @@ drawbox(char const *text)
 void
 prompt_show(char const *text)
 {
-	char *fulltext = malloc(strlen(text) + 24);
-	sprintf(fulltext, "%s\n\npress 'q' to close...", text);
-	drawbox(fulltext);
-	free(fulltext);
+	drawbox(text);
 	
 	int k;
 	while ((k = getch()) != 'q' && k != 'Q');
@@ -59,21 +56,6 @@ prompt_show(char const *text)
 char *
 prompt_ask(char const *text)
 {
-	char *fulltext = malloc(strlen(text) + 4);
-	sprintf(fulltext, "%s\n=>", text);
-	drawbox(fulltext);
-	free(fulltext);
-
+	drawbox(text);
 	return NULL;
-}
-
-char *
-prompt_ask_buf(char out_buf[], size_t n, char const *text)
-{
-	char *fulltext = malloc(strlen(text) + 4);
-	sprintf(fulltext, "%s\n=>", text);
-	drawbox(fulltext);
-	free(fulltext);
-	
-	return out_buf;
 }

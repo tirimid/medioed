@@ -1,14 +1,12 @@
 #include "keybd.h"
 
-#define _POSIX_C_SOURCE 200809
-#include <string.h>
-#undef _POSIX_C_SOURCE
-
 #include <stdlib.h>
+#include <string.h>
 
-#include <unistd.h>
 #include <ncurses.h>
-#include <tmcul/ds/arraylist.h>
+#include <unistd.h>
+
+#include "util.h"
 
 struct keybind {
 	char *keyseq;

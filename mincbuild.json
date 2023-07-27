@@ -2,7 +2,7 @@
 	"tc": {
 		"cc": "/usr/bin/gcc",
 		"ld": "/usr/bin/gcc",
-		"cflags": "-std=c99 -pedantic",
+		"cflags": "-std=c99 -pedantic -D_POSIX_C_SOURCE=200809",
 		"ldflags": ""
 	},
 	"tc-info": {
@@ -25,6 +25,6 @@
 	},
 	"deps": {
 		"incs": [],
-		"libs": ["ncurses", "tmcul"]
+		"libs": ["ncurses"]
 	}
 }

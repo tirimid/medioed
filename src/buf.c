@@ -1,10 +1,8 @@
 #include "buf.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-
-#include <tmcul/file.h>
 
 #define SIZE_ADD 4096
 
@@ -24,16 +22,20 @@ buf_from_file(char const *path)
 	FILE *fp = fopen(path, "rb");
 	if (!fp)
 		return buf_create();
+
+	fseek(fp, 0, SEEK_END);
+	size_t fsize = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
 	
-	size_t cap = file_size_direct(fp), size;
-	cap += SIZE_ADD - cap % SIZE_ADD;
-	char *conts = realloc(file_read_direct(fp, &size), cap);
+	size_t cap = SIZE_ADD - fsize % SIZE_ADD;
+	char *fconts = malloc(cap);
+	fread(fconts, 1, fsize, fp);
 	
 	fclose(fp);
 
 	return (struct buf){
-		.conts = conts,
-		.size = size,
+		.conts = fconts,
+		.size = fsize,
 		.cap = cap,
 	};
 }

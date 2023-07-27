@@ -1,17 +1,13 @@
 #ifndef FRAME_H__
 #define FRAME_H__
 
-#define _POSIX_C_SOURCE 200809
-#include <string.h>
-#undef _POSIX_C_SOURCE
-
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
-
-#include <tmcul/ds/arraylist.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "buf.h"
+#include "util.h"
 
 struct frame_theme_highlight {
 	char *regex;
