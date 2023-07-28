@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #include <ncurses.h>
 #include <sys/ioctl.h>
@@ -34,7 +35,9 @@ bind_chg_frame(void)
 static void
 bind_open_file(void)
 {
-	prompt_show("this keybind is not implemented yet!");
+	char *path = prompt_ask("open file:", prompt_complete_path, NULL);
+	if (path)
+		free(path);
 }
 
 static void

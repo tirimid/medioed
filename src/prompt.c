@@ -9,6 +9,12 @@
 
 #include "def.h"
 
+#define CANCEL_BIND "^G"
+#define NAVFWD_BIND "^F"
+#define NAVBACK_BIND "^B"
+#define DEL_BIND "^?"
+#define COMPLETE_BIND "^I"
+
 static void
 drawbox(char const *text)
 {
@@ -42,6 +48,8 @@ drawbox(char const *text)
 	mvchgat(box_top, 0, tty_size.ws_col, 0, GLOBAL_HIGHLIGHT_PAIR, NULL);
 	for (size_t i = 1; i < text_size_y + 1; ++i)
 		mvchgat(box_top + i, 0, tty_size.ws_col, 0, GLOBAL_NORM_PAIR, NULL);
+
+	refresh();
 }
 
 void
@@ -54,8 +62,78 @@ prompt_show(char const *text)
 }
 
 char *
-prompt_ask(char const *text)
+prompt_ask(char const *text, void (*complete)(char **, size_t *, void *),
+           void *compdata)
 {
-	drawbox(text);
-	return NULL;
+	char *fulltext = malloc(strlen(text) + 2);
+	sprintf(fulltext, "%s\n", text);
+	drawbox(fulltext);
+	free(fulltext);
+
+	struct winsize tty_size;
+	ioctl(0, TIOCGWINSZ, &tty_size);
+
+	char *resp = malloc(1);
+	size_t resp_len = 0;
+	size_t csr = 0, dstart = 0;
+
+	// a faux cursor is drawn before entering the keyboard loop, so that it
+	// doesn't look like it spontaneously appears upon a keypress.
+	unsigned resp_row = tty_size.ws_row - 1;
+	mvchgat(resp_row, 0, 1, 0, GLOBAL_HIGHLIGHT_PAIR, NULL);
+	refresh();
+
+	int k;
+	while ((k = getch()) != '\n') {
+		// gather response.
+		char const *kname = keyname(k);
+		
+		if (!strcmp(kname, CANCEL_BIND)) {
+			free(resp);
+			return NULL;
+		} else if (!strcmp(kname, NAVFWD_BIND))
+			csr += csr < resp_len;
+		else if (!strcmp(kname, NAVBACK_BIND))
+			csr -= csr > 0;
+		else if (!strcmp(kname, DEL_BIND)) {
+			if (csr > 0) {
+				memmove(resp + csr - 1, resp + csr, resp_len - csr);
+				--resp_len;
+				--csr;
+			}
+		} else if (!strcmp(kname, COMPLETE_BIND)) {
+			if (complete)
+				complete(&resp, &resp_len, compdata);
+		} else {
+			resp = realloc(resp, ++resp_len + 1);
+			memmove(resp + csr + 1, resp + csr, resp_len - csr);
+			resp[csr] = (char)k;
+			++csr;
+		}
+
+		// interactively render response.
+		if (csr < dstart)
+			dstart = csr;
+		else if (csr - dstart >= tty_size.ws_col - 1)
+			dstart = csr - tty_size.ws_col + 1;
+		
+		for (unsigned i = 0; i < tty_size.ws_col; ++i)
+			mvaddch(resp_row, i, ' ');
+		
+		for (size_t i = 0; i < resp_len - dstart && i < tty_size.ws_col; ++i)
+			mvaddch(resp_row, i, resp[dstart + i]);
+
+		mvchgat(resp_row, 0, tty_size.ws_col, 0, GLOBAL_NORM_PAIR, NULL);
+		mvchgat(resp_row, csr - dstart, 1, 0, GLOBAL_HIGHLIGHT_PAIR, NULL);
+
+		refresh();
+	}
+
+	resp[resp_len] = 0;
+	return resp;
+}
+
+void
+prompt_complete_path(char **resp, size_t *resp_len, void *data)
+{
 }
