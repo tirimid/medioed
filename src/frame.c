@@ -157,7 +157,7 @@ frame_draw(struct frame const *f)
 
 	// set cursor coloration.
 	unsigned csrx, csry;
-	frame_cursor_pos(f, &csrx, &csry);
+	frame_pos(f, f->cursor, &csrx, &csry);
 	mvchgat(f->pos_y + csry, f->pos_x + csrx, 1, 0, ft->cursor_pair, NULL);
 
 	// set linum coloration.
@@ -170,7 +170,7 @@ frame_draw(struct frame const *f)
 }
 
 void
-frame_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y)
+frame_pos(struct frame const *f, size_t pos, unsigned *out_x, unsigned *out_y)
 {
 	unsigned bsx, bsy, bex, bey;
 	unsigned linum_width = 0, right_edge;
@@ -183,11 +183,11 @@ frame_cursor_pos(struct frame const *f, unsigned *out_x, unsigned *out_y)
 	right_edge = f->size_x - GUTTER - linum_width;
 	*out_x = *out_y = 0;
 	
-	for (size_t i = f->buf_start; i < f->cursor; ++i) {
+	for (size_t i = f->buf_start; i < pos; ++i) {
 		if (f->buf->conts[i] == '\t')
 			*out_x += f->theme->tabsize - *out_x % f->theme->tabsize - 1;
 		
-		if (f->buf->conts[i] == '\n' || *out_x > right_edge - 1) {
+		if (f->buf->conts[i] == '\n' || *out_x >= right_edge - 1) {
 			*out_x = 0;
 			++*out_y;
 			continue;
@@ -203,15 +203,41 @@ void
 frame_move_cursor(struct frame *f, unsigned x, unsigned y)
 {
 	size_t *csr = &f->cursor, *bs = &f->buf_start;
+	char const *bconts = f->buf->conts;
+
+	// adjust the actual cursor position.
 	*csr = 0;
 	
 	for (; *csr < f->buf->size && y > 0; ++*csr) {
-		if (f->buf->conts[*csr] == '\n')
+		if (bconts[*csr] == '\n')
 			--y;
 	}
 
-	for (; *csr < f->buf->size && f->buf->conts[*csr] != '\n' && x > 0; --x)
+	for (; *csr < f->buf->size && bconts[*csr] != '\n' && x > 0; --x)
 		++*csr;
+
+	// redetermine buffer boundaries for rendering.
+	unsigned bsx, bsy, csrx, csry;
+	
+	frame_pos(f, *bs, &bsx, &bsy);
+	frame_pos(f, f->cursor, &csrx, &csry);
+	
+	while (csry >= bsy + f->size_y) {
+		for (++*bs; *bs < f->buf->size && bconts[*bs - 1] != '\n'; ++*bs);
+		
+		frame_pos(f, *bs, &bsx, &bsy);
+		frame_pos(f, f->cursor, &csrx, &csry);
+	}
+
+	buf_pos(f->buf, *bs, &bsx, &bsy);
+	buf_pos(f->buf, f->cursor, &csrx, &csry);
+	
+	while (csry < bsy) {
+		for (--*bs; *bs > 0 && bconts[*bs - 1] != '\n'; --*bs);
+		
+		buf_pos(f->buf, *bs, &bsx, &bsy);
+		buf_pos(f->buf, f->cursor, &csrx, &csry);
+	}
 }
 
 void
