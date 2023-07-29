@@ -48,11 +48,10 @@ struct frame {
 struct frame_theme frame_theme_default(void);
 struct frame_theme frame_theme_load(char const *theme_path);
 void frame_theme_destroy(struct frame_theme *ft);
-struct frame frame_create(char const *name, unsigned px, unsigned py,
-                          unsigned sx, unsigned sy, struct buf *buf,
+struct frame frame_create(char const *name, struct buf *buf,
                           struct frame_theme const *theme);
 void frame_destroy(struct frame *f);
-void frame_draw(struct frame const *f);
+void frame_draw(struct frame const *f, bool active);
 void frame_pos(struct frame const *f, size_t pos, unsigned *out_x,
                unsigned *out_y);
 void frame_move_cursor(struct frame *f, unsigned x, unsigned y);

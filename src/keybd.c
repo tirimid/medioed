@@ -25,6 +25,7 @@ keybd_init(void)
 void
 keybd_quit(void)
 {
+	cur_bind[0] = 0;
 	arraylist_destroy(&binds);
 }
 

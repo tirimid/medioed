@@ -65,23 +65,27 @@ char *
 prompt_ask(char const *text, void (*complete)(char **, size_t *, void *),
            void *compdata)
 {
-	char *fulltext = malloc(strlen(text) + 2);
-	sprintf(fulltext, "%s\n", text);
-	drawbox(fulltext);
-	free(fulltext);
+	drawbox(text);
 
 	struct winsize tty_size;
 	ioctl(0, TIOCGWINSZ, &tty_size);
+	unsigned ttyx = tty_size.ws_col, ttyy = tty_size.ws_row;
+
+	// determine where the response should be rendered.
+	unsigned rrow = ttyy - 1, rcol = 0;
+	for (char const *c = text; *c; ++c) {
+		if (*c == '\n' || ++rcol > ttyx)
+			rcol = 0;
+	}
+
+	// a faux cursor is drawn before entering the keyboard loop, so that it
+	// doesn't look like it spontaneously appears upon a keypress.
+	mvchgat(rrow, rcol, 1, 0, GLOBAL_HIGHLIGHT_PAIR, NULL);
+	refresh();
 
 	char *resp = malloc(1);
 	size_t resp_len = 0;
 	size_t csr = 0, dstart = 0;
-
-	// a faux cursor is drawn before entering the keyboard loop, so that it
-	// doesn't look like it spontaneously appears upon a keypress.
-	unsigned resp_row = tty_size.ws_row - 1;
-	mvchgat(resp_row, 0, 1, 0, GLOBAL_HIGHLIGHT_PAIR, NULL);
-	refresh();
 
 	int k;
 	while ((k = getch()) != '\n') {
@@ -114,17 +118,17 @@ prompt_ask(char const *text, void (*complete)(char **, size_t *, void *),
 		// interactively render response.
 		if (csr < dstart)
 			dstart = csr;
-		else if (csr - dstart >= tty_size.ws_col - 1)
-			dstart = csr - tty_size.ws_col + 1;
-		
-		for (unsigned i = 0; i < tty_size.ws_col; ++i)
-			mvaddch(resp_row, i, ' ');
-		
-		for (size_t i = 0; i < resp_len - dstart && i < tty_size.ws_col; ++i)
-			mvaddch(resp_row, i, resp[dstart + i]);
+		else if (csr - dstart >= ttyx - rcol - 1)
+			dstart = csr - ttyx + rcol + 1;
 
-		mvchgat(resp_row, 0, tty_size.ws_col, 0, GLOBAL_NORM_PAIR, NULL);
-		mvchgat(resp_row, csr - dstart, 1, 0, GLOBAL_HIGHLIGHT_PAIR, NULL);
+		for (unsigned i = rcol; i < ttyx; ++i)
+			mvaddch(rrow, i, ' ');
+		
+		for (size_t i = 0; i < resp_len - dstart && i < ttyx - rcol; ++i)
+			mvaddch(rrow, rcol + i, resp[dstart + i]);
+
+		mvchgat(rrow, rcol, ttyx - rcol, 0, GLOBAL_NORM_PAIR, NULL);
+		mvchgat(rrow, rcol + csr - dstart, 1, 0, GLOBAL_HIGHLIGHT_PAIR, NULL);
 
 		refresh();
 	}

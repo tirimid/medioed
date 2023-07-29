@@ -47,6 +47,18 @@ arraylist_rm(struct arraylist *al, size_t ind)
 	memmove(al->data + ind, al->data + ind + 1, mv_size);
 }
 
+void
+arraylist_swap(struct arraylist *al, size_t ind_a, size_t ind_b)
+{
+	void *tmpp = al->data[ind_a];
+	size_t tmps = al->data_sizes[ind_a];
+
+	al->data[ind_a] = al->data[ind_b];
+	al->data_sizes[ind_a] = al->data_sizes[ind_b];
+	al->data[ind_b] = tmpp;
+	al->data_sizes[ind_b] = tmps;
+}
+
 struct arraylist
 arraylist_copy(struct arraylist const *al)
 {
