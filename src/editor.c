@@ -129,7 +129,7 @@ bind_open_file(void)
 	                                  frame_themes.data[0]);
 	arraylist_add(&frames, &frame, sizeof(frame));
 
-	cur_frame = 0;
+	cur_frame = frames.size - 1;
 	resetbinds();
 	arrangeframes();
 
