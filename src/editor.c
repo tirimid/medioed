@@ -1,5 +1,6 @@
 #include "editor.h"
 
+#include <ctype.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -198,29 +199,28 @@ bind_focus_frame(void)
 static void
 bind_kill_frame(void)
 {
-	for (;;) {
-		char *path = prompt_ask("kill active frame? (y/n) ", NULL, NULL);
-		if (!path)
-			return;
+ask_again:;
+	char *path = prompt_ask("kill active frame? (y/n) ", NULL, NULL);
+	if (!path)
+		return;
 
-		if (!strcmp(path, "y")) {
-			// TODO: add checks for orphaned frame themes and buffers.
-			frame_destroy(frames.data[cur_frame]);
-			arraylist_rm(&frames, cur_frame);
-			cur_frame = cur_frame > 0 ? cur_frame - 1 : 0;
+	if (!strcmp(path, "y")) {
+		// TODO: add checks for orphaned frame themes and buffers.
+		
+		frame_destroy(frames.data[cur_frame]);
+		arraylist_rm(&frames, cur_frame);
+		cur_frame = cur_frame > 0 ? cur_frame - 1 : 0;
 
-			resetbinds();
-			arrangeframes();
+		resetbinds();
+		arrangeframes();
 			
-			free(path);
-			return;
-		} else if (!strcmp(path, "n")) {
-			free(path);
-			return;
-		} else {
-			free(path);
-			prompt_show("expected either 'y' or 'n'!");
-		}
+		free(path);
+	} else if (!strcmp(path, "n"))
+		free(path);
+	else {
+		free(path);
+		prompt_show("expected either 'y' or 'n'!");
+		goto ask_again;
 	}
 }
 
@@ -309,7 +309,24 @@ bind_navln_end(void)
 static void
 bind_navgoto(void)
 {
-	prompt_show("this keybind is not implemented yet!");
+ask_again:;
+	char *linum_text = prompt_ask("goto line: ", NULL, NULL);
+	if (!linum_text)
+		return;
+
+	for (char const *c = linum_text; *c; ++c) {
+		if (!isdigit(*c)) {
+			free(linum_text);
+			prompt_show("expected a valid line number!");
+			goto ask_again;
+		}
+	}
+
+	unsigned linum = atoi(linum_text);
+	linum -= linum != 0;
+	free(linum_text);
+
+	frame_move_cursor(frames.data[cur_frame], 0, linum);
 }
 
 static void
@@ -317,7 +334,7 @@ bind_del(void)
 {
 	struct frame *f = frames.data[cur_frame];
 	
-	if (f->cursor > 0) {
+	if (f->cursor > 0 && f->buf->writable) {
 		buf_erase(f->buf, f->cursor - 1, f->cursor);
 		frame_relmove_cursor(f, -1, 0, true);
 	}

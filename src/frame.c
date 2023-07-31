@@ -116,9 +116,10 @@ frame_draw(struct frame const *f, bool active)
 	
 	for (unsigned i = 1; i < f->size_y; ++i) {
 		if (linum_ind++ <= bey - bsy) {
-			char linum_text[16];
-			snprintf(linum_text, 16, "%u", bsy + linum_ind);
-			mvaddstr(f->pos_y + i, f->pos_x + GUTTER_LEFT, linum_text);
+			char drawtext[16];
+			snprintf(drawtext, 16, "%u", bsy + linum_ind);
+			unsigned drawpos = GUTTER_LEFT + linum_width - strlen(drawtext);
+			mvaddstr(f->pos_y + i, f->pos_x + drawpos, drawtext);
 		}
 
 		draw_line(f, &i, &drawcsr, right_edge, linum_width);

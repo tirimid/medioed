@@ -123,6 +123,8 @@ esspeckey_to_termkey(char const **essk)
 // valid when represented by the terminal keynames.
 // for example, this will not work for "C-a" vs "C-A", as the underlying "^A"
 // terminal keychord is unable to differentiate between upper/lowercase.
+// also, note that this has no error condition and does not perform any
+// validation for the passed emacs-style keysequence.
 static char *
 eskeyseq_to_termkeyseq(char const *eskeyseq)
 {
