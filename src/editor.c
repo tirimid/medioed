@@ -16,12 +16,128 @@
 #include "prompt.h"
 #include "util.h"
 
+static void resetbinds(void);
+static void arrangeframes(void);
+static void bind_quit(void);
+static void bind_chgfwd_frame(void);
+static void bind_chgback_frame(void);
+static void bind_focus_frame(void);
+static void bind_kill_frame(void);
+static void bind_open_file(void);
+static void bind_save_file(void);
+static void bind_navfwd_ch(void);
+static void bind_navfwd_word(void);
+static void bind_navback_ch(void);
+static void bind_navback_word(void);
+static void bind_navdown(void);
+static void bind_navup(void);
+static void bind_navln_start(void);
+static void bind_navln_end(void);
+static void bind_navgoto(void);
+static void bind_del(void);
+static void resetbinds(void);
+
 static bool running;
 static size_t cur_frame;
 static struct arraylist frames, frame_themes;
 static struct arraylist bufs;
 
-static void resetbinds(void);
+void
+editor_init(void)
+{
+	initscr();
+	start_color();
+	raw();
+	noecho();
+	curs_set(0);
+
+	init_pair(GLOBAL_NORM_PAIR, GLOBAL_NORM_FG, GLOBAL_NORM_BG);
+	init_pair(GLOBAL_HIGHLIGHT_PAIR, GLOBAL_HIGHLIGHT_FG, GLOBAL_HIGHLIGHT_BG);
+	
+	keybd_init();
+
+	frames = arraylist_create();
+	frame_themes = arraylist_create();
+	bufs = arraylist_create();
+	cur_frame = 0;
+
+	struct frame_theme deftheme = frame_theme_default();
+	arraylist_add(&frame_themes, &deftheme, sizeof(deftheme));
+
+	// create greeter buffer and frame.
+	struct buf greet_buf = buf_from_str(GLOBAL_GREET_TEXT, false);
+	arraylist_add(&bufs, &greet_buf, sizeof(greet_buf));
+	
+	struct frame greet_frame = frame_create("*greeter*", bufs.data[0],
+	                                        frame_themes.data[0]);
+	arraylist_add(&frames, &greet_frame, sizeof(greet_frame));
+
+	resetbinds();
+}
+
+void
+editor_main_loop(void)
+{
+	running = true;
+	
+	while (running) {
+		if (frames.size > 0) {
+			for (size_t i = 0; i < frames.size; ++i)
+				frame_draw(frames.data[i], i == cur_frame);
+		} else {
+			struct winsize tty_size;
+			ioctl(0, TIOCGWINSZ, &tty_size);
+
+			// clear display characters.
+			for (unsigned i = 0; i < tty_size.ws_row; ++i) {
+				for (unsigned j = 0; j < tty_size.ws_col; ++j)
+					mvaddch(i, j, ' ');
+			}
+
+			// set base display attributes.
+			for (unsigned i = 0; i < tty_size.ws_row; ++i)
+				mvchgat(i, 0, tty_size.ws_col, 0, GLOBAL_NORM_PAIR, NULL);
+		}
+
+		refresh();
+		
+		int key = keybd_await_input();
+		switch (key) {
+		case KEYBD_IGNORE_BIND:
+			break;
+		default: {
+			if (frames.size == 0)
+				break;
+			
+			struct frame *f = frames.data[cur_frame];
+			buf_write_ch(f->buf, f->cursor, key);
+			frame_relmove_cursor(f, f->buf->writable, 0, true);
+			
+			break;
+		}
+		}
+	}
+}
+
+void
+editor_quit(void)
+{
+	for (size_t i = 0; i < frames.size; ++i)
+		frame_destroy(frames.data[i]);
+
+	for (size_t i = 0; i < frame_themes.size; ++i)
+		frame_theme_destroy(frame_themes.data[i]);
+
+	for (size_t i = 0; i < bufs.size; ++i)
+		buf_destroy(bufs.data[i]);
+	
+	arraylist_destroy(&frames);
+	arraylist_destroy(&frame_themes);
+	arraylist_destroy(&bufs);
+	
+	keybd_quit();
+	endwin();
+}
 
 static void
 arrangeframes(void)
@@ -231,101 +347,4 @@ resetbinds(void)
 	keybd_bind(GLOBAL_BIND_NAVLN_END, bind_navln_end);
 	keybd_bind(GLOBAL_BIND_NAVGOTO, bind_navgoto);
 	keybd_bind(GLOBAL_BIND_DEL, bind_del);
-}
-
-void
-editor_init(void)
-{
-	initscr();
-	start_color();
-	raw();
-	noecho();
-	curs_set(0);
-
-	init_pair(GLOBAL_NORM_PAIR, GLOBAL_NORM_FG, GLOBAL_NORM_BG);
-	init_pair(GLOBAL_HIGHLIGHT_PAIR, GLOBAL_HIGHLIGHT_FG, GLOBAL_HIGHLIGHT_BG);
-	
-	keybd_init();
-
-	frames = arraylist_create();
-	frame_themes = arraylist_create();
-	bufs = arraylist_create();
-	cur_frame = 0;
-
-	struct frame_theme deftheme = frame_theme_default();
-	arraylist_add(&frame_themes, &deftheme, sizeof(deftheme));
-
-	// create greeter buffer and frame.
-	struct buf greet_buf = buf_from_str(GLOBAL_GREET_TEXT, false);
-	arraylist_add(&bufs, &greet_buf, sizeof(greet_buf));
-	
-	struct frame greet_frame = frame_create("*greeter*", bufs.data[0],
-	                                        frame_themes.data[0]);
-	arraylist_add(&frames, &greet_frame, sizeof(greet_frame));
-
-	resetbinds();
-}
-
-void
-editor_main_loop(void)
-{
-	running = true;
-	
-	while (running) {
-		if (frames.size > 0) {
-			for (size_t i = 0; i < frames.size; ++i)
-				frame_draw(frames.data[i], i == cur_frame);
-		} else {
-			struct winsize tty_size;
-			ioctl(0, TIOCGWINSZ, &tty_size);
-
-			// clear display characters.
-			for (unsigned i = 0; i < tty_size.ws_row; ++i) {
-				for (unsigned j = 0; j < tty_size.ws_col; ++j)
-					mvaddch(i, j, ' ');
-			}
-
-			// set base display attributes.
-			for (unsigned i = 0; i < tty_size.ws_row; ++i)
-				mvchgat(i, 0, tty_size.ws_col, 0, GLOBAL_NORM_PAIR, NULL);
-		}
-
-		refresh();
-		
-		int key = keybd_await_input();
-		switch (key) {
-		case KEYBD_IGNORE_BIND:
-			break;
-		default: {
-			if (frames.size == 0)
-				break;
-			
-			struct frame *f = frames.data[cur_frame];
-			buf_write_ch(f->buf, f->cursor, key);
-			frame_relmove_cursor(f, f->buf->writable, 0, true);
-			
-			break;
-		}
-		}
-	}
-}
-
-void
-editor_quit(void)
-{
-	for (size_t i = 0; i < frames.size; ++i)
-		frame_destroy(frames.data[i]);
-
-	for (size_t i = 0; i < frame_themes.size; ++i)
-		frame_theme_destroy(frame_themes.data[i]);
-
-	for (size_t i = 0; i < bufs.size; ++i)
-		buf_destroy(bufs.data[i]);
-	
-	arraylist_destroy(&frames);
-	arraylist_destroy(&frame_themes);
-	arraylist_destroy(&bufs);
-	
-	keybd_quit();
-	endwin();
 }

@@ -13,6 +13,9 @@
 #define GUTTER_RIGHT 1
 #define GUTTER (GUTTER_LEFT + GUTTER_RIGHT)
 
+static void draw_line(struct frame const *f, unsigned *line, size_t *dcsr,
+                      size_t redge, unsigned linumw);
+
 struct frame_theme
 frame_theme_default(void)
 {
@@ -81,41 +84,6 @@ void
 frame_destroy(struct frame *f)
 {
 	free(f->name);
-}
-
-static void
-draw_line(struct frame const *f, unsigned *line, size_t *dcsr, size_t redge,
-          unsigned linumw)
-{
-	char const *bconts = f->buf->conts;
-	size_t bsize = f->buf->size;
-	unsigned i;
-
-	for (i = 0; *dcsr < bsize && bconts[*dcsr] != '\n'; ++i, ++*dcsr) {
-		char ch = bconts[*dcsr];
-
-		if (i >= redge) {
-			i = 0;
-			++*line;
-		}
-
-		if (*line >= f->size_y)
-			break;
-		
-		switch (ch) {
-		case '\t':
-			i += f->theme->tabsize - i % f->theme->tabsize - 1;
-			break;
-		default:
-			mvaddch(f->pos_y + *line, f->pos_x + GUTTER + linumw + i, ch);
-			break;
-		}
-	}
-
-	if (i >= redge)
-		++*line;
-
-	++*dcsr;
 }
 
 void
@@ -273,4 +241,39 @@ frame_relmove_cursor(struct frame *f, int x, int y, bool lwrap)
 	csry = (long)csry + y < 0 ? 0 : csry + y;
 	
 	frame_move_cursor(f, csrx, csry);
+}
+
+static void
+draw_line(struct frame const *f, unsigned *line, size_t *dcsr, size_t redge,
+          unsigned linumw)
+{
+	char const *bconts = f->buf->conts;
+	size_t bsize = f->buf->size;
+	unsigned i;
+
+	for (i = 0; *dcsr < bsize && bconts[*dcsr] != '\n'; ++i, ++*dcsr) {
+		char ch = bconts[*dcsr];
+
+		if (i >= redge) {
+			i = 0;
+			++*line;
+		}
+
+		if (*line >= f->size_y)
+			break;
+		
+		switch (ch) {
+		case '\t':
+			i += f->theme->tabsize - i % f->theme->tabsize - 1;
+			break;
+		default:
+			mvaddch(f->pos_y + *line, f->pos_x + GUTTER + linumw + i, ch);
+			break;
+		}
+	}
+
+	if (i >= redge)
+		++*line;
+
+	++*dcsr;
 }

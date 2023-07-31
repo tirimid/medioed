@@ -16,6 +16,11 @@ struct arraylist {
 	size_t size, cap;
 };
 
+struct string {
+	char *data;
+	size_t len, cap;
+};
+
 struct arraylist arraylist_create(void);
 void arraylist_destroy(struct arraylist *al);
 void arraylist_add(struct arraylist *al, void const *new, size_t size);
@@ -24,5 +29,11 @@ void arraylist_swap(struct arraylist *al, size_t ind_a, size_t ind_b);
 struct arraylist arraylist_copy(struct arraylist const *al);
 bool arraylist_contains(struct arraylist const *al, void const *item,
                         size_t size);
+
+struct string string_create(void);
+void string_destroy(struct string *s);
+void string_push_ch(struct string *s, char ch);
+void string_push_str(struct string *s, char const *str);
+char *string_to_str(struct string const *s);
 
 #endif

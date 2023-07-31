@@ -83,3 +83,43 @@ arraylist_contains(struct arraylist const *al, void const *item, size_t size)
 
 	return false;
 }
+
+struct string
+string_create(void)
+{
+	return (struct string){
+		.data = malloc(1),
+		.len = 0,
+		.cap = 1,
+	};
+}
+
+void
+string_destroy(struct string *s)
+{
+	free(s->data);
+}
+
+void
+string_push_ch(struct string *s, char ch)
+{
+	if (s->len >= s->cap) {
+		s->cap *= 2;
+		s->data = realloc(s->data, s->cap);
+	}
+
+	s->data[s->len++] = ch;
+}
+
+void
+string_push_str(struct string *s, char const *str)
+{
+	for (char const *c = str; *c; ++c)
+		string_push_ch(s, *c);
+}
+
+char *
+string_to_str(struct string const *s)
+{
+	return strndup(s->data, s->len);
+}
