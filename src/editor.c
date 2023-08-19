@@ -44,7 +44,7 @@ static struct arraylist frames, frame_themes;
 static struct arraylist bufs;
 
 void
-editor_init(void)
+editor_init(int argc, char const *argv[])
 {
 	initscr();
 	start_color();
@@ -65,7 +65,6 @@ editor_init(void)
 	struct frame_theme deftheme = frame_theme_default();
 	arraylist_add(&frame_themes, &deftheme, sizeof(deftheme));
 
-	// create greeter buffer and frame.
 	struct buf greet_buf = buf_from_str(GLOBAL_GREET_TEXT, false);
 	arraylist_add(&bufs, &greet_buf, sizeof(greet_buf));
 	
@@ -255,7 +254,22 @@ bind_open_file(void)
 static void
 bind_save_file(void)
 {
-	prompt_show("this keybind is not implemented yet!");
+	struct frame *f = frames.data[cur_frame];
+	struct buf *b = f->buf;
+
+	if (b->src_type == BUF_SRC_TYPE_FRESH) {
+		b->src_type = BUF_SRC_TYPE_FILE;
+		b->src = prompt_ask("save to file: ", prompt_complete_path, NULL);
+	}
+
+	// no path was given as source for new buffer, so it is reset to `FRESH`.
+	if (!b->src) {
+		b->src_type = BUF_SRC_TYPE_FRESH;
+		return;
+	}
+	
+	if (buf_save(b))
+		prompt_show("failed to write file!");
 }
 
 static void

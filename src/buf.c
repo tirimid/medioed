@@ -11,7 +11,10 @@ buf_create(bool writable)
 		.conts = malloc(1),
 		.size = 0,
 		.cap = 1,
-		.writable = writable
+		.src_type = BUF_SRC_TYPE_FRESH,
+		.src = NULL,
+		.writable = writable,
+		.modified = false,
 	};
 }
 
@@ -22,6 +25,7 @@ buf_from_str(char const *str, bool writable)
 	
 	buf_write_str(&b, 0, str);
 	b.writable = writable;
+	b.modified = false;
 
 	return b;
 }
@@ -49,14 +53,40 @@ buf_from_file(char const *path, bool writable)
 		.conts = fconts,
 		.size = fsize,
 		.cap = cap,
+		.src_type = BUF_SRC_TYPE_FILE,
+		.src = strdup(path),
 		.writable = writable,
+		.modified = false,
 	};
+}
+
+int
+buf_save(struct buf *b)
+{
+	// it doesnt make sense to save to anything other than a file.
+	// and since no file is specified as the buffer source, nothing is done.
+	if (b->src_type != BUF_SRC_TYPE_FILE)
+		return 1;
+	
+	FILE *fp = fopen(b->src, "wb");
+	if (!fp)
+		return 1;
+
+	if (fwrite(b->conts, 1, b->size, fp) != b->size)
+		return 1;
+
+	fclose(fp);
+	b->modified = false;
+	
+	return 0;
 }
 
 void
 buf_destroy(struct buf *b)
 {
 	free(b->conts);
+	if (b->src)
+		free(b->src);
 }
 
 void
@@ -73,6 +103,7 @@ buf_write_ch(struct buf *b, size_t ind, char ch)
 	memmove(b->conts + ind + 1, b->conts + ind, b->size - ind);
 	b->conts[ind] = ch;
 	++b->size;
+	b->modified = true;
 }
 
 void
@@ -97,6 +128,7 @@ buf_write_str(struct buf *b, size_t ind, char const *s)
 	memmove(b->conts + ind + len, b->conts + ind, b->size - ind);
 	memcpy(b->conts + ind, s, len);
 	b->size += len;
+	b->modified = true;
 }
 
 void
@@ -107,6 +139,7 @@ buf_erase(struct buf *b, size_t lb, size_t ub)
 	
 	memmove(b->conts + lb, b->conts + ub, b->size - ub);
 	b->size -= ub - lb;
+	b->modified = true;
 }
 
 void

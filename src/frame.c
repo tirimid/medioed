@@ -106,9 +106,17 @@ frame_draw(struct frame const *f, bool active)
 			mvaddch(f->pos_y + i, f->pos_x + j, ' ');
 	}
 
-	// write frame name.
+	// write frame name and buffer modification indicator.
 	for (unsigned i = 0; f->name[i] && i < f->size_x; ++i)
 		mvaddch(f->pos_y, f->pos_x + i, f->name[i]);
+
+	if (f->buf->modified) {
+		char modind[] = "(*)\0";
+		if (f->size_x >= 0 && f->size_x < strlen(modind) + 1)
+			modind[f->size_x] = 0;
+
+		mvaddstr(f->pos_y, f->pos_x + f->size_x - strlen(modind), modind);
+	}
 	
 	// write lines and linums.
 	size_t drawcsr = f->buf_start;

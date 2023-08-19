@@ -121,25 +121,20 @@ drawbox(char const *text)
 		}
 	}
 
-	size_t box_top = tty_size.ws_row - text_size_y - 1;
+	size_t box_top = tty_size.ws_row - text_size_y;
 
 	// clear box.
-	for (size_t i = 1; i < tty_size.ws_row; ++i) {
+	for (size_t i = box_top; i < tty_size.ws_row; ++i) {
 		for (size_t j = 0; j < tty_size.ws_col; ++j)
-			mvaddch(box_top + i, j, ' ');
+			mvaddch(i, j, ' ');
 	}
-
-	// write separator.
-	for (size_t i = 0; i < tty_size.ws_col; ++i)
-		mvaddch(box_top, i, '-');
-
+	
 	// write actual text.
-	mvaddstr(box_top + 1, 0, text);
+	mvaddstr(box_top, 0, text);
 
 	// set coloration.
-	mvchgat(box_top, 0, tty_size.ws_col, 0, GLOBAL_HIGHLIGHT_PAIR, NULL);
-	for (size_t i = 1; i < text_size_y + 1; ++i)
-		mvchgat(box_top + i, 0, tty_size.ws_col, 0, GLOBAL_NORM_PAIR, NULL);
+	for (size_t i = box_top; i < tty_size.ws_row; ++i)
+		mvchgat(i, 0, tty_size.ws_col, 0, GLOBAL_NORM_PAIR, NULL);
 
 	refresh();
 }
