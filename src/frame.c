@@ -6,63 +6,16 @@
 #include <ncurses.h>
 #include <sys/ioctl.h>
 
-#include "def.h"
+#include "conf.h"
 
 // padding size around line numbers.
-#define GUTTER_LEFT 1
-#define GUTTER_RIGHT 1
-#define GUTTER (GUTTER_LEFT + GUTTER_RIGHT)
+#define GUTTER (CONF_GUTTER_LEFT + CONF_GUTTER_RIGHT)
 
-static void draw_line(struct frame const *f, unsigned *line, size_t *dcsr,
-                      size_t redge, unsigned linumw);
-
-struct frame_theme
-frame_theme_default(void)
-{
-	struct frame_theme ft = {
-		.norm_fg = COLOR_WHITE,
-		.norm_bg = COLOR_BLACK,
-		.cursor_fg = COLOR_BLACK,
-		.cursor_bg = COLOR_WHITE,
-		.linum_fg = COLOR_YELLOW,
-		.linum_bg = COLOR_BLACK,
-		.highlights = arraylist_create(),
-		.tabsize = 4,
-	};
-
-	ft.norm_pair = alloc_pair(ft.norm_fg, ft.norm_bg);
-	ft.cursor_pair = alloc_pair(ft.cursor_fg, ft.cursor_bg);
-	ft.linum_pair = alloc_pair(ft.linum_fg, ft.linum_bg);
-
-	return ft;
-}
-
-struct frame_theme
-frame_theme_load(char const *theme_path)
-{
-	// TODO: add custom theme loading from file.
-	return frame_theme_default();
-}
-
-void
-frame_theme_destroy(struct frame_theme *ft)
-{
-	free_pair(ft->norm_pair);
-	free_pair(ft->cursor_pair);
-	free_pair(ft->linum_pair);
-	
-	for (size_t i = 0; i < ft->highlights.size; ++i) {
-		struct frame_theme_highlight *highlight = ft->highlights.data[i];
-		
-		free(highlight->regex);
-		free_pair(highlight->pair);
-	}
-
-	arraylist_destroy(&ft->highlights);
-}
+static void drawline(struct frame const *f, unsigned *line, size_t *dcsr,
+                     size_t redge, unsigned linumw);
 
 struct frame
-frame_create(char const *name, struct buf *buf, struct frame_theme const *theme)
+frame_create(char const *name, struct buf *buf)
 {
 	struct winsize tty_size;
 	ioctl(0, TIOCGWINSZ, &tty_size);
@@ -74,7 +27,6 @@ frame_create(char const *name, struct buf *buf, struct frame_theme const *theme)
 		.size_x = tty_size.ws_col,
 		.size_y = tty_size.ws_row,
 		.buf = buf,
-		.theme = theme,
 		.cursor = 0,
 		.buf_start = 0,
 	};
@@ -111,11 +63,24 @@ frame_draw(struct frame const *f, bool active)
 		mvaddch(f->pos_y, f->pos_x + i, f->name[i]);
 
 	if (f->buf->modified) {
-		char modind[] = "(*)\0";
+		char modind[] = CONF_BUFMOD_MARK "\0";
 		if (f->size_x >= 0 && f->size_x < strlen(modind) + 1)
 			modind[f->size_x] = 0;
 
 		mvaddstr(f->pos_y, f->pos_x + f->size_x - strlen(modind), modind);
+	}
+
+	// draw margins.
+	for (size_t i = 0; i < conf_mtab_size; ++i) {
+		struct margin const *m = &conf_mtab[i];
+
+		if (m->pos >= f->size_x)
+			continue;
+
+		for (size_t i = 1; i < f->size_y; ++i) {
+			mvaddch(f->pos_y + i, f->pos_x + m->pos, m->ch);
+			mvchgat(f->pos_y + i, f->pos_x + m->pos, 1, 0, m->colpair, NULL);
+		}
 	}
 	
 	// write lines and linums.
@@ -126,34 +91,32 @@ frame_draw(struct frame const *f, bool active)
 		if (linum_ind++ <= bey - bsy) {
 			char drawtext[16];
 			snprintf(drawtext, 16, "%u", bsy + linum_ind);
-			unsigned drawpos = GUTTER_LEFT + linum_width - strlen(drawtext);
-			mvaddstr(f->pos_y + i, f->pos_x + drawpos, drawtext);
+			unsigned drawx = CONF_GUTTER_LEFT + linum_width - strlen(drawtext);
+			mvaddstr(f->pos_y + i, f->pos_x + drawx, drawtext);
 		}
 
-		draw_line(f, &i, &drawcsr, right_edge, linum_width);
+		drawline(f, &i, &drawcsr, right_edge, linum_width);
 	}
-
-	struct frame_theme const *ft = f->theme;
 
 	// set normal coloration.
 	mvchgat(f->pos_y, f->pos_x, f->size_x, 0,
-	        active ? GLOBAL_HIGHLIGHT_PAIR : GLOBAL_NORM_PAIR, NULL);
+	        active ? conf_ghighlight : conf_gnorm, NULL);
 	
 	for (size_t i = 1; i < f->size_y; ++i)
-		mvchgat(f->pos_y + i, f->pos_x, f->size_x, 0, ft->norm_pair, NULL);
+		mvchgat(f->pos_y + i, f->pos_x, f->size_x, 0, conf_norm, NULL);
 
 	// set cursor coloration.
 	unsigned csrx, csry;
 	frame_pos(f, f->cursor, &csrx, &csry);
-	mvchgat(f->pos_y + csry, f->pos_x + csrx, 1, 0, ft->cursor_pair, NULL);
+	mvchgat(f->pos_y + csry, f->pos_x + csrx, 1, 0, conf_cursor, NULL);
 
 	// set linum coloration.
 	for (size_t i = 1; i < f->size_y; ++i) {
-		mvchgat(f->pos_y + i, f->pos_x, GUTTER + linum_width, 0, ft->linum_pair,
+		mvchgat(f->pos_y + i, f->pos_x, GUTTER + linum_width, 0, conf_linum,
 		        NULL);
 	}
 
-	// TODO: set highlight coloration.
+	// TODO: set global and visible highlight coloration.
 }
 
 void
@@ -174,7 +137,7 @@ frame_pos(struct frame const *f, size_t pos, unsigned *out_x, unsigned *out_y)
 	
 	for (size_t i = f->buf_start; i < pos; ++i) {
 		if (f->buf->conts[i] == '\t')
-			*out_x += f->theme->tabsize - *out_x % f->theme->tabsize - 1;
+			*out_x += CONF_TABSIZE - *out_x % CONF_TABSIZE - 1;
 		
 		if (f->buf->conts[i] == '\n' || *out_x >= right_edge - 1) {
 			*out_x = 0;
@@ -252,9 +215,10 @@ frame_relmove_cursor(struct frame *f, int x, int y, bool lwrap)
 	frame_move_cursor(f, csrx, csry);
 }
 
+// TODO: add support for line highlight coloration.
 static void
-draw_line(struct frame const *f, unsigned *line, size_t *dcsr, size_t redge,
-          unsigned linumw)
+drawline(struct frame const *f, unsigned *line, size_t *dcsr, size_t redge,
+         unsigned linumw)
 {
 	char const *bconts = f->buf->conts;
 	size_t bsize = f->buf->size;
@@ -273,7 +237,7 @@ draw_line(struct frame const *f, unsigned *line, size_t *dcsr, size_t redge,
 		
 		switch (ch) {
 		case '\t':
-			i += f->theme->tabsize - i % f->theme->tabsize - 1;
+			i += CONF_TABSIZE - i % CONF_TABSIZE - 1;
 			break;
 		default:
 			mvaddch(f->pos_y + *line, f->pos_x + GUTTER + linumw + i, ch);

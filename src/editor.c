@@ -11,13 +11,15 @@
 #include <sys/stat.h>
 
 #include "buf.h"
-#include "def.h"
+#include "conf.h"
 #include "frame.h"
 #include "keybd.h"
 #include "prompt.h"
 #include "util.h"
 
-static void resetbinds(void);
+static struct buf *addbuf(struct buf *b);
+static struct theme *addtheme(struct theme *t);
+static struct frame *addframe(struct frame *f);
 static void arrangeframes(void);
 static void bind_quit(void);
 static void bind_chgfwd_frame(void);
@@ -35,12 +37,13 @@ static void bind_navup(void);
 static void bind_navln_start(void);
 static void bind_navln_end(void);
 static void bind_navgoto(void);
-static void bind_del(void);
+static void bind_del_ch(void);
+static void bind_del_word(void);
 static void resetbinds(void);
 
 static bool running;
 static size_t cur_frame;
-static struct arraylist frames, frame_themes;
+static struct arraylist frames;
 static struct arraylist bufs;
 
 void
@@ -52,27 +55,42 @@ editor_init(int argc, char const *argv[])
 	noecho();
 	curs_set(0);
 
-	init_pair(GLOBAL_NORM_PAIR, GLOBAL_NORM_FG, GLOBAL_NORM_BG);
-	init_pair(GLOBAL_HIGHLIGHT_PAIR, GLOBAL_HIGHLIGHT_FG, GLOBAL_HIGHLIGHT_BG);
+	if (conf_init() != 0)
+		return;
 	
 	keybd_init();
 
 	frames = arraylist_create();
-	frame_themes = arraylist_create();
 	bufs = arraylist_create();
 	cur_frame = 0;
 
-	struct frame_theme deftheme = frame_theme_default();
-	arraylist_add(&frame_themes, &deftheme, sizeof(deftheme));
-
-	struct buf greet_buf = buf_from_str(GLOBAL_GREET_TEXT, false);
-	arraylist_add(&bufs, &greet_buf, sizeof(greet_buf));
-	
-	struct frame greet_frame = frame_create("*greeter*", bufs.data[0],
-	                                        frame_themes.data[0]);
-	arraylist_add(&frames, &greet_frame, sizeof(greet_frame));
+	if (argc <= 1) {
+		struct buf gb = buf_from_str(CONF_GREET_TEXT, false);
+		struct buf *gbp = addbuf(&gb);
+		struct frame gf = frame_create("*greeter*", gbp);
+		addframe(&gf);
+	} else {
+		for (int i = 1; i < argc; ++i) {
+			struct stat s;
+			if (stat(argv[i], &s) || !S_ISREG(s.st_mode)) {
+				char *msg = malloc(strlen(argv[i]) + 22);
+				sprintf(msg, "could not open file: %s", argv[i]);
+				
+				prompt_show(msg);
+				
+				free(msg);
+				continue;
+			}
+			
+			struct buf b = buf_from_file(argv[i], true);
+			struct buf *bp = addbuf(&b);
+			struct frame f = frame_create(argv[i], bp);
+			addframe(&f);
+		}
+	}
 
 	resetbinds();
+	arrangeframes();
 }
 
 void
@@ -96,7 +114,7 @@ editor_main_loop(void)
 
 			// set base display attributes.
 			for (unsigned i = 0; i < tty_size.ws_row; ++i)
-				mvchgat(i, 0, tty_size.ws_col, 0, GLOBAL_NORM_PAIR, NULL);
+				mvchgat(i, 0, tty_size.ws_col, 0, conf_gnorm, NULL);
 		}
 
 		refresh();
@@ -125,18 +143,39 @@ editor_quit(void)
 	for (size_t i = 0; i < frames.size; ++i)
 		frame_destroy(frames.data[i]);
 
-	for (size_t i = 0; i < frame_themes.size; ++i)
-		frame_theme_destroy(frame_themes.data[i]);
-
 	for (size_t i = 0; i < bufs.size; ++i)
 		buf_destroy(bufs.data[i]);
 	
 	arraylist_destroy(&frames);
-	arraylist_destroy(&frame_themes);
 	arraylist_destroy(&bufs);
 	
 	keybd_quit();
+	conf_quit();
 	endwin();
+}
+
+static struct buf *
+addbuf(struct buf *b)
+{
+	for (size_t i = 0; i < bufs.size; ++i) {
+		struct buf *ob = bufs.data[i];
+
+		if (b->src_type = BUF_SRC_TYPE_FILE && ob->src_type == BUF_SRC_TYPE_FILE
+		    && !strcmp(b->src, ob->src)) {
+			buf_destroy(b);
+			return ob;
+		}
+	}
+
+	arraylist_add(&bufs, b, sizeof(*b));
+	return bufs.data[bufs.size - 1];
+}
+
+static struct frame *
+addframe(struct frame *f)
+{
+	arraylist_add(&frames, f, sizeof(*f));
+	return frames.data[frames.size - 1];
 }
 
 static void
@@ -199,7 +238,7 @@ static void
 bind_kill_frame(void)
 {
 ask_again:;
-	char *path = prompt_ask("kill active frame? (y/n) ", NULL, NULL);
+	char *path = prompt_ask("kill active frame? (y/N) ", NULL, NULL);
 	if (!path)
 		return;
 
@@ -214,7 +253,7 @@ ask_again:;
 		arrangeframes();
 			
 		free(path);
-	} else if (!strcmp(path, "n"))
+	} else if (!strcmp(path, "n") || !*path)
 		free(path);
 	else {
 		free(path);
@@ -238,11 +277,8 @@ bind_open_file(void)
 	}
 
 	struct buf buf = buf_from_file(path, true);
-	arraylist_add(&bufs, &buf, sizeof(buf));
-	
-	struct frame frame = frame_create(path, bufs.data[bufs.size - 1],
-	                                  frame_themes.data[0]);
-	arraylist_add(&frames, &frame, sizeof(frame));
+	struct frame frame = frame_create(path, addbuf(&buf));
+	addframe(&frame);
 
 	cur_frame = frames.size - 1;
 	resetbinds();
@@ -344,7 +380,7 @@ ask_again:;
 }
 
 static void
-bind_del(void)
+bind_del_ch(void)
 {
 	struct frame *f = frames.data[cur_frame];
 	
@@ -355,27 +391,34 @@ bind_del(void)
 }
 
 static void
+bind_del_word(void)
+{
+	prompt_show("this keybind is not implemented yet!");
+}
+
+static void
 resetbinds(void)
 {
 	// quit and reinit to reset current keybind buffer and bind information.
 	keybd_quit();
 	keybd_init();
 	
-	keybd_bind(GLOBAL_BIND_QUIT, bind_quit);
-	keybd_bind(GLOBAL_BIND_CHGFWD_FRAME, bind_chgfwd_frame);
-	keybd_bind(GLOBAL_BIND_CHGBACK_FRAME, bind_chgback_frame);
-	keybd_bind(GLOBAL_BIND_FOCUS_FRAME, bind_focus_frame);
-	keybd_bind(GLOBAL_BIND_KILL_FRAME, bind_kill_frame);
-	keybd_bind(GLOBAL_BIND_OPEN_FILE, bind_open_file);
-	keybd_bind(GLOBAL_BIND_SAVE_FILE, bind_save_file);
-	keybd_bind(GLOBAL_BIND_NAVFWD_CH, bind_navfwd_ch);
-	keybd_bind(GLOBAL_BIND_NAVFWD_WORD, bind_navfwd_word);
-	keybd_bind(GLOBAL_BIND_NAVBACK_CH, bind_navback_ch);
-	keybd_bind(GLOBAL_BIND_NAVBACK_WORD, bind_navback_word);
-	keybd_bind(GLOBAL_BIND_NAVDOWN, bind_navdown);
-	keybd_bind(GLOBAL_BIND_NAVUP, bind_navup);
-	keybd_bind(GLOBAL_BIND_NAVLN_START, bind_navln_start);
-	keybd_bind(GLOBAL_BIND_NAVLN_END, bind_navln_end);
-	keybd_bind(GLOBAL_BIND_NAVGOTO, bind_navgoto);
-	keybd_bind(GLOBAL_BIND_DEL, bind_del);
+	keybd_bind(CONF_BIND_QUIT, bind_quit);
+	keybd_bind(CONF_BIND_CHGFWD_FRAME, bind_chgfwd_frame);
+	keybd_bind(CONF_BIND_CHGBACK_FRAME, bind_chgback_frame);
+	keybd_bind(CONF_BIND_FOCUS_FRAME, bind_focus_frame);
+	keybd_bind(CONF_BIND_KILL_FRAME, bind_kill_frame);
+	keybd_bind(CONF_BIND_OPEN_FILE, bind_open_file);
+	keybd_bind(CONF_BIND_SAVE_FILE, bind_save_file);
+	keybd_bind(CONF_BIND_NAVFWD_CH, bind_navfwd_ch);
+	keybd_bind(CONF_BIND_NAVFWD_WORD, bind_navfwd_word);
+	keybd_bind(CONF_BIND_NAVBACK_CH, bind_navback_ch);
+	keybd_bind(CONF_BIND_NAVBACK_WORD, bind_navback_word);
+	keybd_bind(CONF_BIND_NAVDOWN, bind_navdown);
+	keybd_bind(CONF_BIND_NAVUP, bind_navup);
+	keybd_bind(CONF_BIND_NAVLN_START, bind_navln_start);
+	keybd_bind(CONF_BIND_NAVLN_END, bind_navln_end);
+	keybd_bind(CONF_BIND_NAVGOTO, bind_navgoto);
+	keybd_bind(CONF_BIND_DEL_CH, bind_del_ch);
+	keybd_bind(CONF_BIND_DEL_WORD, bind_del_word);
 }

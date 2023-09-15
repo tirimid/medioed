@@ -7,7 +7,7 @@
 #include <ncurses.h>
 #include <sys/ioctl.h>
 
-#include "def.h"
+#include "conf.h"
 
 #define CANCEL_BIND "^G"
 #define NAVFWD_BIND "^F"
@@ -45,7 +45,7 @@ prompt_ask(char const *text, void (*complete)(char **, size_t *, void *),
 
 	// a faux cursor is drawn before entering the keyboard loop, so that it
 	// doesn't look like it spontaneously appears upon a keypress.
-	mvchgat(rrow, rcol, 1, 0, GLOBAL_HIGHLIGHT_PAIR, NULL);
+	mvchgat(rrow, rcol, 1, 0, conf_ghighlight, NULL);
 	refresh();
 
 	char *resp = malloc(1);
@@ -92,8 +92,8 @@ prompt_ask(char const *text, void (*complete)(char **, size_t *, void *),
 		for (size_t i = 0; i < resp_len - dstart && i < ttyx - rcol; ++i)
 			mvaddch(rrow, rcol + i, resp[dstart + i]);
 
-		mvchgat(rrow, rcol, ttyx - rcol, 0, GLOBAL_NORM_PAIR, NULL);
-		mvchgat(rrow, rcol + csr - dstart, 1, 0, GLOBAL_HIGHLIGHT_PAIR, NULL);
+		mvchgat(rrow, rcol, ttyx - rcol, 0, conf_gnorm, NULL);
+		mvchgat(rrow, rcol + csr - dstart, 1, 0, conf_ghighlight, NULL);
 
 		refresh();
 	}
@@ -134,7 +134,7 @@ drawbox(char const *text)
 
 	// set coloration.
 	for (size_t i = box_top; i < tty_size.ws_row; ++i)
-		mvchgat(i, 0, tty_size.ws_col, 0, GLOBAL_NORM_PAIR, NULL);
+		mvchgat(i, 0, tty_size.ws_col, 0, conf_gnorm, NULL);
 
 	refresh();
 }

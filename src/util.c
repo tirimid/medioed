@@ -70,18 +70,15 @@ arraylist_copy(struct arraylist const *al)
 	return cp;
 }
 
-bool
-arraylist_contains(struct arraylist const *al, void const *item, size_t size)
+ssize_t
+arraylist_find(struct arraylist const *al, void const *item, size_t size)
 {
-	for (size_t i = 0; i < al->size; ++i) {
-		if (al->data_sizes[i] != size)
-			continue;
-		
-		if (!memcmp(al->data[i], item, size))
-			return true;
+	for (ssize_t i = 0; i < al->size; ++i) {
+		if (al->data_sizes[i] == size && !memcmp(al->data[i], item, size))
+			return i;
 	}
 
-	return false;
+	return -1;
 }
 
 struct string
