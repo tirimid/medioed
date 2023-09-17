@@ -2,9 +2,8 @@
 
 struct highlight conf_htab[] = {
 	{
-		.re_str = "#[\\s\\S]*",
+		.re_str = "#\\s*[a-zA-Z_][a-zA-Z0-9_]*",
 		.mode = "c",
-		.scope = HIGHLIGHT_SCOPE_LINE,
 		.bg = COLOR_BLACK,
 		.fg = COLOR_CYAN,
 	},
@@ -37,10 +36,14 @@ conf_init(void)
 
 	for (size_t i = 0; i < conf_htab_size; ++i) {
 		struct highlight *hl = &conf_htab[i];
-		int re_flags = REG_NEWLINE * (hl->scope == HIGHLIGHT_SCOPE_LINE);
-		if (regcomp(&hl->re, hl->re_str, re_flags) != 0)
-			return 1;
 
+		int rc;
+		uint64_t flags = PCRE2_ZERO_TERMINATED;
+		PCRE2_SIZE erroff;
+		PCRE2_SPTR pat = (PCRE2_SPTR)hl->re_str;
+		if (!(hl->re = pcre2_compile(pat, flags, 0, &rc, &erroff, NULL)))
+			return 1;
+		
 		hl->colpair = alloc_pair(hl->fg, hl->bg);
 	}
 
@@ -63,8 +66,10 @@ conf_quit(void)
 	free_pair(conf_cursor);
 
 	for (size_t i = 0; i < conf_htab_size; ++i) {
-		regfree(&conf_htab[i].re);
-		free_pair(conf_htab[i].colpair);
+		struct highlight *hl = &conf_htab[i];
+		
+		pcre2_code_free(hl->re);
+		free_pair(hl->colpair);
 	}
 
 	for (size_t i = 0; i < conf_mtab_size; ++i)

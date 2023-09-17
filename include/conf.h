@@ -4,7 +4,9 @@
 #include <stdint.h>
 
 #include <ncurses.h>
-#include <regex.h>
+
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 #define CONF_BIND_QUIT "C-x C-c"
 #define CONF_BIND_CHGFWD_FRAME "C-x b"
@@ -63,18 +65,11 @@
 #define CONF_CURSOR_BG COLOR_WHITE
 #define CONF_CURSOR_FG COLOR_BLACK
 
-enum highlight_scope {
-	HIGHLIGHT_SCOPE_GLOBAL = 0,
-	HIGHLIGHT_SCOPE_VISIBLE,
-	HIGHLIGHT_SCOPE_LINE,
-};
-
 struct highlight {
-	regex_t re;
+	pcre2_code *re;
 	char const *re_str;
 	char const *mode;
 	int colpair;
-	unsigned char scope; // see `enum highlight_scope`.
 	uint8_t bg, fg;
 };
 

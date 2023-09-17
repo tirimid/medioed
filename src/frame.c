@@ -11,6 +11,7 @@
 // padding size around line numbers.
 #define GUTTER (CONF_GUTTER_LEFT + CONF_GUTTER_RIGHT)
 
+static void exechighlight(struct frame const *f, struct highlight const *hl);
 static void drawline(struct frame const *f, unsigned *line, size_t *dcsr,
                      size_t redge, unsigned linumw);
 
@@ -70,6 +71,13 @@ frame_draw(struct frame const *f, bool active)
 		mvaddstr(f->pos_y, f->pos_x + f->size_x - strlen(modind), modind);
 	}
 
+	// set normal coloration.
+	mvchgat(f->pos_y, f->pos_x, f->size_x, 0,
+	        active ? conf_ghighlight : conf_gnorm, NULL);
+	
+	for (size_t i = 1; i < f->size_y; ++i)
+		mvchgat(f->pos_y + i, f->pos_x, f->size_x, 0, conf_norm, NULL);
+
 	// draw margins.
 	for (size_t i = 0; i < conf_mtab_size; ++i) {
 		struct margin const *m = &conf_mtab[i];
@@ -98,13 +106,10 @@ frame_draw(struct frame const *f, bool active)
 		drawline(f, &i, &drawcsr, right_edge, linum_width);
 	}
 
-	// set normal coloration.
-	mvchgat(f->pos_y, f->pos_x, f->size_x, 0,
-	        active ? conf_ghighlight : conf_gnorm, NULL);
+	// set highlight coloration.
+	for (size_t i = 0; i < conf_htab_size; ++i)
+		exechighlight(f, &conf_htab[i]);
 	
-	for (size_t i = 1; i < f->size_y; ++i)
-		mvchgat(f->pos_y + i, f->pos_x, f->size_x, 0, conf_norm, NULL);
-
 	// set cursor coloration.
 	unsigned csrx, csry;
 	frame_pos(f, f->cursor, &csrx, &csry);
@@ -115,8 +120,6 @@ frame_draw(struct frame const *f, bool active)
 		mvchgat(f->pos_y + i, f->pos_x, GUTTER + linum_width, 0, conf_linum,
 		        NULL);
 	}
-
-	// TODO: set global and visible highlight coloration.
 }
 
 void
@@ -215,7 +218,29 @@ frame_relmove_cursor(struct frame *f, int x, int y, bool lwrap)
 	frame_move_cursor(f, csrx, csry);
 }
 
-// TODO: add support for line highlight coloration.
+static void
+exechighlight(struct frame const *f, struct highlight const *hl)
+{
+	pcre2_match_data *md = pcre2_match_data_create_from_pattern(hl->re, NULL);
+	PCRE2_SIZE off = f->buf_start, len = f->buf->size;
+	PCRE2_SPTR sub = (PCRE2_SPTR)f->buf->conts;
+
+	while (pcre2_match(hl->re, sub, len, off, 0, md, NULL) >= 0) {
+		PCRE2_SIZE *offv = pcre2_get_ovector_pointer(md);
+		
+		unsigned hsx, hsy, hex, hey;
+		frame_pos(f, offv[0], &hlx, &hly);
+		if (hly >= f->size_y)
+			break;
+
+		// TODO: actually set coloring.
+		
+		off = offv[1];
+	}
+
+	pcre2_match_data_free(md);
+}
+
 static void
 drawline(struct frame const *f, unsigned *line, size_t *dcsr, size_t redge,
          unsigned linumw)
