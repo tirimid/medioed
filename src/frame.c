@@ -11,7 +11,8 @@
 // padding size around line numbers.
 #define GUTTER (CONF_GUTTER_LEFT + CONF_GUTTER_RIGHT)
 
-static void exechighlight(struct frame const *f, struct highlight const *hl);
+static void exechighlight(struct frame const *f, struct highlight const *hl,
+                          size_t redge, unsigned linumw);
 static void drawline(struct frame const *f, unsigned *line, size_t *dcsr,
                      size_t redge, unsigned linumw);
 
@@ -108,7 +109,7 @@ frame_draw(struct frame const *f, bool active)
 
 	// set highlight coloration.
 	for (size_t i = 0; i < conf_htab_size; ++i)
-		exechighlight(f, &conf_htab[i]);
+		exechighlight(f, &conf_htab[i], right_edge, linum_width);
 	
 	// set cursor coloration.
 	unsigned csrx, csry;
@@ -219,7 +220,8 @@ frame_relmove_cursor(struct frame *f, int x, int y, bool lwrap)
 }
 
 static void
-exechighlight(struct frame const *f, struct highlight const *hl)
+exechighlight(struct frame const *f, struct highlight const *hl, size_t redge,
+              unsigned linumw)
 {
 	pcre2_match_data *md = pcre2_match_data_create_from_pattern(hl->re, NULL);
 	PCRE2_SIZE off = f->buf_start, len = f->buf->size;
@@ -228,12 +230,42 @@ exechighlight(struct frame const *f, struct highlight const *hl)
 	while (pcre2_match(hl->re, sub, len, off, 0, md, NULL) >= 0) {
 		PCRE2_SIZE *offv = pcre2_get_ovector_pointer(md);
 		
-		unsigned hsx, hsy, hex, hey;
+		unsigned hlx, hly;
 		frame_pos(f, offv[0], &hlx, &hly);
 		if (hly >= f->size_y)
 			break;
 
-		// TODO: actually set coloring.
+		unsigned draw_x = hlx - GUTTER - linumw, draw_y = hly;
+		for (size_t i = offv[0]; i < offv[1]; ++i) {
+			char ch = f->buf->conts[i];
+			
+			if (draw_x + linumw >= redge) {
+				draw_x = 0;
+				++draw_y;
+			}
+
+			if (draw_y >= f->size_y)
+				break;
+
+			switch (ch) {
+			case '\n':
+				draw_x = 0;
+				++draw_y;
+				break;
+			case '\t': {
+				unsigned tabrem = CONF_TABSIZE - draw_x % CONF_TABSIZE;
+				mvchgat(f->pos_y + draw_y, f->pos_x + GUTTER + linumw + draw_x,
+				        tabrem, 0, hl->colpair, NULL);
+				draw_x += tabrem;
+				break;
+			}
+			default:
+				mvchgat(f->pos_y + draw_y, f->pos_x + GUTTER + linumw + draw_x,
+				        1, 0, hl->colpair, NULL);
+				++draw_x;
+				break;
+			}
+		}
 		
 		off = offv[1];
 	}

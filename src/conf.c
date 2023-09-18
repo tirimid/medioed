@@ -1,12 +1,7 @@
 #include "conf.h"
 
 struct highlight conf_htab[] = {
-	{
-		.re_str = "#\\s*[a-zA-Z_][a-zA-Z0-9_]*",
-		.mode = "c",
-		.bg = COLOR_BLACK,
-		.fg = COLOR_CYAN,
-	},
+#include "conf-highlight/c.h"
 };
 size_t const conf_htab_size = sizeof(conf_htab) / sizeof(struct highlight);
 
