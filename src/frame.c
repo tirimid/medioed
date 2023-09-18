@@ -87,8 +87,9 @@ frame_draw(struct frame const *f, bool active)
 			continue;
 
 		for (size_t i = 1; i < f->size_y; ++i) {
-			mvaddch(f->pos_y + i, f->pos_x + m->pos, m->ch);
-			mvchgat(f->pos_y + i, f->pos_x + m->pos, 1, 0, m->colpair, NULL);
+			unsigned drawx = GUTTER + linum_width + m->pos;
+			mvaddch(f->pos_y + i, f->pos_x + drawx, m->ch);
+			mvchgat(f->pos_y + i, f->pos_x + drawx, 1, 0, m->colpair, NULL);
 		}
 	}
 	

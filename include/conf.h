@@ -36,17 +36,20 @@
 	"copyleft (c) Fuck Copyright\n" \
 	"\n" \
 	"basic keybinds:\n" \
-	"\tquit medioed              : " CONF_BIND_QUIT "\n" \
-	"\tnavigate forward one char : " CONF_BIND_NAVFWD_CH "\n" \
-	"\tnavigate forward one word : " CONF_BIND_NAVFWD_WORD "\n" \
-	"\tnavigate back one char    : " CONF_BIND_NAVBACK_CH "\n" \
-	"\tnavigate back one word    : " CONF_BIND_NAVBACK_WORD "\n" \
-	"\tnavigate down one line    : " CONF_BIND_NAVDOWN "\n" \
-	"\tnavigate up one line      : " CONF_BIND_NAVUP "\n" \
-	"\topen file                 : " CONF_BIND_OPEN_FILE "\n" \
-	"\tsave file                 : " CONF_BIND_SAVE_FILE "\n" \
+	"\tquit medioed               : " CONF_BIND_QUIT "\n" \
+	"\tnavigate forward one char  : " CONF_BIND_NAVFWD_CH "\n" \
+	"\tnavigate forward one word  : " CONF_BIND_NAVFWD_WORD "\n" \
+	"\tnavigate back one char     : " CONF_BIND_NAVBACK_CH "\n" \
+	"\tnavigate back one word     : " CONF_BIND_NAVBACK_WORD "\n" \
+	"\tnavigate down one line     : " CONF_BIND_NAVDOWN "\n" \
+	"\tnavigate up one line       : " CONF_BIND_NAVUP "\n" \
+	"\topen file                  : " CONF_BIND_OPEN_FILE "\n" \
+	"\tsave file                  : " CONF_BIND_SAVE_FILE "\n" \
 	"\n" \
-	"to customize visuals, controls, etc., edit `include/conf.h`\n"
+	"to customize medioed, edit:\n" \
+	"\t`include/conf.h`            : basic visual configuration, binds\n" \
+	"\t`include/conf-highlight/*`  : individual language syntax highlights\n" \
+	"\t`src/conf.c`                : visual margins\n"
 
 #define CONF_TABSIZE 4
 #define CONF_GUTTER_LEFT 1

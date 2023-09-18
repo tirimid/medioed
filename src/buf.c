@@ -67,6 +67,11 @@ buf_save(struct buf *b)
 	// and since no file is specified as the buffer source, nothing is done.
 	if (b->src_type != BUF_SRC_TYPE_FILE)
 		return 1;
+
+	// no point saving an unchanged file into itself.
+	// still, this isn't really an error.
+	if (!b->modified)
+		return 0;
 	
 	FILE *fp = fopen(b->src, "wb");
 	if (!fp)

@@ -160,7 +160,8 @@ addbuf(struct buf *b)
 	for (size_t i = 0; i < bufs.size; ++i) {
 		struct buf *ob = bufs.data[i];
 
-		if (b->src_type = BUF_SRC_TYPE_FILE && ob->src_type == BUF_SRC_TYPE_FILE
+		if (b->src_type == BUF_SRC_TYPE_FILE
+		    && ob->src_type == BUF_SRC_TYPE_FILE
 		    && !strcmp(b->src, ob->src)) {
 			buf_destroy(b);
 			return ob;
@@ -243,7 +244,7 @@ ask_again:;
 		return;
 
 	if (!strcmp(path, "y")) {
-		// TODO: add checks for orphaned frame themes and buffers.
+		// TODO: add checks for orphaned buffers.
 		
 		frame_destroy(frames.data[cur_frame]);
 		arraylist_rm(&frames, cur_frame);
