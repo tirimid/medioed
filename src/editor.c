@@ -46,7 +46,7 @@ static size_t cur_frame;
 static struct arraylist frames;
 static struct arraylist bufs;
 
-void
+int
 editor_init(int argc, char const *argv[])
 {
 	initscr();
@@ -55,8 +55,10 @@ editor_init(int argc, char const *argv[])
 	noecho();
 	curs_set(0);
 
-	if (conf_init() != 0)
-		return;
+	if (conf_init() != 0) {
+		endwin();
+		return 1;
+	}
 	
 	keybd_init();
 
@@ -91,6 +93,8 @@ editor_init(int argc, char const *argv[])
 
 	resetbinds();
 	arrangeframes();
+
+	return 0;
 }
 
 void
