@@ -103,6 +103,12 @@ editor_main_loop(void)
 	running = true;
 	
 	while (running) {
+		// ensure frames sharing buffers are in a valid state.
+		for (size_t i = 0; i < frames.size; ++i) {
+			struct frame *f = frames.data[i];
+			f->cursor = MIN(f->cursor, f->buf->size);
+		}
+		
 		if (frames.size > 0) {
 			for (size_t i = 0; i < frames.size; ++i)
 				frame_draw(frames.data[i], i == cur_frame);
