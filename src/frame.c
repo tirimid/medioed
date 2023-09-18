@@ -240,7 +240,7 @@ exechighlight(struct frame const *f, struct highlight const *hl, size_t redge,
 		for (size_t i = offv[0]; i < offv[1]; ++i) {
 			char ch = f->buf->conts[i];
 			
-			if (draw_x + linumw >= redge) {
+			if (draw_x >= redge) {
 				draw_x = 0;
 				++draw_y;
 			}
