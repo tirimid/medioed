@@ -47,9 +47,13 @@
 	"\tsave file                  : " CONF_BIND_SAVE_FILE "\n" \
 	"\n" \
 	"to customize medioed, edit:\n" \
-	"\t`include/conf.h`            : basic visual configuration, binds\n" \
-	"\t`include/conf-highlight/*`  : individual language syntax highlights\n" \
-	"\t`src/conf.c`                : visual margins\n"
+	"\t`include/conf.h`       : basic visual configuration, binds\n" \
+	"\t`include/highlight/*`  : individual language syntax highlights\n" \
+	"\t`include/mode/*        : individual language mode code\n" \
+	"\t`src/conf.c`           : visual margins\n" \
+	"\n" \
+	"after editing these files, check `include/conf.h` and `src/conf.c` to\n" \
+	"make sure that your updated configuration will be loaded correctly\n"
 
 #define CONF_TABSIZE 4
 #define CONF_GUTTER_LEFT 1

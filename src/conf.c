@@ -1,7 +1,7 @@
 #include "conf.h"
 
 struct highlight conf_htab[] = {
-#include "conf-highlight/c.h"
+#include "highlight/hl_c.h"
 };
 size_t const conf_htab_size = sizeof(conf_htab) / sizeof(struct highlight);
 

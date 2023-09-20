@@ -1,3 +1,6 @@
+#ifndef HL_C_H__
+#define HL_C_H__
+
 #define KEYWORD(kw) "(?<![a-zA-Z0-9_])" kw "(?![a-zA-Z0-0_])"
 
 #define HIGHLIGHT(_bg, _fg, _re_str) \
@@ -72,3 +75,5 @@ HIGHLIGHT(STRING_BG, STRING_FG, "\"(?:[^\"\\\\]|\\\\.)*\"")
 HIGHLIGHT(STRING_BG, STRING_FG, "'(?:[^'\\\\]|\\\\.)*'")
 HIGHLIGHT(COMMENT_BG, COMMENT_FG, "//.*")
 HIGHLIGHT(COMMENT_BG, COMMENT_FG, "\\/\\*(\\*(?!\\/)|[^*])*\\*\\/")
+
+#endif

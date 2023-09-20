@@ -445,12 +445,5 @@ sigwinch_handler(int arg)
 	
 	arrangeframes();
 	drawframes();
-
-	char size[16];
-	struct winsize tty_size;
-	ioctl(0, TIOCGWINSZ, &tty_size);
-	sprintf(size, "%d %d", tty_size.ws_row, tty_size.ws_col);
-	mvaddstr(0, 0, size);
-	
 	refresh();
 }
