@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -18,9 +19,9 @@
 #include "util.h"
 
 static struct buf *addbuf(struct buf *b);
-static struct theme *addtheme(struct theme *t);
 static struct frame *addframe(struct frame *f);
 static void arrangeframes(void);
+static void drawframes(void);
 static void bind_quit(void);
 static void bind_chgfwd_frame(void);
 static void bind_chgback_frame(void);
@@ -40,11 +41,13 @@ static void bind_navgoto(void);
 static void bind_del_ch(void);
 static void bind_del_word(void);
 static void resetbinds(void);
+static void sigwinch_handler(int arg);
 
 static bool running;
 static size_t cur_frame;
 static struct arraylist frames;
 static struct arraylist bufs;
+static void (*old_sigwinch_handler)(int);
 
 int
 editor_init(int argc, char const *argv[])
@@ -77,7 +80,8 @@ editor_init(int argc, char const *argv[])
 			if (stat(argv[i], &s) || !S_ISREG(s.st_mode)) {
 				char *msg = malloc(strlen(argv[i]) + 22);
 				sprintf(msg, "could not open file: %s", argv[i]);
-				
+
+				clear();
 				prompt_show(msg);
 				
 				free(msg);
@@ -90,6 +94,13 @@ editor_init(int argc, char const *argv[])
 			addframe(&f);
 		}
 	}
+
+	struct sigaction sa;
+	sigaction(SIGWINCH, NULL, &sa);
+	old_sigwinch_handler = sa.sa_handler;
+
+	sa.sa_handler = sigwinch_handler;
+	sigaction(SIGWINCH, &sa, NULL);
 
 	resetbinds();
 	arrangeframes();
@@ -108,25 +119,8 @@ editor_main_loop(void)
 			struct frame *f = frames.data[i];
 			f->cursor = MIN(f->cursor, f->buf->size);
 		}
-		
-		if (frames.size > 0) {
-			for (size_t i = 0; i < frames.size; ++i)
-				frame_draw(frames.data[i], i == cur_frame);
-		} else {
-			struct winsize tty_size;
-			ioctl(0, TIOCGWINSZ, &tty_size);
 
-			// clear display characters.
-			for (unsigned i = 0; i < tty_size.ws_row; ++i) {
-				for (unsigned j = 0; j < tty_size.ws_col; ++j)
-					mvaddch(i, j, ' ');
-			}
-
-			// set base display attributes.
-			for (unsigned i = 0; i < tty_size.ws_row; ++i)
-				mvchgat(i, 0, tty_size.ws_col, 0, conf_gnorm, NULL);
-		}
-
+		drawframes();
 		refresh();
 		
 		int key = keybd_await_input();
@@ -215,6 +209,16 @@ arrangeframes(void)
 		if (f->pos_y + f->size_y > tty_size.ws_row)
 			f->size_y = tty_size.ws_row - f->pos_y;
 	}
+}
+
+static void
+drawframes(void)
+{
+	if (frames.size > 0) {
+		for (size_t i = 0; i < frames.size; ++i)
+			frame_draw(frames.data[i], i == cur_frame);
+	} else
+		clear();
 }
 
 static void
@@ -432,4 +436,21 @@ resetbinds(void)
 	keybd_bind(CONF_BIND_NAVGOTO, bind_navgoto);
 	keybd_bind(CONF_BIND_DEL_CH, bind_del_ch);
 	keybd_bind(CONF_BIND_DEL_WORD, bind_del_word);
+}
+
+static void
+sigwinch_handler(int arg)
+{
+	old_sigwinch_handler(arg);
+	
+	arrangeframes();
+	drawframes();
+
+	char size[16];
+	struct winsize tty_size;
+	ioctl(0, TIOCGWINSZ, &tty_size);
+	sprintf(size, "%d %d", tty_size.ws_row, tty_size.ws_col);
+	mvaddstr(0, 0, size);
+	
+	refresh();
 }
