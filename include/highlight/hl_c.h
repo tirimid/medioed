@@ -5,7 +5,7 @@
 
 #define HIGHLIGHT(_bg, _fg, _re_str) \
 	{ \
-		.mode = "c", \
+		.localmode = "c", \
 		.bg = _bg, \
 		.fg = _fg, \
 		.re_str = _re_str \

@@ -40,6 +40,8 @@ static void bind_navln_end(void);
 static void bind_navgoto(void);
 static void bind_del_ch(void);
 static void bind_del_word(void);
+static void bind_chgmode_global(void);
+static void bind_chgmode_local(void);
 static void resetbinds(void);
 static void sigwinch_handler(int arg);
 
@@ -412,6 +414,21 @@ bind_del_word(void)
 }
 
 static void
+bind_chgmode_global(void)
+{
+	prompt_show("this keybind is not implemented yet!");
+}
+
+static void
+bind_chgmode_local(void)
+{
+	char *new_lm = prompt_ask("new frame localmode: ", NULL, NULL);
+	struct frame *f = frames.data[cur_frame];
+	free(f->localmode);
+	f->localmode = new_lm;
+}
+
+static void
 resetbinds(void)
 {
 	// quit and reinit to reset current keybind buffer and bind information.
@@ -436,6 +453,8 @@ resetbinds(void)
 	keybd_bind(CONF_BIND_NAVGOTO, bind_navgoto);
 	keybd_bind(CONF_BIND_DEL_CH, bind_del_ch);
 	keybd_bind(CONF_BIND_DEL_WORD, bind_del_word);
+	keybd_bind(CONF_BIND_CHGMODE_GLOBAL, bind_chgmode_global);
+	keybd_bind(CONF_BIND_CHGMODE_LOCAL, bind_chgmode_local);
 }
 
 static void

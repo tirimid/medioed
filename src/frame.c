@@ -31,6 +31,7 @@ frame_create(char const *name, struct buf *buf)
 		.buf = buf,
 		.cursor = 0,
 		.buf_start = 0,
+		.localmode = strdup("\0"),
 	};
 }
 
@@ -38,6 +39,7 @@ void
 frame_destroy(struct frame *f)
 {
 	free(f->name);
+	free(f->localmode);
 }
 
 void
@@ -224,6 +226,9 @@ static void
 exechighlight(struct frame const *f, struct highlight const *hl, size_t redge,
               unsigned linumw)
 {
+	if (strcmp(hl->localmode, f->localmode))
+		return;
+	
 	pcre2_match_data *md = pcre2_match_data_create_from_pattern(hl->re, NULL);
 	PCRE2_SIZE off = f->buf_start, len = f->buf->size;
 	PCRE2_SPTR sub = (PCRE2_SPTR)f->buf->conts;

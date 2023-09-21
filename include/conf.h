@@ -26,6 +26,8 @@
 #define CONF_BIND_NAVGOTO "M-g M-g"
 #define CONF_BIND_DEL_CH "<BACKSPC>"
 #define CONF_BIND_DEL_WORD "M-<BACKSPC>"
+#define CONF_BIND_CHGMODE_GLOBAL "C-c C-g g"
+#define CONF_BIND_CHGMODE_LOCAL "C-c C-g l"
 
 #define CONF_GREET_TEXT \
 	"welcome to medioed, the (medio)cre text (ed)itor\n" \
@@ -75,7 +77,7 @@
 struct highlight {
 	pcre2_code *re;
 	char const *re_str;
-	char const *mode;
+	char const *localmode;
 	int colpair;
 	uint8_t bg, fg;
 };

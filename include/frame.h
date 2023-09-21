@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <unistd.h>
+
 #include "buf.h"
 #include "util.h"
 
@@ -17,7 +19,9 @@ struct frame {
 	
 	// use `frame_(rel)move_cursor()` instead of writing directly, otherwise
 	// visual frame effects will be messed up (scrolling, wrapping, etc.).
-	size_t buf_start, cursor; 
+	size_t buf_start, cursor;
+
+	char *localmode;
 };
 
 struct frame frame_create(char const *name, struct buf *buf);
