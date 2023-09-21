@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include <ncurses.h>
@@ -15,6 +16,7 @@
 #include "conf.h"
 #include "frame.h"
 #include "keybd.h"
+#include "mode.h"
 #include "prompt.h"
 #include "util.h"
 
@@ -42,6 +44,7 @@ static void bind_del_ch(void);
 static void bind_del_word(void);
 static void bind_chgmode_global(void);
 static void bind_chgmode_local(void);
+static void bind_create_scrap(void);
 static void resetbinds(void);
 static void sigwinch_handler(int arg);
 
@@ -62,6 +65,7 @@ editor_init(int argc, char const *argv[])
 
 	if (conf_init() != 0) {
 		endwin();
+		fputs("failed on conf_init()!\n", stderr);
 		return 1;
 	}
 	
@@ -134,8 +138,10 @@ editor_main_loop(void)
 				break;
 			
 			struct frame *f = frames.data[cur_frame];
+			
 			buf_write_ch(f->buf, f->cursor, key);
 			frame_relmove_cursor(f, f->buf->writable, 0, true);
+			mode_keyupdate(f, key);
 			
 			break;
 		}
@@ -232,6 +238,9 @@ bind_quit(void)
 static void
 bind_chgfwd_frame(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	cur_frame = (cur_frame + 1) % frames.size;
 	resetbinds();
 }
@@ -239,6 +248,9 @@ bind_chgfwd_frame(void)
 static void
 bind_chgback_frame(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	cur_frame = (cur_frame == 0 ? frames.size : cur_frame) - 1;
 	resetbinds();
 }
@@ -246,6 +258,9 @@ bind_chgback_frame(void)
 static void
 bind_focus_frame(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	arraylist_swap(&frames, 0, cur_frame);
 	cur_frame = 0;
 	arrangeframes();
@@ -254,6 +269,9 @@ bind_focus_frame(void)
 static void
 bind_kill_frame(void)
 {
+	if (frames.size == 0)
+		return;
+	
 ask_again:;
 	char *path = prompt_ask("kill active frame? (y/N) ", NULL, NULL);
 	if (!path)
@@ -307,6 +325,9 @@ bind_open_file(void)
 static void
 bind_save_file(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	struct frame *f = frames.data[cur_frame];
 	struct buf *b = f->buf;
 
@@ -328,54 +349,81 @@ bind_save_file(void)
 static void
 bind_navfwd_ch(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	frame_relmove_cursor(frames.data[cur_frame], 1, 0, true);
 }
 
 static void
 bind_navfwd_word(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
 bind_navback_ch(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	frame_relmove_cursor(frames.data[cur_frame], -1, 0, true);
 }
 
 static void
 bind_navback_word(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
 bind_navdown(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	frame_relmove_cursor(frames.data[cur_frame], 0, 1, false);
 }
 
 static void
 bind_navup(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	frame_relmove_cursor(frames.data[cur_frame], 0, -1, false);
 }
 
 static void
 bind_navln_start(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	frame_relmove_cursor(frames.data[cur_frame], -INT_MAX, 0, false);
 }
 
 static void
 bind_navln_end(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	frame_relmove_cursor(frames.data[cur_frame], INT_MAX, 0, false);
 }
 
 static void
 bind_navgoto(void)
 {
+	if (frames.size == 0)
+		return;
+	
 ask_again:;
 	char *linum_text = prompt_ask("goto line: ", NULL, NULL);
 	if (!linum_text)
@@ -399,6 +447,9 @@ ask_again:;
 static void
 bind_del_ch(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	struct frame *f = frames.data[cur_frame];
 	
 	if (f->cursor > 0 && f->buf->writable) {
@@ -410,22 +461,40 @@ bind_del_ch(void)
 static void
 bind_del_word(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
 bind_chgmode_global(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
 bind_chgmode_local(void)
 {
+	if (frames.size == 0)
+		return;
+	
 	char *new_lm = prompt_ask("new frame localmode: ", NULL, NULL);
+	if (!new_lm)
+		return;
+	
 	struct frame *f = frames.data[cur_frame];
 	free(f->localmode);
 	f->localmode = new_lm;
+}
+
+static void
+bind_create_scrap(void)
+{
+	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
@@ -455,6 +524,7 @@ resetbinds(void)
 	keybd_bind(CONF_BIND_DEL_WORD, bind_del_word);
 	keybd_bind(CONF_BIND_CHGMODE_GLOBAL, bind_chgmode_global);
 	keybd_bind(CONF_BIND_CHGMODE_LOCAL, bind_chgmode_local);
+	keybd_bind(CONF_BIND_CREATE_SCRAP, bind_create_scrap);
 }
 
 static void

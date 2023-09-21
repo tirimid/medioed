@@ -1,5 +1,11 @@
 #include "conf.h"
 
+#include <stdio.h>
+
+#include "mode/mode_c.h"
+
+#define ERRBUF_SIZE 512
+
 struct highlight conf_htab[] = {
 #include "highlight/hl_c.h"
 };
@@ -15,6 +21,16 @@ struct margin conf_mtab[] = {
 	},
 };
 size_t const conf_mtab_size = sizeof(conf_mtab) / sizeof(struct margin);
+
+struct mode conf_lmtab[] = {
+	{
+		.name = "c",
+		.init = mode_c_init,
+		.quit = mode_c_quit,
+		.keypress = mode_c_keypress,
+	},
+};
+size_t const conf_lmtab_size = sizeof(conf_lmtab) / sizeof(struct mode);
 
 int conf_gnorm, conf_ghighlight;
 int conf_norm, conf_linum, conf_cursor;
@@ -36,8 +52,15 @@ conf_init(void)
 		uint64_t flags = PCRE2_ZERO_TERMINATED;
 		PCRE2_SIZE erroff;
 		PCRE2_SPTR pat = (PCRE2_SPTR)hl->re_str;
-		if (!(hl->re = pcre2_compile(pat, flags, 0, &rc, &erroff, NULL)))
+		if (!(hl->re = pcre2_compile(pat, flags, 0, &rc, &erroff, NULL))) {
+			char errbuf[ERRBUF_SIZE];
+			pcre2_get_error_message(rc, (PCRE2_UCHAR *)errbuf, ERRBUF_SIZE);
+			
+			fprintf(stderr, "failed to compile regex: '%s'!\n", hl->re_str);
+			fprintf(stderr, "pcre2 error at %zu: '%s'!\n", erroff, errbuf);
+			
 			return 1;
+		}
 		
 		hl->colpair = alloc_pair(hl->fg, hl->bg);
 	}

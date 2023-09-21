@@ -1,16 +1,16 @@
 #include "mode/mode_c.h"
 
 void
-mode_c_init(struct buf *b)
+mode_c_init(struct frame *f)
 {
 }
 
 void
-mode_c_quit(struct buf *b)
+mode_c_quit(struct frame *f)
 {
 }
 
 void
-mode_c_keypress(struct buf *b, int k)
+mode_c_keypress(struct frame *f, int k)
 {
 }

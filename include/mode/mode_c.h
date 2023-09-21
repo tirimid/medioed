@@ -1,10 +1,10 @@
 #ifndef MODE_C_H__
 #define MODE_C_H__
 
-#include "buf.h"
+#include "frame.h"
 
-void mode_c_init(struct buf *b);
-void mode_c_quit(struct buf *b);
-void mode_c_keypress(struct buf *b, int k);
+void mode_c_init(struct frame *f);
+void mode_c_quit(struct frame *f);
+void mode_c_keypress(struct frame *f, int k);
 
 #endif

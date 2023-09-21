@@ -8,6 +8,8 @@
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
+#include "mode.h"
+
 #define CONF_BIND_QUIT "C-x C-c"
 #define CONF_BIND_CHGFWD_FRAME "C-x b"
 #define CONF_BIND_CHGBACK_FRAME "C-c b"
@@ -28,6 +30,7 @@
 #define CONF_BIND_DEL_WORD "M-<BACKSPC>"
 #define CONF_BIND_CHGMODE_GLOBAL "C-c C-g g"
 #define CONF_BIND_CHGMODE_LOCAL "C-c C-g l"
+#define CONF_BIND_CREATE_SCRAP "C-c n"
 
 #define CONF_GREET_TEXT \
 	"welcome to medioed, the (medio)cre text (ed)itor\n" \
@@ -47,6 +50,7 @@
 	"\tnavigate up one line       : " CONF_BIND_NAVUP "\n" \
 	"\topen file                  : " CONF_BIND_OPEN_FILE "\n" \
 	"\tsave file                  : " CONF_BIND_SAVE_FILE "\n" \
+	"\tcreate scrap buffer        : " CONF_BIND_CREATE_SCRAP "\n" \
 	"\n" \
 	"to customize medioed, edit:\n" \
 	"\t`include/conf.h`       : basic visual configuration, binds\n" \
@@ -55,7 +59,12 @@
 	"\t`src/conf.c`           : visual margins\n" \
 	"\n" \
 	"after editing these files, check `include/conf.h` and `src/conf.c` to\n" \
-	"make sure that your updated configuration will be loaded correctly\n"
+	"make sure that your updated configuration will be loaded correctly\n" \
+	"\n" \
+	"in order to properly debug mincbuild at runtime (e.g. to test that\n" \
+	"your configuration works), you will need to redirect `stderr` to a\n" \
+	"different file, as otherwise some error output will not be shown due\n" \
+	"to ncurses resetting the TTY `stderr` upon running\n"
 
 #define CONF_TABSIZE 4
 #define CONF_GUTTER_LEFT 1
@@ -97,6 +106,9 @@ extern size_t const conf_htab_size;
 
 extern struct margin conf_mtab[];
 extern size_t const conf_mtab_size;
+
+extern struct mode conf_lmtab[];
+extern size_t const conf_lmtab_size;
 
 extern int conf_gnorm, conf_ghighlight;
 extern int conf_norm, conf_linum, conf_cursor;

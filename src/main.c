@@ -6,7 +6,7 @@ int
 main(int argc, char const *argv[])
 {
 	if (editor_init(argc, argv)) {
-		fputs("critical initialization error\n", stderr);
+		fputs("critical initialization error!\n", stderr);
 		return 1;
 	}
 	
