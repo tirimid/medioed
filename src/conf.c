@@ -14,7 +14,13 @@ size_t const conf_htab_size = sizeof(conf_htab) / sizeof(struct highlight);
 // `pos` is zero-indexed.
 struct margin conf_mtab[] = {
 	{
-		.pos = 79,
+		.pos = 80,
+		.ch = '|',
+		.fg = COLOR_WHITE,
+		.bg = COLOR_BLACK,
+	},
+	{
+		.pos = 110,
 		.ch = '|',
 		.fg = COLOR_RED,
 		.bg = COLOR_BLACK,

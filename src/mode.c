@@ -21,14 +21,12 @@ mode_set(char const *name, struct frame *f)
 	struct mode const *oldm = mode_get();
 	
 	for (size_t i = 0; i < conf_lmtab_size; ++i) {
-		struct mode const *m = &conf_lmtab[i];
-		
-		if (!strcmp(name, m->name)) {
+		if (!strcmp(name, conf_lmtab[i].name)) {
 			if (oldm)
 				oldm->quit(f);
 
 			cur_mode = i;
-			m->init(f);
+			conf_lmtab[i].init(f);
 			
 			return;
 		}
@@ -40,9 +38,6 @@ mode_set(char const *name, struct frame *f)
 void
 mode_keyupdate(struct frame *f, int k)
 {
-	if (cur_mode == -1)
-		return;
-
-	struct mode *m = &conf_lmtab[cur_mode];
-	m->keypress(f, k);
+	if (cur_mode != -1)
+		conf_lmtab[cur_mode].keypress(f, k);
 }

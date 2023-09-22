@@ -222,11 +222,11 @@ arrangeframes(void)
 static void
 drawframes(void)
 {
+	clear();
 	if (frames.size > 0) {
 		for (size_t i = 0; i < frames.size; ++i)
 			frame_draw(frames.data[i], i == cur_frame);
-	} else
-		clear();
+	}
 }
 
 static void
@@ -429,10 +429,16 @@ ask_again:;
 	if (!linum_text)
 		return;
 
+	if (!*linum_text) {
+		free(linum_text);
+		prompt_show("expected a line number!");
+		goto ask_again;
+	}
+
 	for (char const *c = linum_text; *c; ++c) {
 		if (!isdigit(*c)) {
 			free(linum_text);
-			prompt_show("expected a valid line number!");
+			prompt_show("invalid line number!");
 			goto ask_again;
 		}
 	}

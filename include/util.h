@@ -29,8 +29,7 @@ void arraylist_add(struct arraylist *al, void const *new, size_t size);
 void arraylist_rm(struct arraylist *al, size_t ind);
 void arraylist_swap(struct arraylist *al, size_t ind_a, size_t ind_b);
 struct arraylist arraylist_copy(struct arraylist const *al);
-ssize_t arraylist_find(struct arraylist const *al, void const *item,
-                       size_t size);
+ssize_t arraylist_find(struct arraylist const *al, void const *item, size_t size);
 
 struct string string_create(void);
 void string_destroy(struct string *s);

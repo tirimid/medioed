@@ -58,15 +58,16 @@
 	"\t`include/mode/*        : individual language mode code\n" \
 	"\t`src/conf.c`           : visual margins\n" \
 	"\n" \
-	"after editing these files, check `include/conf.h` and `src/conf.c` to\n" \
-	"make sure that your updated configuration will be loaded correctly\n" \
+	"after editing these files, check `include/conf.h` and `src/conf.c`\n" \
+	"to make sure that your updated configuration will be loaded\n" \
+	"correctly\n" \
 	"\n" \
 	"in order to properly debug mincbuild at runtime (e.g. to test that\n" \
 	"your configuration works), you will need to redirect `stderr` to a\n" \
-	"different file, as otherwise some error output will not be shown due\n" \
-	"to ncurses resetting the TTY `stderr` upon running\n"
+	"different file, as otherwise some error output will not be shown\n" \
+	"due to ncurses resetting the TTY `stderr` upon running\n"
 
-#define CONF_TABSIZE 4
+#define CONF_TABSIZE 8
 #define CONF_GUTTER_LEFT 1
 #define CONF_GUTTER_RIGHT 1
 #define CONF_BUFMOD_MARK "~~ (*)"

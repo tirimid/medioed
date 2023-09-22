@@ -27,19 +27,17 @@ prompt_show(char const *text)
 }
 
 char *
-prompt_ask(char const *text, void (*complete)(char **, size_t *, void *),
-           void *compdata)
+prompt_ask(char const *text, void (*complete)(char **, size_t *, void *), void *compdata)
 {
 	drawbox(text);
 
-	struct winsize tty_size;
-	ioctl(0, TIOCGWINSZ, &tty_size);
-	unsigned ttyx = tty_size.ws_col, ttyy = tty_size.ws_row;
+	struct winsize ws;
+	ioctl(0, TIOCGWINSZ, &ws);
 
 	// determine where the response should be rendered.
-	unsigned rrow = ttyy - 1, rcol = 0;
+	unsigned rrow = ws.ws_row - 1, rcol = 0;
 	for (char const *c = text; *c; ++c) {
-		if (*c == '\n' || ++rcol > ttyx)
+		if (*c == '\n' || ++rcol > ws.ws_col)
 			rcol = 0;
 	}
 
@@ -83,16 +81,16 @@ prompt_ask(char const *text, void (*complete)(char **, size_t *, void *),
 		// interactively render response.
 		if (csr < dstart)
 			dstart = csr;
-		else if (csr - dstart >= ttyx - rcol - 1)
-			dstart = csr - ttyx + rcol + 1;
+		else if (csr - dstart >= ws.ws_col - rcol - 1)
+			dstart = csr - ws.ws_col + rcol + 1;
 
-		for (unsigned i = rcol; i < ttyx; ++i)
+		for (unsigned i = rcol; i < ws.ws_col; ++i)
 			mvaddch(rrow, i, ' ');
 		
-		for (size_t i = 0; i < resp_len - dstart && i < ttyx - rcol; ++i)
+		for (size_t i = 0; i < resp_len - dstart && i < ws.ws_col - rcol; ++i)
 			mvaddch(rrow, rcol + i, resp[dstart + i]);
 
-		mvchgat(rrow, rcol, ttyx - rcol, 0, conf_gnorm, NULL);
+		mvchgat(rrow, rcol, ws.ws_col - rcol, 0, conf_gnorm, NULL);
 		mvchgat(rrow, rcol + csr - dstart, 1, 0, conf_ghighlight, NULL);
 
 		refresh();
@@ -110,22 +108,22 @@ prompt_complete_path(char **resp, size_t *resp_len, void *data)
 static void
 drawbox(char const *text)
 {
-	struct winsize tty_size;
-	ioctl(0, TIOCGWINSZ, &tty_size);
+	struct winsize ws;
+	ioctl(0, TIOCGWINSZ, &ws);
 
 	size_t text_size_y = 1, linewidth = 0;
 	for (char const *c = text; *c; ++c) {
-		if (*c == '\n' || ++linewidth > tty_size.ws_col) {
+		if (*c == '\n' || ++linewidth > ws.ws_col) {
 			linewidth = 0;
 			++text_size_y;
 		}
 	}
 
-	size_t box_top = tty_size.ws_row - text_size_y;
+	size_t box_top = ws.ws_row - text_size_y;
 
 	// clear box.
-	for (size_t i = box_top; i < tty_size.ws_row; ++i) {
-		for (size_t j = 0; j < tty_size.ws_col; ++j)
+	for (size_t i = box_top; i < ws.ws_row; ++i) {
+		for (size_t j = 0; j < ws.ws_col; ++j)
 			mvaddch(i, j, ' ');
 	}
 	
@@ -133,8 +131,8 @@ drawbox(char const *text)
 	mvaddstr(box_top, 0, text);
 
 	// set coloration.
-	for (size_t i = box_top; i < tty_size.ws_row; ++i)
-		mvchgat(i, 0, tty_size.ws_col, 0, conf_gnorm, NULL);
+	for (size_t i = box_top; i < ws.ws_row; ++i)
+		mvchgat(i, 0, ws.ws_col, 0, conf_gnorm, NULL);
 
 	refresh();
 }
