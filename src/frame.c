@@ -12,7 +12,6 @@
 #define GUTTER (CONF_GUTTER_LEFT + CONF_GUTTER_RIGHT)
 
 static unsigned getlinumw(struct frame const *f);
-static void puthlch(struct frame const *f, int colpair, char ch, unsigned *x, unsigned *y);
 static void exechighlight(struct frame const *f, struct highlight const *hl);
 static void drawline(struct frame const *f, unsigned *line, size_t *dcsr);
 
@@ -213,38 +212,6 @@ getlinumw(struct frame const *f)
 }
 
 static void
-puthlch(struct frame const *f, int colpair, char ch, unsigned *x, unsigned *y)
-{
-	unsigned linumw = getlinumw(f);
-	
-	if (*x >= f->size_x - GUTTER - linumw) {
-		*x = 0;
-		++*y;
-	}
-
-	if (*y >= f->size_y)
-		return;
-
-	unsigned w;
-	
-	switch (ch) {
-	case '\n':
-		*x = 0;
-		++*y;
-		return;
-	case '\t':
-		w = CONF_TABSIZE - *x % CONF_TABSIZE;
-		break;
-	default:
-		w = 1;
-		break;
-	}
-
-	mvchgat(f->pos_y + *y, f->pos_x + GUTTER + linumw + *x, w, 0, colpair, NULL);
-	*x += w;
-}
-
-static void
 exechighlight(struct frame const *f, struct highlight const *hl)
 {
 	if (strcmp(hl->localmode, f->localmode))
@@ -252,7 +219,7 @@ exechighlight(struct frame const *f, struct highlight const *hl)
 	
 	pcre2_match_data *md = pcre2_match_data_create_from_pattern(hl->re, NULL);
 	PCRE2_SIZE off = f->buf_start;
-	unsigned linumw = getlinumw(f);
+	unsigned linumw = getlinumw(f), ledge = GUTTER + linumw;
 	while (pcre2_match(hl->re, (PCRE2_SPTR)f->buf->conts, f->buf->size, off, 0, md, NULL) >= 0) {
 		PCRE2_SIZE *offv = pcre2_get_ovector_pointer(md);
 		
@@ -261,9 +228,34 @@ exechighlight(struct frame const *f, struct highlight const *hl)
 		if (hly >= f->size_y)
 			break;
 
-		unsigned x = hlx - GUTTER - linumw, y = hly;
-		for (size_t i = offv[0]; i < offv[1]; ++i)
-			puthlch(f, hl->colpair, f->buf->conts[i], &x, &y);
+		unsigned x = hlx - ledge, y = hly;
+		for (size_t i = offv[0]; i < offv[1]; ++i) {
+			if (x >= f->size_x - ledge) {
+				x = 0;
+				++y;
+			}
+
+			if (y >= f->size_y)
+				break;
+
+			unsigned w;
+	
+			switch (f->buf->conts[i]) {
+			case '\n':
+				x = 0;
+				++y;
+				continue;
+			case '\t':
+				w = CONF_TABSIZE - x % CONF_TABSIZE;
+				break;
+			default:
+				w = 1;
+				break;
+			}
+
+			mvchgat(f->pos_y + y, f->pos_x + ledge + x, w, hl->attr, hl->colpair, NULL);
+			x += w;
+		}
 		
 		off = offv[1];
 	}

@@ -223,10 +223,8 @@ static void
 drawframes(void)
 {
 	clear();
-	if (frames.size > 0) {
-		for (size_t i = 0; i < frames.size; ++i)
-			frame_draw(frames.data[i], i == cur_frame);
-	}
+	for (size_t i = 0; i < frames.size; ++i)
+		frame_draw(frames.data[i], i == cur_frame);
 }
 
 static void
@@ -238,9 +236,6 @@ bind_quit(void)
 static void
 bind_chgfwd_frame(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	cur_frame = (cur_frame + 1) % frames.size;
 	resetbinds();
 }
@@ -248,9 +243,6 @@ bind_chgfwd_frame(void)
 static void
 bind_chgback_frame(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	cur_frame = (cur_frame == 0 ? frames.size : cur_frame) - 1;
 	resetbinds();
 }
@@ -258,9 +250,6 @@ bind_chgback_frame(void)
 static void
 bind_focus_frame(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	arraylist_swap(&frames, 0, cur_frame);
 	cur_frame = 0;
 	arrangeframes();
@@ -269,20 +258,33 @@ bind_focus_frame(void)
 static void
 bind_kill_frame(void)
 {
-	if (frames.size == 0)
-		return;
-	
 ask_again:;
 	char *path = prompt_ask("kill active frame? (y/N) ", NULL, NULL);
 	if (!path)
 		return;
 
 	if (!strcmp(path, "y")) {
-		// TODO: add checks for orphaned buffers.
-		
 		frame_destroy(frames.data[cur_frame]);
 		arraylist_rm(&frames, cur_frame);
 		cur_frame = cur_frame > 0 ? cur_frame - 1 : 0;
+
+		// destroy orphaned buffers.
+		for (size_t i = 0; i < bufs.size; ++i) {
+			bool orphan = true;
+			for (size_t j = 0; j < frames.size; ++j) {
+				struct frame const *f = frames.data[j];
+				if (bufs.data[i] == f->buf) {
+					orphan = false;
+					break;
+				}
+			}
+
+			if (orphan) {
+				buf_destroy(bufs.data[i]);
+				arraylist_rm(&bufs, i);
+				--i;
+			}
+		}
 
 		resetbinds();
 		arrangeframes();
@@ -294,6 +296,12 @@ ask_again:;
 		free(path);
 		prompt_show("expected either 'y' or 'n'!");
 		goto ask_again;
+	}
+
+	if (frames.size == 0) {
+		struct buf b = buf_create(true);
+		struct frame f = frame_create("*scratch*", addbuf(&b));
+		addframe(&f);
 	}
 }
 
@@ -325,18 +333,14 @@ bind_open_file(void)
 static void
 bind_save_file(void)
 {
-	if (frames.size == 0)
-		return;
-	
-	struct frame *f = frames.data[cur_frame];
-	struct buf *b = f->buf;
+	struct buf *b = ((struct frame *)frames.data[cur_frame])->buf;
 
 	if (b->src_type == BUF_SRC_TYPE_FRESH) {
 		b->src_type = BUF_SRC_TYPE_FILE;
 		b->src = prompt_ask("save to file: ", prompt_complete_path, NULL);
 	}
 
-	// no path was given as source for new buffer, so it is reset to `FRESH`.
+	// no path was given as source for new buffer, so it is set to `FRESH`.
 	if (!b->src) {
 		b->src_type = BUF_SRC_TYPE_FRESH;
 		return;
@@ -349,81 +353,54 @@ bind_save_file(void)
 static void
 bind_navfwd_ch(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	frame_relmove_cursor(frames.data[cur_frame], 1, 0, true);
 }
 
 static void
 bind_navfwd_word(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
 bind_navback_ch(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	frame_relmove_cursor(frames.data[cur_frame], -1, 0, true);
 }
 
 static void
 bind_navback_word(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
 bind_navdown(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	frame_relmove_cursor(frames.data[cur_frame], 0, 1, false);
 }
 
 static void
 bind_navup(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	frame_relmove_cursor(frames.data[cur_frame], 0, -1, false);
 }
 
 static void
 bind_navln_start(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	frame_relmove_cursor(frames.data[cur_frame], -INT_MAX, 0, false);
 }
 
 static void
 bind_navln_end(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	frame_relmove_cursor(frames.data[cur_frame], INT_MAX, 0, false);
 }
 
 static void
 bind_navgoto(void)
 {
-	if (frames.size == 0)
-		return;
-	
 ask_again:;
 	char *linum_text = prompt_ask("goto line: ", NULL, NULL);
 	if (!linum_text)
@@ -453,9 +430,6 @@ ask_again:;
 static void
 bind_del_ch(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	struct frame *f = frames.data[cur_frame];
 	
 	if (f->cursor > 0 && f->buf->writable) {
@@ -467,27 +441,23 @@ bind_del_ch(void)
 static void
 bind_del_word(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	prompt_show("this keybind is not implemented yet!");
 }
 
 static void
 bind_chgmode_global(void)
 {
-	if (frames.size == 0)
+	char *new_gm = prompt_ask("new globalmode: ", NULL, NULL);
+	if (!new_gm)
 		return;
-	
-	prompt_show("this keybind is not implemented yet!");
+
+	mode_set(new_gm, frames.data[cur_frame]);
+	free(new_gm);
 }
 
 static void
 bind_chgmode_local(void)
 {
-	if (frames.size == 0)
-		return;
-	
 	char *new_lm = prompt_ask("new frame localmode: ", NULL, NULL);
 	if (!new_lm)
 		return;

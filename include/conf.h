@@ -89,6 +89,7 @@ struct highlight {
 	char const *re_str;
 	char const *localmode;
 	int colpair;
+	attr_t attr;
 	uint8_t bg, fg;
 };
 
