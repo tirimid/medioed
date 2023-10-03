@@ -13,6 +13,7 @@
 #define ESSPECKEY_NAME_SPC "SPC"
 #define ESSPECKEY_NAME_ENTER "ENTER"
 #define IGNORE_KEY 0x12349876
+#define MAXBINDSIZE 128
 
 struct keybind {
 	char *keyseq;
@@ -23,7 +24,7 @@ static char const *esspeckey_to_termkey(char const **essk);
 static char *eskeyseq_to_termkeyseq(char const *eskeyseq);
 
 static struct arraylist binds;
-static char cur_bind[128];
+static char cur_bind[MAXBINDSIZE];
 
 void
 keybd_init(void)
@@ -82,7 +83,10 @@ keybd_await_input(void)
 	int k = getch();
 	char const *kname = keyname(k);
 
-	sprintf(cur_bind, "%s%s ", cur_bind, kname);
+	char bindcp[MAXBINDSIZE];
+	memcpy(bindcp, cur_bind, sizeof(char) * MAXBINDSIZE);
+	sprintf(bindcp, "%s%s ", cur_bind, kname);
+	memcpy(cur_bind, bindcp, sizeof(char) * MAXBINDSIZE);
 	
 	for (size_t i = 0; i < binds.size; ++i) {
 		struct keybind const *bind = binds.data[i];
