@@ -11,7 +11,6 @@
 // padding size around line numbers.
 #define GUTTER (CONF_GUTTER_LEFT + CONF_GUTTER_RIGHT)
 
-static unsigned getlinumw(struct frame const *f);
 static void exechighlight(struct frame const *f, struct highlight const *hl);
 static void drawline(struct frame const *f, unsigned *line, size_t *dcsr);
 
@@ -20,6 +19,12 @@ frame_create(char const *name, struct buf *buf)
 {
 	struct winsize ws;
 	ioctl(0, TIOCGWINSZ, &ws);
+
+	unsigned bex, bey;
+	buf_pos(buf, buf->size, &bex, &bey);
+	unsigned linumw = 0;
+	for (unsigned i = MIN(bey, ws.ws_row) + 1; i > 0; i /= 10)
+		++linumw;
 	
 	return (struct frame){
 		.name = strdup(name),
@@ -30,6 +35,7 @@ frame_create(char const *name, struct buf *buf)
 		.buf = buf,
 		.cursor = 0,
 		.buf_start = 0,
+		.linumw = linumw,
 		.localmode = strdup("\0"),
 	};
 }
@@ -48,8 +54,7 @@ frame_draw(struct frame const *f, bool active)
 	buf_pos(f->buf, f->buf_start, &bsx, &bsy);
 	buf_pos(f->buf, f->buf->size, &bex, &bey);
 	
-	unsigned linumw = getlinumw(f);
-	unsigned ledge = GUTTER + linumw;
+	unsigned ledge = GUTTER + f->linumw;
 	
 	// write frame name and buffer modification marker.
 	for (unsigned i = 0; f->name[i] && i < f->size_x; ++i)
@@ -87,7 +92,7 @@ frame_draw(struct frame const *f, bool active)
 		if (linum_ind++ <= bey - bsy) {
 			char drawtext[16];
 			snprintf(drawtext, 16, "%u", bsy + linum_ind);
-			mvaddstr(f->pos_y + i, f->pos_x + CONF_GUTTER_LEFT + linumw - strlen(drawtext), drawtext);
+			mvaddstr(f->pos_y + i, f->pos_x + CONF_GUTTER_LEFT + f->linumw - strlen(drawtext), drawtext);
 		}
 
 		drawline(f, &i, &drawcsr);
@@ -110,8 +115,7 @@ frame_draw(struct frame const *f, bool active)
 void
 frame_pos(struct frame const *f, size_t pos, unsigned *out_x, unsigned *out_y)
 {
-	unsigned linumw = getlinumw(f);
-	unsigned redge = f->size_x - GUTTER - linumw;
+	unsigned redge = f->size_x - GUTTER - f->linumw;
 	
 	*out_x = 0;
 	*out_y = 1;
@@ -129,7 +133,7 @@ frame_pos(struct frame const *f, size_t pos, unsigned *out_x, unsigned *out_y)
 		++*out_x;
 	}
 
-	*out_x += GUTTER + linumw;
+	*out_x += GUTTER + f->linumw;
 }
 
 void
@@ -172,6 +176,13 @@ frame_move_cursor(struct frame *f, unsigned x, unsigned y)
 		buf_pos(f->buf, f->buf_start, &bsx, &bsy);
 		buf_pos(f->buf, f->cursor, &csrx, &csry);
 	}
+
+	// fix linum width.
+	unsigned bex, bey;
+	buf_pos(f->buf, f->buf->size, &bex, &bey);
+	f->linumw = 0;
+	for (unsigned i = bsy + MIN(bey - bsy, f->size_y) + 1; i > 0; i /= 10)
+		++f->linumw;
 }
 
 void
@@ -197,20 +208,6 @@ frame_relmove_cursor(struct frame *f, int x, int y, bool lwrap)
 	frame_move_cursor(f, csrx, csry);
 }
 
-static unsigned
-getlinumw(struct frame const *f)
-{
-	unsigned bsx, bsy, bex, bey;
-	buf_pos(f->buf, f->buf_start, &bsx, &bsy);
-	buf_pos(f->buf, f->buf->size, &bex, &bey);
-
-	unsigned linumw = 0;
-	for (unsigned i = bsy + MIN(bey - bsy, f->size_y) + 1; i > 0; i /= 10)
-		++linumw;
-
-	return linumw;
-}
-
 static void
 exechighlight(struct frame const *f, struct highlight const *hl)
 {
@@ -219,7 +216,7 @@ exechighlight(struct frame const *f, struct highlight const *hl)
 	
 	pcre2_match_data *md = pcre2_match_data_create_from_pattern(hl->re, NULL);
 	PCRE2_SIZE off = f->buf_start;
-	unsigned linumw = getlinumw(f), ledge = GUTTER + linumw;
+	unsigned ledge = GUTTER + f->linumw;
 	while (pcre2_match(hl->re, (PCRE2_SPTR)f->buf->conts, f->buf->size, off, 0, md, NULL) >= 0) {
 		PCRE2_SIZE *offv = pcre2_get_ovector_pointer(md);
 		
@@ -266,7 +263,7 @@ exechighlight(struct frame const *f, struct highlight const *hl)
 static void
 drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 {
-	unsigned linumw = getlinumw(f), ledge = GUTTER + linumw, redge = f->size_x - ledge;
+	unsigned ledge = GUTTER + f->linumw, redge = f->size_x - ledge;
 	unsigned i;
 
 	for (i = 0; *dcsr < f->buf->size && f->buf->conts[*dcsr] != '\n'; ++i, ++*dcsr) {

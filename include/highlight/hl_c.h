@@ -3,55 +3,55 @@
 
 #include <ncurses.h>
 
-#define KEYWORD(kw) "(?<![a-zA-Z0-9_])" kw "(?![a-zA-Z0-0_])"
-
-#define HIGHLIGHT(bg_, fg_, attr_, re_str_) \
+#define HIGHLIGHT(hl, re_str_) \
 	{ \
 		.localmode = "c", \
-		.bg = bg_, \
-		.fg = fg_, \
-		.attr = attr_, \
-		.re_str = re_str_ \
+		.bg = hl##_BG, \
+		.fg = hl##_FG, \
+		.attr = hl##_ATTR, \
+		.re_str = re_str_, \
 	},
 
 #define KEYWORDS \
-	KEYWORD("auto") "|" \
-	KEYWORD("break") "|" \
-	KEYWORD("case") "|" \
-	KEYWORD("char") "|" \
-	KEYWORD("const") "|" \
-	KEYWORD("continue") "|" \
-	KEYWORD("default") "|" \
-	KEYWORD("do") "|" \
-	KEYWORD("double") "|" \
-	KEYWORD("else") "|" \
-	KEYWORD("enum") "|" \
-	KEYWORD("extern") "|" \
-	KEYWORD("float") "|" \
-	KEYWORD("for") "|" \
-	KEYWORD("goto") "|" \
-	KEYWORD("if") "|" \
-	KEYWORD("inline") "|" \
-	KEYWORD("int") "|" \
-	KEYWORD("long") "|" \
-	KEYWORD("register") "|" \
-	KEYWORD("restrict") "|" \
-	KEYWORD("return") "|" \
-	KEYWORD("short") "|" \
-	KEYWORD("signed") "|" \
-	KEYWORD("sizeof") "|" \
-	KEYWORD("static") "|" \
-	KEYWORD("struct") "|" \
-	KEYWORD("switch") "|" \
-	KEYWORD("typedef") "|" \
-	KEYWORD("union") "|" \
-	KEYWORD("unsigned") "|" \
-	KEYWORD("void") "|" \
-	KEYWORD("volatile") "|" \
-	KEYWORD("while") "|" \
-	KEYWORD("_Bool") "|" \
-	KEYWORD("_Complex") "|" \
-	KEYWORD("_Imaginary")
+	"(?<=[^A-Za-z0-9_])(" \
+	"auto|" \
+	"break|" \
+	"case|" \
+	"char|" \
+	"const|" \
+	"continue|" \
+	"default|" \
+	"do|" \
+	"double|" \
+	"else|" \
+	"enum|" \
+	"extern|" \
+	"float|" \
+	"for|" \
+	"goto|" \
+	"if|" \
+	"inline|" \
+	"int|" \
+	"long|" \
+	"register|" \
+	"restrict|" \
+	"return|" \
+	"short|" \
+	"signed|" \
+	"sizeof|" \
+	"static|" \
+	"struct|" \
+	"switch|" \
+	"typedef|" \
+	"union|" \
+	"unsigned|" \
+	"void|" \
+	"volatile|" \
+	"while|" \
+	"_Bool|" \
+	"_Complex|" \
+	"_Imaginary" \
+	")(?=[^A-Za-z0-9_])" \
 
 #define PREPROC_BG CONF_NORM_BG
 #define PREPROC_FG COLOR_CYAN
@@ -74,16 +74,20 @@
 #define SPECIAL_BG CONF_NORM_BG
 #define SPECIAL_FG COLOR_BLUE
 #define SPECIAL_ATTR 0
+#define TRAILINGWS_BG COLOR_GREEN
+#define TRAILINGWS_FG CONF_NORM_FG
+#define TRAILINGWS_ATTR 0
 
-HIGHLIGHT(KEYWORD_BG, KEYWORD_FG, KEYWORD_ATTR, KEYWORDS)
-HIGHLIGHT(FUNC_BG, FUNC_FG, FUNC_ATTR, "(?<![a-zA-Z0-9_])[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*\\()")
-HIGHLIGHT(MACRO_BG, MACRO_FG, MACRO_ATTR, "(?<![a-zA-Z0-9_])[A-Z_][A-Z0-9_]*(?![a-zA-Z0-9_])")
-HIGHLIGHT(SPECIAL_BG, SPECIAL_FG, SPECIAL_ATTR, "[\\+\\-\\(\\)\\[\\]\\.\\<\\>\\{\\}\\!\\~\\*\\&\\/\\%\\=\\?\\:\\|\\;\\,]")
-HIGHLIGHT(PREPROC_BG, PREPROC_FG, PREPROC_ATTR, "#\\s*[a-zA-Z_][a-zA-Z0-9_]*")
-HIGHLIGHT(STRING_BG, STRING_FG, STRING_ATTR, "#\\s*include\\s*\\K<.*>")
-HIGHLIGHT(STRING_BG, STRING_FG, STRING_ATTR, "\"(?:[^\"\\\\]|\\\\.)*\"")
-HIGHLIGHT(STRING_BG, STRING_FG, STRING_ATTR, "'(?:[^'\\\\]|\\\\.)*'")
-HIGHLIGHT(COMMENT_BG, COMMENT_FG, COMMENT_ATTR, "//.*")
-HIGHLIGHT(COMMENT_BG, COMMENT_FG, COMMENT_ATTR, "\\/\\*(\\*(?!\\/)|[^*])*\\*\\/")
+HIGHLIGHT(FUNC, "(?<![a-zA-Z0-9_])[a-zA-Z_][a-zA-Z0-9_]*(?=\\s*\\()")
+HIGHLIGHT(KEYWORD, KEYWORDS)
+HIGHLIGHT(MACRO, "(?<![a-zA-Z0-9_])[A-Z_][A-Z0-9_]*(?![a-zA-Z0-9_])")
+HIGHLIGHT(SPECIAL, "[\\+\\-\\(\\)\\[\\]\\.\\<\\>\\{\\}\\!\\~\\*\\&\\/\\%\\=\\?\\:\\|\\;\\,]")
+HIGHLIGHT(PREPROC, "(\\n|^)\\s*\\K#\\s*[a-zA-Z_][a-zA-Z0-9_]*")
+HIGHLIGHT(STRING, "(\\n|^)\\s*#\\s*include\\s*\\K<.*>")
+HIGHLIGHT(STRING, "\"(?:[^\"\\\\]|\\\\.)*\"")
+HIGHLIGHT(STRING, "'(?:[^'\\\\]|\\\\.)*'")
+HIGHLIGHT(COMMENT, "//.*")
+HIGHLIGHT(COMMENT, "\\/\\*(\\*(?!\\/)|[^*])*\\*\\/")
+HIGHLIGHT(TRAILINGWS, "\\s+(\\n|$)")
 
 #endif

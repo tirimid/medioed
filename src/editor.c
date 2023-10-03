@@ -222,7 +222,16 @@ arrangeframes(void)
 static void
 drawframes(void)
 {
-	clear();
+	// rather than calling `clear()`, manually wipe the screen.
+	// this reduces tearing in a TTY.
+	struct winsize tty_size;
+	ioctl(0, TIOCGWINSZ, &tty_size);
+	for (unsigned i = 0; i < tty_size.ws_row; ++i) {
+		mvchgat(i, 0, tty_size.ws_col, 0, conf_gnorm, NULL);
+		for (unsigned j = 0; j < tty_size.ws_col; ++j)
+			mvaddch(i, j, ' ');
+	}
+	
 	for (size_t i = 0; i < frames.size; ++i)
 		frame_draw(frames.data[i], i == cur_frame);
 }

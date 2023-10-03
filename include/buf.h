@@ -12,10 +12,10 @@ enum buf_src_type {
 struct buf {
 	char *conts;
 	size_t size, cap;
-	
+
 	enum buf_src_type src_type;
 	void *src;
-	
+
 	bool writable;
 	bool modified;
 };
