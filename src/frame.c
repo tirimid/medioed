@@ -68,12 +68,7 @@ frame_draw(struct frame const *f, bool active)
 		mvaddstr(f->pos_y, f->pos_x + f->size_x - strlen(modmk), modmk);
 	}
 
-	// set normal coloration.
-	mvchgat(f->pos_y, f->pos_x, f->size_x, 0, active ? conf_ghighlight : conf_gnorm, NULL);
-	for (size_t i = 1; i < f->size_y; ++i)
-		mvchgat(f->pos_y + i, f->pos_x, f->size_x, 0, conf_norm, NULL);
-
-	// draw margins.
+	// write margins.
 	for (size_t i = 0; i < conf_mtab_size; ++i) {
 		if (ledge + conf_mtab[i].pos >= f->size_x)
 			continue;
@@ -81,7 +76,6 @@ frame_draw(struct frame const *f, bool active)
 		for (unsigned j = 1; j < f->size_y; ++j) {
 			unsigned x = f->pos_x + ledge + conf_mtab[i].pos, y = f->pos_y + j;
 			mvaddch(y, x, conf_mtab[i].ch);
-			mvchgat(y, x, 1, 0, conf_mtab[i].colpair, NULL);
 		}
 	}
 
@@ -96,6 +90,22 @@ frame_draw(struct frame const *f, bool active)
 		}
 
 		drawline(f, &i, &drawcsr);
+	}
+
+	// set base coloration.
+	mvchgat(f->pos_y, f->pos_x, f->size_x, 0, active ? conf_ghighlight : conf_gnorm, NULL);
+	for (size_t i = 1; i < f->size_y; ++i)
+		mvchgat(f->pos_y + i, f->pos_x, f->size_x, 0, conf_norm, NULL);
+
+	// set margin coloration.
+	for (size_t i = 0; i < conf_mtab_size; ++i) {
+		if (ledge + conf_mtab[i].pos >= f->size_x)
+			continue;
+
+		for (unsigned j = 1; j < f->size_y; ++j) {
+			unsigned x = f->pos_x + ledge + conf_mtab[i].pos, y = f->pos_y + j;
+			mvchgat(y, x, 1, 0, conf_mtab[i].colpair, NULL);
+		}
 	}
 
 	// set highlight coloration.
