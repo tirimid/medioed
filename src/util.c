@@ -19,7 +19,7 @@ arraylist_destroy(struct arraylist *al)
 {
 	for (size_t i = 0; i < al->size; ++i)
 		free(al->data[i]);
-	
+
 	free(al->data);
 	free(al->data_sizes);
 }

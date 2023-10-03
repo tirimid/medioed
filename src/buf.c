@@ -22,7 +22,7 @@ struct buf
 buf_from_str(char const *str, bool writable)
 {
 	struct buf b = buf_create(true);
-	
+
 	buf_write_str(&b, 0, str);
 	b.writable = writable;
 	b.modified = false;
@@ -40,13 +40,13 @@ buf_from_file(char const *path, bool writable)
 	fseek(fp, 0, SEEK_END);
 	size_t fsize = ftell(fp);
 	fseek(fp, 0, SEEK_SET);
-	
+
 	size_t cap;
 	for (cap = 1; cap < fsize; cap *= 2);
-	
+
 	char *fconts = malloc(cap);
 	fread(fconts, 1, fsize, fp);
-	
+
 	fclose(fp);
 
 	return (struct buf){
@@ -72,7 +72,7 @@ buf_save(struct buf *b)
 	// still, this isn't really an error.
 	if (!b->modified)
 		return 0;
-	
+
 	FILE *fp = fopen(b->src, "wb");
 	if (!fp)
 		return 1;
@@ -82,7 +82,7 @@ buf_save(struct buf *b)
 
 	fclose(fp);
 	b->modified = false;
-	
+
 	return 0;
 }
 
@@ -99,7 +99,7 @@ buf_write_ch(struct buf *b, size_t ind, char ch)
 {
 	if (!b->writable)
 		return;
-	
+
 	if (b->size >= b->cap) {
 		b->cap *= 2;
 		b->conts = realloc(b->conts, b->cap);
@@ -116,10 +116,10 @@ buf_write_str(struct buf *b, size_t ind, char const *s)
 {
 	if (!b->writable)
 		return;
-	
+
 	size_t len = strlen(s);
 	size_t new_cap = b->cap;
-	
+
 	for (size_t i = 1; i <= len; ++i) {
 		if (b->size + i > new_cap)
 			new_cap *= 2;
@@ -141,7 +141,7 @@ buf_erase(struct buf *b, size_t lb, size_t ub)
 {
 	if (!b->writable)
 		return;
-	
+
 	memmove(b->conts + lb, b->conts + ub, b->size - ub);
 	b->size -= ub - lb;
 	b->modified = true;
@@ -151,7 +151,7 @@ void
 buf_pos(struct buf const *b, size_t pos, unsigned *out_x, unsigned *out_y)
 {
 	*out_x = *out_y = 0;
-	
+
 	for (size_t i = 0; i < pos; ++i) {
 		++*out_x;
 		if (b->conts[i] == '\n') {

@@ -68,7 +68,7 @@ editor_init(int argc, char const *argv[])
 		fputs("failed on conf_init()!\n", stderr);
 		return 1;
 	}
-	
+
 	keybd_init();
 
 	frames = arraylist_create();
@@ -89,11 +89,11 @@ editor_init(int argc, char const *argv[])
 
 				clear();
 				prompt_show(msg);
-				
+
 				free(msg);
 				continue;
 			}
-			
+
 			struct buf b = buf_from_file(argv[i], true);
 			struct buf *bp = addbuf(&b);
 			struct frame f = frame_create(argv[i], bp);
@@ -118,7 +118,7 @@ void
 editor_main_loop(void)
 {
 	running = true;
-	
+
 	while (running) {
 		// ensure frames sharing buffers are in a valid state.
 		for (size_t i = 0; i < frames.size; ++i) {
@@ -128,7 +128,7 @@ editor_main_loop(void)
 
 		drawframes();
 		refresh();
-		
+
 		int key = keybd_await_input();
 		switch (key) {
 		case KEYBD_IGNORE_BIND:
@@ -136,13 +136,13 @@ editor_main_loop(void)
 		default: {
 			if (frames.size == 0)
 				break;
-			
+
 			struct frame *f = frames.data[cur_frame];
-			
+
 			buf_write_ch(f->buf, f->cursor, key);
 			frame_relmove_cursor(f, f->buf->writable, 0, true);
 			mode_keyupdate(f, key);
-			
+
 			break;
 		}
 		}
@@ -157,10 +157,10 @@ editor_quit(void)
 
 	for (size_t i = 0; i < bufs.size; ++i)
 		buf_destroy(bufs.data[i]);
-	
+
 	arraylist_destroy(&frames);
 	arraylist_destroy(&bufs);
-	
+
 	keybd_quit();
 	conf_quit();
 	endwin();
@@ -196,12 +196,12 @@ arrangeframes(void)
 {
 	if (frames.size == 0)
 		return;
-	
+
 	struct winsize tty_size;
 	ioctl(0, TIOCGWINSZ, &tty_size);
 
 	struct frame *f = frames.data[0];
-	
+
 	f->pos_x = f->pos_y = 0;
 	f->size_y = tty_size.ws_row;
 	f->size_x = frames.size == 1 ? tty_size.ws_col : 4 * tty_size.ws_col / 7;
@@ -231,7 +231,7 @@ drawframes(void)
 		for (unsigned j = 0; j < tty_size.ws_col; ++j)
 			mvaddch(i, j, ' ');
 	}
-	
+
 	for (size_t i = 0; i < frames.size; ++i)
 		frame_draw(frames.data[i], i == cur_frame);
 }
@@ -297,7 +297,7 @@ ask_again:;
 
 		resetbinds();
 		arrangeframes();
-			
+
 		free(path);
 	} else if (!strcmp(path, "n") || !*path)
 		free(path);
@@ -354,7 +354,7 @@ bind_save_file(void)
 		b->src_type = BUF_SRC_TYPE_FRESH;
 		return;
 	}
-	
+
 	if (buf_save(b))
 		prompt_show("failed to write file!");
 }
@@ -440,7 +440,7 @@ static void
 bind_del_ch(void)
 {
 	struct frame *f = frames.data[cur_frame];
-	
+
 	if (f->cursor > 0 && f->buf->writable) {
 		buf_erase(f->buf, f->cursor - 1, f->cursor);
 		frame_relmove_cursor(f, -1, 0, true);
@@ -470,7 +470,7 @@ bind_chgmode_local(void)
 	char *new_lm = prompt_ask("new frame localmode: ", NULL, NULL);
 	if (!new_lm)
 		return;
-	
+
 	struct frame *f = frames.data[cur_frame];
 	free(f->localmode);
 	f->localmode = new_lm;
@@ -488,7 +488,7 @@ resetbinds(void)
 	// quit and reinit to reset current keybind buffer and bind information.
 	keybd_quit();
 	keybd_init();
-	
+
 	keybd_bind(CONF_BIND_QUIT, bind_quit);
 	keybd_bind(CONF_BIND_CHGFWD_FRAME, bind_chgfwd_frame);
 	keybd_bind(CONF_BIND_CHGBACK_FRAME, bind_chgback_frame);
@@ -516,7 +516,7 @@ static void
 sigwinch_handler(int arg)
 {
 	old_sigwinch_handler(arg);
-	
+
 	arrangeframes();
 	drawframes();
 	refresh();

@@ -45,7 +45,7 @@ keybd_bind(char const *keyseq, void (*fn)(void))
 	for (size_t i = 0; i < binds.size; ++i) {
 		struct keybind *ex = binds.data[i];
 		char *tkeyseq = eskeyseq_to_termkeyseq(keyseq);
-		
+
 		if (!strcmp(ex->keyseq, tkeyseq)) {
 			ex->fn = fn;
 			free(tkeyseq);
@@ -68,7 +68,7 @@ keybd_unbind(char const *keyseq)
 {
 	for (size_t i = 0; i < binds.size; ++i) {
 		struct keybind *bind = binds.data[i];
-		
+
 		if (!strcmp(bind->keyseq, keyseq)) {
 			free(bind->keyseq);
 			arraylist_rm(&binds, i);
@@ -83,14 +83,12 @@ keybd_await_input(void)
 	int k = getch();
 	char const *kname = keyname(k);
 
-	char bindcp[MAXBINDSIZE];
-	memcpy(bindcp, cur_bind, sizeof(char) * MAXBINDSIZE);
-	sprintf(bindcp, "%s%s ", cur_bind, kname);
-	memcpy(cur_bind, bindcp, sizeof(char) * MAXBINDSIZE);
-	
+	strcat(cur_bind, kname);
+	strcat(cur_bind, " ");
+
 	for (size_t i = 0; i < binds.size; ++i) {
 		struct keybind const *bind = binds.data[i];
-		
+
 		if (!strcmp(bind->keyseq, cur_bind)) {
 			bind->fn();
 			cur_bind[0] = 0;
@@ -171,12 +169,12 @@ eskeyseq_to_termkeyseq(char const *eskeyseq)
 			string_push_ch(&tks, *c);
 			break;
 		}
-		
+
 		string_push_ch(&tks, ' ');
 	}
 
 	char *tks_str = string_to_str(&tks);
 	string_destroy(&tks);
-	
+
 	return tks_str;
 }

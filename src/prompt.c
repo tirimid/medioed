@@ -21,7 +21,7 @@ void
 prompt_show(char const *text)
 {
 	drawbox(text);
-	
+
 	int k;
 	while ((k = getch()) != 'q' && k != 'Q');
 }
@@ -54,7 +54,7 @@ prompt_ask(char const *text, void (*complete)(char **, size_t *, void *), void *
 	while ((k = getch()) != '\n') {
 		// gather response.
 		char const *kname = keyname(k);
-		
+
 		if (!strcmp(kname, CANCEL_BIND)) {
 			free(resp);
 			return NULL;
@@ -86,7 +86,7 @@ prompt_ask(char const *text, void (*complete)(char **, size_t *, void *), void *
 
 		for (unsigned i = rcol; i < ws.ws_col; ++i)
 			mvaddch(rrow, i, ' ');
-		
+
 		for (size_t i = 0; i < resp_len - dstart && i < ws.ws_col - rcol; ++i)
 			mvaddch(rrow, rcol + i, resp[dstart + i]);
 
@@ -126,7 +126,7 @@ drawbox(char const *text)
 		for (size_t j = 0; j < ws.ws_col; ++j)
 			mvaddch(i, j, ' ');
 	}
-	
+
 	// write actual text.
 	mvaddstr(box_top, 0, text);
 

@@ -46,7 +46,7 @@ conf_init(void)
 {
 	conf_gnorm = alloc_pair(CONF_GNORM_FG, CONF_GNORM_BG);
 	conf_ghighlight = alloc_pair(CONF_GHIGHLIGHT_FG, CONF_GHIGHLIGHT_BG);
-	
+
 	conf_norm = alloc_pair(CONF_NORM_FG, CONF_NORM_BG);
 	conf_linum = alloc_pair(CONF_LINUM_FG, CONF_LINUM_BG);
 	conf_cursor = alloc_pair(CONF_CURSOR_FG, CONF_CURSOR_BG);
@@ -61,13 +61,13 @@ conf_init(void)
 		if (!(hl->re = pcre2_compile(pat, flags, 0, &rc, &erroff, NULL))) {
 			char errbuf[ERRBUF_SIZE];
 			pcre2_get_error_message(rc, (PCRE2_UCHAR *)errbuf, ERRBUF_SIZE);
-			
+
 			fprintf(stderr, "failed to compile regex: '%s'!\n", hl->re_str);
 			fprintf(stderr, "pcre2 error at %zu: '%s'!\n", erroff, errbuf);
-			
+
 			return 1;
 		}
-		
+
 		hl->colpair = alloc_pair(hl->fg, hl->bg);
 	}
 
@@ -84,14 +84,14 @@ conf_quit(void)
 {
 	free_pair(conf_gnorm);
 	free_pair(conf_ghighlight);
-	
+
 	free_pair(conf_norm);
 	free_pair(conf_linum);
 	free_pair(conf_cursor);
 
 	for (size_t i = 0; i < conf_htab_size; ++i) {
 		struct highlight *hl = &conf_htab[i];
-		
+
 		pcre2_code_free(hl->re);
 		free_pair(hl->colpair);
 	}

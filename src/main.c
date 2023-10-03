@@ -9,9 +9,9 @@ main(int argc, char const *argv[])
 		fputs("critical initialization error!\n", stderr);
 		return 1;
 	}
-	
+
 	editor_main_loop();
 	editor_quit();
-	
+
 	return 0;
 }

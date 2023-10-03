@@ -19,7 +19,7 @@ void
 mode_set(char const *name, struct frame *f)
 {
 	struct mode const *oldm = mode_get();
-	
+
 	for (size_t i = 0; i < conf_lmtab_size; ++i) {
 		if (!strcmp(name, conf_lmtab[i].name)) {
 			if (oldm)
@@ -27,7 +27,7 @@ mode_set(char const *name, struct frame *f)
 
 			cur_mode = i;
 			conf_lmtab[i].init(f);
-			
+
 			return;
 		}
 	}

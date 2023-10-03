@@ -25,7 +25,7 @@ frame_create(char const *name, struct buf *buf)
 	unsigned linumw = 0;
 	for (unsigned i = MIN(bey, ws.ws_row) + 1; i > 0; i /= 10)
 		++linumw;
-	
+
 	return (struct frame){
 		.name = strdup(name),
 		.pos_x = 0,
@@ -53,9 +53,9 @@ frame_draw(struct frame const *f, bool active)
 	unsigned bsx, bsy, bex, bey;
 	buf_pos(f->buf, f->buf_start, &bsx, &bsy);
 	buf_pos(f->buf, f->buf->size, &bex, &bey);
-	
+
 	unsigned ledge = GUTTER + f->linumw;
-	
+
 	// write frame name and buffer modification marker.
 	for (unsigned i = 0; f->name[i] && i < f->size_x; ++i)
 		mvaddch(f->pos_y, f->pos_x + i, f->name[i]);
@@ -64,7 +64,7 @@ frame_draw(struct frame const *f, bool active)
 		char modmk[] = CONF_BUFMOD_MARK "\0";
 		if (f->size_x >= 0 && f->size_x < strlen(modmk) + 1)
 			modmk[f->size_x] = 0;
-		
+
 		mvaddstr(f->pos_y, f->pos_x + f->size_x - strlen(modmk), modmk);
 	}
 
@@ -101,7 +101,7 @@ frame_draw(struct frame const *f, bool active)
 	// set highlight coloration.
 	for (size_t i = 0; i < conf_htab_size; ++i)
 		exechighlight(f, &conf_htab[i]);
-	
+
 	// set cursor coloration.
 	unsigned csrx, csry;
 	frame_pos(f, f->cursor, &csrx, &csry);
@@ -116,14 +116,14 @@ void
 frame_pos(struct frame const *f, size_t pos, unsigned *out_x, unsigned *out_y)
 {
 	unsigned redge = f->size_x - GUTTER - f->linumw;
-	
+
 	*out_x = 0;
 	*out_y = 1;
-	
+
 	for (size_t i = f->buf_start; i < pos; ++i) {
 		if (f->buf->conts[i] == '\t')
 			*out_x += CONF_TABSIZE - *out_x % CONF_TABSIZE - 1;
-		
+
 		if (f->buf->conts[i] == '\n' || *out_x >= redge - 1) {
 			*out_x = 0;
 			++*out_y;
@@ -141,7 +141,7 @@ frame_move_cursor(struct frame *f, unsigned x, unsigned y)
 {
 	// adjust the actual cursor position.
 	f->cursor = 0;
-	
+
 	for (; f->cursor < f->buf->size && y > 0; ++f->cursor) {
 		if (f->buf->conts[f->cursor] == '\n')
 			--y;
@@ -152,27 +152,27 @@ frame_move_cursor(struct frame *f, unsigned x, unsigned y)
 
 	// redetermine buffer boundaries for rendering.
 	unsigned bsx, bsy, csrx, csry;
-	
+
 	frame_pos(f, f->buf_start, &bsx, &bsy);
 	frame_pos(f, f->cursor, &csrx, &csry);
-	
+
 	while (csry >= bsy + f->size_y - 1) {
 		++f->buf_start;
 		while (f->buf_start < f->buf->size && f->buf->conts[f->buf_start - 1] != '\n')
 			++f->buf_start;
-		
+
 		frame_pos(f, f->buf_start, &bsx, &bsy);
 		frame_pos(f, f->cursor, &csrx, &csry);
 	}
 
 	buf_pos(f->buf, f->buf_start, &bsx, &bsy);
 	buf_pos(f->buf, f->cursor, &csrx, &csry);
-	
+
 	while (csry < bsy) {
 		--f->buf_start;
 		while (f->buf_start > 0 && f->buf->conts[f->buf_start - 1] != '\n')
 			--f->buf_start;
-		
+
 		buf_pos(f->buf, f->buf_start, &bsx, &bsy);
 		buf_pos(f->buf, f->cursor, &csrx, &csry);
 	}
@@ -192,9 +192,9 @@ frame_relmove_cursor(struct frame *f, int x, int y, bool lwrap)
 		int dir = SIGN(x);
 		long bs_dst = -(long)f->cursor;
 		long be_dst = f->buf->size - f->cursor;
-		
+
 		x = dir == -1 ? MAX(x, bs_dst) : MIN(x, be_dst);
-		
+
 		for (; f->cursor >= 0 && f->cursor <= f->buf->size && x != 0; x -= dir)
 			f->cursor += dir;
 	}
@@ -204,7 +204,7 @@ frame_relmove_cursor(struct frame *f, int x, int y, bool lwrap)
 	buf_pos(f->buf, f->cursor, &csrx, &csry);
 	csrx = (long)csrx + x < 0 ? 0 : csrx + x;
 	csry = (long)csry + y < 0 ? 0 : csry + y;
-	
+
 	frame_move_cursor(f, csrx, csry);
 }
 
@@ -213,13 +213,13 @@ exechighlight(struct frame const *f, struct highlight const *hl)
 {
 	if (strcmp(hl->localmode, f->localmode))
 		return;
-	
+
 	pcre2_match_data *md = pcre2_match_data_create_from_pattern(hl->re, NULL);
 	PCRE2_SIZE off = f->buf_start;
 	unsigned ledge = GUTTER + f->linumw;
 	while (pcre2_match(hl->re, (PCRE2_SPTR)f->buf->conts, f->buf->size, off, 0, md, NULL) >= 0) {
 		PCRE2_SIZE *offv = pcre2_get_ovector_pointer(md);
-		
+
 		unsigned hlx, hly;
 		frame_pos(f, offv[0], &hlx, &hly);
 		if (hly >= f->size_y)
@@ -236,7 +236,7 @@ exechighlight(struct frame const *f, struct highlight const *hl)
 				break;
 
 			unsigned w;
-	
+
 			switch (f->buf->conts[i]) {
 			case '\n':
 				x = 0;
@@ -253,7 +253,7 @@ exechighlight(struct frame const *f, struct highlight const *hl)
 			mvchgat(f->pos_y + y, f->pos_x + ledge + x, w, hl->attr, hl->colpair, NULL);
 			x += w;
 		}
-		
+
 		off = offv[1];
 	}
 
@@ -276,7 +276,7 @@ drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 
 		if (*line >= f->size_y)
 			break;
-		
+
 		switch (ch) {
 		case '\t':
 			i += CONF_TABSIZE - i % CONF_TABSIZE - 1;
