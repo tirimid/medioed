@@ -3,11 +3,13 @@
 #include <stdio.h>
 
 #include "mode/mode_c.h"
+#include "mode/mode_sh.h"
 
 #define ERRBUF_SIZE 512
 
 struct highlight conf_htab[] = {
 #include "highlight/hl_c.h"
+#include "highlight/hl_sh.h"
 };
 size_t const conf_htab_size = sizeof(conf_htab) / sizeof(struct highlight);
 
@@ -17,13 +19,13 @@ struct margin conf_mtab[] = {
 		.pos = 80,
 		.ch = '|',
 		.fg = COLOR_WHITE,
-		.bg = COLOR_BLACK,
+		.bg = CONF_NORM_BG,
 	},
 	{
 		.pos = 110,
 		.ch = '|',
 		.fg = COLOR_RED,
-		.bg = COLOR_BLACK,
+		.bg = CONF_NORM_BG,
 	},
 };
 size_t const conf_mtab_size = sizeof(conf_mtab) / sizeof(struct margin);
@@ -34,6 +36,12 @@ struct mode conf_lmtab[] = {
 		.init = mode_c_init,
 		.quit = mode_c_quit,
 		.keypress = mode_c_keypress,
+	},
+	{
+		.name = "sh",
+		.init = mode_sh_init,
+		.quit = mode_sh_quit,
+		.keypress = mode_sh_keypress,
 	},
 };
 size_t const conf_lmtab_size = sizeof(conf_lmtab) / sizeof(struct mode);
@@ -55,10 +63,10 @@ conf_init(void)
 		struct highlight *hl = &conf_htab[i];
 
 		int rc;
-		uint64_t flags = PCRE2_ZERO_TERMINATED;
+		uint64_t flags = PCRE2_MULTILINE;
 		PCRE2_SIZE erroff;
 		PCRE2_SPTR pat = (PCRE2_SPTR)hl->re_str;
-		if (!(hl->re = pcre2_compile(pat, flags, 0, &rc, &erroff, NULL))) {
+		if (!(hl->re = pcre2_compile(pat, strlen(hl->re_str), flags, &rc, &erroff, NULL))) {
 			char errbuf[ERRBUF_SIZE];
 			pcre2_get_error_message(rc, (PCRE2_UCHAR *)errbuf, ERRBUF_SIZE);
 

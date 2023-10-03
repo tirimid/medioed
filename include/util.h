@@ -37,4 +37,6 @@ void string_push_ch(struct string *s, char ch);
 void string_push_str(struct string *s, char const *str);
 char *string_to_str(struct string const *s);
 
+char const *fileext(char const *path);
+
 #endif

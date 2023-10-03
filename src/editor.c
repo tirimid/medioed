@@ -342,21 +342,34 @@ bind_open_file(void)
 static void
 bind_save_file(void)
 {
-	struct buf *b = ((struct frame *)frames.data[cur_frame])->buf;
+	struct frame *f = frames.data[cur_frame];
+	enum buf_src_type prevtype = f->buf->src_type;
 
-	if (b->src_type == BUF_SRC_TYPE_FRESH) {
-		b->src_type = BUF_SRC_TYPE_FILE;
-		b->src = prompt_ask("save to file: ", prompt_complete_path, NULL);
+	if (f->buf->src_type == BUF_SRC_TYPE_FRESH) {
+		f->buf->src_type = BUF_SRC_TYPE_FILE;
+		f->buf->src = prompt_ask("save to file: ", prompt_complete_path, NULL);;
 	}
 
-	// no path was given as source for new buffer, so it is set to `FRESH`.
-	if (!b->src) {
-		b->src_type = BUF_SRC_TYPE_FRESH;
+	// no path was given as source for new buffer, so the type is reset.
+	if (!f->buf->src) {
+		f->buf->src_type = prevtype;
 		return;
 	}
 
-	if (buf_save(b))
+	if (buf_save(f->buf)) {
 		prompt_show("failed to write file!");
+		return;
+	}
+
+	if (prevtype == BUF_SRC_TYPE_FRESH) {
+		free(f->name);
+		f->name = strdup(f->buf->src);
+	}
+
+	if (!f->localmode[0]) {
+		free(f->localmode);
+		f->localmode = strdup(fileext(f->buf->src));
+	}
 }
 
 static void

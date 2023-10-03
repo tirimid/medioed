@@ -120,3 +120,10 @@ string_to_str(struct string const *s)
 {
 	return strndup(s->data, s->len);
 }
+
+char const *
+fileext(char const *path)
+{
+	char const *ext = strrchr(path, '.');
+	return ext && ext != path ? ext + 1 : "\0";
+}

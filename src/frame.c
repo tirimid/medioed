@@ -36,7 +36,7 @@ frame_create(char const *name, struct buf *buf)
 		.cursor = 0,
 		.buf_start = 0,
 		.linumw = linumw,
-		.localmode = strdup("\0"),
+		.localmode = strdup(buf->src_type == BUF_SRC_TYPE_FILE ? fileext(buf->src) : "\0"),
 	};
 }
 
