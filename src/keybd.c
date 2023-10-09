@@ -5,8 +5,6 @@
 #include "conf.h"
 #include "util.h"
 
-#define MAXEXBUFLEN 8
-
 typedef struct bind bind;
 
 struct bind {
@@ -20,8 +18,6 @@ VEC_DEFPROTO_STATIC(bind)
 static struct vec_bind binds;
 static int curbind[KEYBD_MAXBINDLEN];
 static size_t curbindlen = 0;
-static int exbuf[MAXEXBUFLEN];
-static size_t exbuflen = 0;
 
 void
 keybd_init(void)
@@ -64,14 +60,7 @@ wint_t
 keybd_awaitkey(void)
 {
 	wint_t k = getwchar();
-	if (k == WEOF) {
-		if (exbuflen == 0)
-			return KEYBD_IGNORE;
-
-		k = exbuf[0];
-		memmove(exbuf, exbuf + 1, --exbuflen * sizeof(int));
-	}
-
+	
 	curbind[curbindlen++] = k;
 
 	for (size_t i = 0; i < binds.size; ++i) {
