@@ -39,8 +39,9 @@ static void bind_navup(void);
 static void bind_navln_start(void);
 static void bind_navln_end(void);
 static void bind_navgoto(void);
-static void bind_del_ch(void);
-static void bind_del_word(void);
+static void bind_delfwd_ch(void);
+static void bind_delback_ch(void);
+static void bind_delback_word(void);
 static void bind_chgmode_global(void);
 static void bind_chgmode_local(void);
 static void bind_create_scrap(void);
@@ -48,6 +49,7 @@ static void bind_newline(void);
 static void resetbinds(void);
 static void sigwinch_handler(int arg);
 
+static void (*old_sigwinch_handler)(int);
 static bool running;
 static size_t curframe;
 static struct vec_frame frames;
@@ -56,7 +58,8 @@ static struct vec_pbuf pbufs;
 int
 editor_init(int argc, char const *argv[])
 {
-	draw_clear();
+	draw_clear(' ', CONF_A_GNORM);
+	draw_refresh();
 	
 	if (conf_init()) {
 		fputs("failed on conf_init()!\n", stderr);
@@ -93,6 +96,7 @@ editor_init(int argc, char const *argv[])
 
 	struct sigaction sa;
 	sigaction(SIGWINCH, NULL, &sa);
+	old_sigwinch_handler = sa.sa_handler;
 	sa.sa_handler = sigwinch_handler;
 	sigaction(SIGWINCH, &sa, NULL);
 
@@ -117,6 +121,7 @@ editor_mainloop(void)
 
 		struct frame *f = &frames.data[curframe];
 		frame_draw(f, true);
+		draw_refresh();
 		
 		wint_t key = keybd_awaitkey();
 		if (key != KEYBD_IGNORE) {
@@ -202,6 +207,7 @@ redrawall(void)
 {
 	for (size_t i = 0; i < frames.size; ++i)
 		frame_draw(&frames.data[i], i == curframe);
+	draw_refresh();
 }
 
 static void
@@ -456,7 +462,15 @@ askagain:;
 }
 
 static void
-bind_del_ch(void)
+bind_delfwd_ch(void)
+{
+	struct frame *f = &frames.data[curframe];
+	if (f->csr < f->buf->size)
+		buf_erase(f->buf, f->csr, f->csr + 1);
+}
+
+static void
+bind_delback_ch(void)
 {
 	struct frame *f = &frames.data[curframe];
 
@@ -467,7 +481,7 @@ bind_del_ch(void)
 }
 
 static void
-bind_del_word(void)
+bind_delback_word(void)
 {
 	prompt_show(L"this bind is not implemented yet!");
 	redrawall();
@@ -546,8 +560,9 @@ resetbinds(void)
 	keybd_bind(conf_bind_navln_start, bind_navln_start);
 	keybd_bind(conf_bind_navln_end, bind_navln_end);
 	keybd_bind(conf_bind_navgoto, bind_navgoto);
-	keybd_bind(conf_bind_del_ch, bind_del_ch);
-	keybd_bind(conf_bind_del_word, bind_del_word);
+	keybd_bind(conf_bind_delfwd_ch, bind_delfwd_ch);
+	keybd_bind(conf_bind_delback_ch, bind_delback_ch);
+	keybd_bind(conf_bind_delback_word, bind_delback_word);
 	keybd_bind(conf_bind_chgmode_global, bind_chgmode_global);
 	keybd_bind(conf_bind_chgmode_local, bind_chgmode_local);
 	keybd_bind(conf_bind_create_scrap, bind_create_scrap);
@@ -557,6 +572,7 @@ resetbinds(void)
 static void
 sigwinch_handler(int arg)
 {
+	old_sigwinch_handler(arg);
 	arrangeframes();
 	redrawall();
 }

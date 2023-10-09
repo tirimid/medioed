@@ -38,10 +38,10 @@ enum attr {
 
 int draw_init(void);
 int draw_quit(void);
-void draw_clear(void);
+void draw_clear(wchar_t wch, uint16_t a);
 void draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch, uint16_t a);
 void draw_putwch(unsigned r, unsigned c, wchar_t wch, uint16_t a);
 void draw_putwstr(unsigned r, unsigned c, wchar_t const *wstr, uint16_t a);
-void draw_putnwstr(unsigned r, unsigned c, wchar_t const *wstr, size_t n, uint16_t a);
+void draw_refresh(void);
 
 #endif

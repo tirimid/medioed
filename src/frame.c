@@ -1,8 +1,8 @@
 #include "frame.h"
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <wctype.h>
 
 #include <sys/ioctl.h>
 
@@ -113,7 +113,7 @@ frame_draw(struct frame const *f, bool active)
 
 	// draw cursor.
 	wchar_t csrch = f->csr < f->buf->size ? f->buf->conts[f->csr] : L' ';
-	csrch = isgraph(csrch) ? csrch : L' ';
+	csrch = iswgraph(csrch) ? csrch : L' ';
 	
 	unsigned csrr, csrc;
 	frame_pos(f, f->csr, &csrr, &csrc);
@@ -291,7 +291,7 @@ exechighlight(struct frame const *f, struct highlight const *hl)
 
 			for (size_t j = 0; j < w; ++j) {
 				wchar_t wch = f->buf->conts[i];
-				wch = isgraph(wch) ? wch : L' ';
+				wch = iswgraph(wch) ? wch : L' ';
 				draw_putwch(f->pr + r, f->pc + ledge + c + j, wch, hl->attr);
 			}
 			

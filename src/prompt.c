@@ -1,9 +1,9 @@
 #include "prompt.h"
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wctype.h>
 
 #include <sys/ioctl.h>
 
@@ -23,6 +23,7 @@ void
 prompt_show(wchar_t const *msg)
 {
 	drawbox(msg);
+	draw_refresh();
 	
 	for (;;) {
 		wint_t k = getwchar();
@@ -49,6 +50,7 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, void *), void 
 	// a faux cursor is drawn before entering the keyboard loop, so that it
 	// doesn't look like it spontaneously appears upon a keypress.
 	draw_putwch(rrow, rcol, L' ', CONF_A_GHIGH);
+	draw_refresh();
 
 	wchar_t *resp = malloc(sizeof(wchar_t));
 	size_t resplen = 0;
@@ -91,8 +93,10 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, void *), void 
 			draw_putwch(rrow, rcol + i, resp[dstart + i], CONF_A_GNORM);
 
 		wchar_t csrch = csr < resplen ? resp[csr] : L' ';
-		csrch = isgraph(csrch) ? csrch : L' ';
+		csrch = iswgraph(csrch) ? csrch : L' ';
 		draw_putwch(rrow, rcol + csr - dstart, csrch, CONF_A_GHIGH);
+
+		draw_refresh();
 	}
 
 	resp[resplen] = 0;

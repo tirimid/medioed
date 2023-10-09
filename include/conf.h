@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <wchar.h>
 
-#define PCRE2_CODE_UNIT_WIDTH 32
 #include <pcre2.h>
 
 #include "draw.h"
@@ -64,8 +63,9 @@ extern int const conf_bind_navup[];
 extern int const conf_bind_navln_start[];
 extern int const conf_bind_navln_end[];
 extern int const conf_bind_navgoto[];
-extern int const conf_bind_del_ch[];
-extern int const conf_bind_del_word[];
+extern int const conf_bind_delfwd_ch[];
+extern int const conf_bind_delback_ch[];
+extern int const conf_bind_delback_word[];
 extern int const conf_bind_chgmode_global[];
 extern int const conf_bind_chgmode_local[];
 extern int const conf_bind_create_scrap[];
