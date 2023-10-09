@@ -11,6 +11,6 @@ mode_sh_quit(struct frame *f)
 }
 
 void
-mode_sh_keypress(struct frame *f, int k)
+mode_sh_keypress(struct frame *f, wint_t k)
 {
 }

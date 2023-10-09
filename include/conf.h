@@ -1,119 +1,84 @@
 #ifndef CONF_H__
 #define CONF_H__
 
+#include <stddef.h>
 #include <stdint.h>
+#include <wchar.h>
 
-#include <ncurses.h>
-
-#define PCRE2_CODE_UNIT_WIDTH 8
+#define PCRE2_CODE_UNIT_WIDTH 32
 #include <pcre2.h>
 
+#include "draw.h"
 #include "mode.h"
-
-#define CONF_BIND_QUIT "C-x C-c"
-#define CONF_BIND_CHGFWD_FRAME "C-x b"
-#define CONF_BIND_CHGBACK_FRAME "C-c b"
-#define CONF_BIND_FOCUS_FRAME "C-c f"
-#define CONF_BIND_KILL_FRAME "C-x k"
-#define CONF_BIND_OPEN_FILE "C-x C-f"
-#define CONF_BIND_SAVE_FILE "C-x C-s"
-#define CONF_BIND_NAVFWD_CH "C-f"
-#define CONF_BIND_NAVFWD_WORD "M-f"
-#define CONF_BIND_NAVBACK_CH "C-b"
-#define CONF_BIND_NAVBACK_WORD "M-b"
-#define CONF_BIND_NAVDOWN "C-n"
-#define CONF_BIND_NAVUP "C-p"
-#define CONF_BIND_NAVLN_START "C-a"
-#define CONF_BIND_NAVLN_END "C-e"
-#define CONF_BIND_NAVGOTO "M-g M-g"
-#define CONF_BIND_DEL_CH "<BACKSPC>"
-#define CONF_BIND_DEL_WORD "M-<BACKSPC>"
-#define CONF_BIND_CHGMODE_GLOBAL "C-c C-g g"
-#define CONF_BIND_CHGMODE_LOCAL "C-c C-g l"
-#define CONF_BIND_CREATE_SCRAP "C-c n"
-
-#define CONF_GREET_TEXT \
-	"welcome to medioed, the (medio)cre text (ed)itor\n" \
-	"\n" \
-	"this program is 100% free software, licensed under the GNU GPLv3\n" \
-	"the source code is available at https://gitlab.com/tirimid/medioed\n" \
-	"\n" \
-	"copyleft (c) Fuck Copyright\n" \
-	"\n" \
-	"basic keybinds:\n" \
-	"\tquit medioed               : " CONF_BIND_QUIT "\n" \
-	"\tnavigate forward one char  : " CONF_BIND_NAVFWD_CH "\n" \
-	"\tnavigate forward one word  : " CONF_BIND_NAVFWD_WORD "\n" \
-	"\tnavigate back one char     : " CONF_BIND_NAVBACK_CH "\n" \
-	"\tnavigate back one word     : " CONF_BIND_NAVBACK_WORD "\n" \
-	"\tnavigate down one line     : " CONF_BIND_NAVDOWN "\n" \
-	"\tnavigate up one line       : " CONF_BIND_NAVUP "\n" \
-	"\topen file                  : " CONF_BIND_OPEN_FILE "\n" \
-	"\tsave file                  : " CONF_BIND_SAVE_FILE "\n" \
-	"\tcreate scrap buffer        : " CONF_BIND_CREATE_SCRAP "\n" \
-	"\n" \
-	"to customize medioed, edit:\n" \
-	"\t`include/conf.h`       : basic visual configuration, binds\n" \
-	"\t`include/highlight/*`  : individual language syntax highlights\n" \
-	"\t`include/mode/*        : individual language mode code\n" \
-	"\t`src/conf.c`           : visual margins\n" \
-	"\n" \
-	"after editing these files, check `include/conf.h` and `src/conf.c`\n" \
-	"to make sure that your updated configuration will be loaded\n" \
-	"correctly\n" \
-	"\n" \
-	"in order to properly debug mincbuild at runtime (e.g. to test that\n" \
-	"your configuration works), you will need to redirect `stderr` to a\n" \
-	"different file, as otherwise some error output will not be shown\n" \
-	"due to ncurses resetting the TTY `stderr` upon running\n"
 
 #define CONF_TABSIZE 8
 #define CONF_GUTTER_LEFT 1
 #define CONF_GUTTER_RIGHT 1
-#define CONF_BUFMOD_MARK "~~ (*)"
+#define CONF_BUFMODMARK L"~~ (*)"
+#define CONF_MNUM 4
+#define CONF_MDENOM 7
 
-#define CONF_GNORM_BG COLOR_BLACK
-#define CONF_GNORM_FG COLOR_YELLOW
-#define CONF_GHIGHLIGHT_BG COLOR_YELLOW
-#define CONF_GHIGHLIGHT_FG COLOR_BLACK
+#define CONF_A_GNORM (A_YELLOW | A_BBLACK)
+#define CONF_A_GHIGH (A_BLACK | A_BYELLOW)
+#define CONF_A_NORM (A_WHITE | A_BBLACK)
+#define CONF_A_LINUM (A_YELLOW | A_BBLACK)
+#define CONF_A_CURSOR (A_BLACK | A_BWHITE)
 
-#define CONF_NORM_BG COLOR_BLACK
-#define CONF_NORM_FG COLOR_WHITE
-#define CONF_LINUM_BG COLOR_BLACK
-#define CONF_LINUM_FG COLOR_YELLOW
-#define CONF_CURSOR_BG COLOR_WHITE
-#define CONF_CURSOR_FG COLOR_BLACK
+#define CONF_GREETNAME L"*greeter*"
+#define CONF_SCRAPNAME L"*scrap*"
+
+#define CONF_GREETTEXT \
+	L"welcome to medioed, the (medio)cre text (ed)itor\n" \
+	L"\n" \
+	L"copyleft (c) Fuck Copyright\n" \
+	L"\n" \
+	L"this program is 100% free software, licensed under the GNU GPLv3\n" \
+	L"the source is available at https://gitlab.com/tirimid/medioed\n"
 
 struct highlight {
 	pcre2_code *re;
-	char const *re_str;
+	wchar_t const *re_str;
 	char const *localmode;
-	int colpair;
-	attr_t attr;
-	uint8_t bg, fg;
+	uint16_t attr;
 };
 
 struct margin {
-	unsigned pos;
-	int colpair;
-	char ch;
-	uint8_t fg, bg;
+	unsigned col;
+	wchar_t wch;
+	uint16_t attr;
 };
 
-// to configure table variables, edit `src/conf.c`.
-// tables are stored in a source file so that only one instance exists during
-// program execution.
+extern int const conf_bind_quit[];
+extern int const conf_bind_chgfwd_frame[];
+extern int const conf_bind_chgback_frame[];
+extern int const conf_bind_focus_frame[];
+extern int const conf_bind_kill_frame[];
+extern int const conf_bind_open_file[];
+extern int const conf_bind_save_file[];
+extern int const conf_bind_navfwd_ch[];
+extern int const conf_bind_navfwd_word[];
+extern int const conf_bind_navback_ch[];
+extern int const conf_bind_navback_word[];
+extern int const conf_bind_navdown[];
+extern int const conf_bind_navup[];
+extern int const conf_bind_navln_start[];
+extern int const conf_bind_navln_end[];
+extern int const conf_bind_navgoto[];
+extern int const conf_bind_del_ch[];
+extern int const conf_bind_del_word[];
+extern int const conf_bind_chgmode_global[];
+extern int const conf_bind_chgmode_local[];
+extern int const conf_bind_create_scrap[];
+extern int const conf_bind_newline[];
+
 extern struct highlight conf_htab[];
 extern size_t const conf_htab_size;
 
-extern struct margin conf_mtab[];
+extern struct margin const conf_mtab[];
 extern size_t const conf_mtab_size;
 
-extern struct mode conf_lmtab[];
+extern struct mode const conf_lmtab[];
 extern size_t const conf_lmtab_size;
-
-extern int conf_gnorm, conf_ghighlight;
-extern int conf_norm, conf_linum, conf_cursor;
 
 int conf_init(void);
 void conf_quit(void);

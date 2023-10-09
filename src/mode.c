@@ -7,12 +7,12 @@
 
 #include "conf.h"
 
-static ssize_t cur_mode = -1;
+static ssize_t curmode = -1;
 
 struct mode const *
 mode_get(void)
 {
-	return cur_mode == -1 ? NULL : &conf_lmtab[cur_mode];
+	return curmode == -1 ? NULL : &conf_lmtab[curmode];
 }
 
 void
@@ -25,19 +25,19 @@ mode_set(char const *name, struct frame *f)
 			if (oldm)
 				oldm->quit(f);
 
-			cur_mode = i;
+			curmode = i;
 			conf_lmtab[i].init(f);
 
 			return;
 		}
 	}
 
-	cur_mode = -1;
+	curmode = -1;
 }
 
 void
-mode_keyupdate(struct frame *f, int k)
+mode_keyupdate(struct frame *f, wint_t k)
 {
-	if (cur_mode != -1)
-		conf_lmtab[cur_mode].keypress(f, k);
+	if (curmode != -1)
+		conf_lmtab[curmode].keypress(f, k);
 }

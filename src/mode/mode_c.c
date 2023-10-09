@@ -11,6 +11,6 @@ mode_c_quit(struct frame *f)
 }
 
 void
-mode_c_keypress(struct frame *f, int k)
+mode_c_keypress(struct frame *f, wint_t k)
 {
 }

@@ -1,81 +1,82 @@
 #include "prompt.h"
 
-#include <stddef.h>
+#include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <ncurses.h>
 #include <sys/ioctl.h>
 
 #include "conf.h"
+#include "draw.h"
+#include "util.h"
 
-#define CANCEL_BIND "^G"
-#define NAVFWD_BIND "^F"
-#define NAVBACK_BIND "^B"
-#define DEL_BIND "^?"
-#define COMPLETE_BIND "^I"
+#define BIND_CANCEL K_CTL('g')
+#define BIND_NAVFWD K_CTL('f')
+#define BIND_NAVBACK K_CTL('b')
+#define BIND_DEL K_BACKSPC
+#define BIND_COMPLETE L'\t'
 
-static void drawbox(char const *text);
+static void drawbox(wchar_t const *text);
 
 void
-prompt_show(char const *text)
+prompt_show(wchar_t const *msg)
 {
-	drawbox(text);
-
-	int k;
-	while ((k = getch()) != 'q' && k != 'Q');
+	drawbox(msg);
+	
+	for (;;) {
+		wint_t k = getwchar();
+		if (k == WEOF || k == L'q' || k == L'Q')
+			break;
+	}
 }
 
-char *
-prompt_ask(char const *text, void (*complete)(char **, size_t *, void *), void *compdata)
+wchar_t *
+prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, void *), void *cdata)
 {
-	drawbox(text);
+	drawbox(msg);
 
 	struct winsize ws;
 	ioctl(0, TIOCGWINSZ, &ws);
 
 	// determine where the response should be rendered.
 	unsigned rrow = ws.ws_row - 1, rcol = 0;
-	for (char const *c = text; *c; ++c) {
-		if (*c == '\n' || ++rcol > ws.ws_col)
+	for (wchar_t const *c = msg; *c; ++c) {
+		if (*c == L'\n' || ++rcol > ws.ws_col)
 			rcol = 0;
 	}
 
 	// a faux cursor is drawn before entering the keyboard loop, so that it
 	// doesn't look like it spontaneously appears upon a keypress.
-	mvchgat(rrow, rcol, 1, 0, conf_ghighlight, NULL);
-	refresh();
+	draw_putwch(rrow, rcol, L' ', CONF_A_GHIGH);
 
-	char *resp = malloc(1);
-	size_t resp_len = 0;
+	wchar_t *resp = malloc(sizeof(wchar_t));
+	size_t resplen = 0;
 	size_t csr = 0, dstart = 0;
 
-	int k;
-	while ((k = getch()) != '\n') {
+	wint_t k;
+	while ((k = getwchar()) != K_RET) {
 		// gather response.
-		char const *kname = keyname(k);
-
-		if (!strcmp(kname, CANCEL_BIND)) {
+		if (k == BIND_CANCEL || k == WEOF) {
 			free(resp);
 			return NULL;
-		} else if (!strcmp(kname, NAVFWD_BIND))
-			csr += csr < resp_len;
-		else if (!strcmp(kname, NAVBACK_BIND))
+		} else if (k == BIND_NAVFWD)
+			csr += csr < resplen;
+		else if (k == BIND_NAVBACK)
 			csr -= csr > 0;
-		else if (!strcmp(kname, DEL_BIND)) {
+		else if (k == BIND_DEL) {
 			if (csr > 0) {
-				memmove(resp + csr - 1, resp + csr, resp_len - csr);
-				--resp_len;
+				memmove(resp + csr - 1, resp + csr, sizeof(wchar_t) * (resplen - csr));
+				--resplen;
 				--csr;
 			}
-		} else if (!strcmp(kname, COMPLETE_BIND)) {
-			if (complete)
-				complete(&resp, &resp_len, compdata);
+		} else if (k == BIND_COMPLETE) {
+			if (comp)
+				comp(&resp, &resplen, cdata);
 		} else {
-			resp = realloc(resp, ++resp_len + 1);
-			memmove(resp + csr + 1, resp + csr, resp_len - csr);
-			resp[csr] = (char)k;
-			++csr;
+			resp = realloc(resp, sizeof(wchar_t) * (++resplen + 1));
+			memmove(resp + csr + 1, resp + csr, sizeof(wchar_t) * (resplen - csr));
+			resp[csr++] = k;
 		}
 
 		// interactively render response.
@@ -84,55 +85,70 @@ prompt_ask(char const *text, void (*complete)(char **, size_t *, void *), void *
 		else if (csr - dstart >= ws.ws_col - rcol - 1)
 			dstart = csr - ws.ws_col + rcol + 1;
 
-		for (unsigned i = rcol; i < ws.ws_col; ++i)
-			mvaddch(rrow, i, ' ');
+		draw_fill(ws.ws_row - 1, rcol, 1, ws.ws_col - rcol, L' ', CONF_A_GNORM);
+		
+		for (size_t i = 0; i < resplen - dstart && i < ws.ws_col - rcol; ++i)
+			draw_putwch(rrow, rcol + i, resp[dstart + i], CONF_A_GNORM);
 
-		for (size_t i = 0; i < resp_len - dstart && i < ws.ws_col - rcol; ++i)
-			mvaddch(rrow, rcol + i, resp[dstart + i]);
-
-		mvchgat(rrow, rcol, ws.ws_col - rcol, 0, conf_gnorm, NULL);
-		mvchgat(rrow, rcol + csr - dstart, 1, 0, conf_ghighlight, NULL);
-
-		refresh();
+		wchar_t csrch = csr < resplen ? resp[csr] : L' ';
+		csrch = isgraph(csrch) ? csrch : L' ';
+		draw_putwch(rrow, rcol + csr - dstart, csrch, CONF_A_GHIGH);
 	}
 
-	resp[resp_len] = 0;
+	resp[resplen] = 0;
 	return resp;
 }
 
+int
+prompt_yesno(wchar_t const *msg, bool deflt)
+{
+	size_t fullmsglen = wcslen(msg) + 8;
+	wchar_t *fullmsg = malloc(sizeof(wchar_t) * fullmsglen);
+	wchar_t const *defltmk = deflt ? L"(Y/n)" : L"(y/N)";
+	swprintf(fullmsg, fullmsglen, L"%ls %ls ", msg, defltmk);
+	
+askagain:;
+	wchar_t *resp = prompt_ask(fullmsg, NULL, NULL);
+	if (!resp) {
+		free(fullmsg);
+		return -1;
+	}
+	
+	if (!wcscmp(resp, L"y") || deflt && !*resp) {
+		free(resp);
+		free(fullmsg);
+		return 1;
+	} else if (!wcscmp(resp, L"n") || !deflt && !*resp) {
+		free(resp);
+		free(fullmsg);
+		return 0;
+	} else {
+		free(resp);
+		prompt_show(L"expected either 'y' or 'n'!");
+		goto askagain;
+	}
+}
+
 void
-prompt_complete_path(char **resp, size_t *resp_len, void *data)
+prompt_comp_path(wchar_t **resp, size_t *rlen, void *cdata)
 {
 }
 
 static void
-drawbox(char const *text)
+drawbox(wchar_t const *text)
 {
 	struct winsize ws;
 	ioctl(0, TIOCGWINSZ, &ws);
 
-	size_t text_size_y = 1, linewidth = 0;
-	for (char const *c = text; *c; ++c) {
-		if (*c == '\n' || ++linewidth > ws.ws_col) {
+	size_t textrows = 1, linewidth = 0;
+	for (wchar_t const *c = text; *c; ++c) {
+		if (*c == L'\n' || ++linewidth > ws.ws_col) {
 			linewidth = 0;
-			++text_size_y;
+			++textrows;
 		}
 	}
 
-	size_t box_top = ws.ws_row - text_size_y;
-
-	// clear box.
-	for (size_t i = box_top; i < ws.ws_row; ++i) {
-		for (size_t j = 0; j < ws.ws_col; ++j)
-			mvaddch(i, j, ' ');
-	}
-
-	// write actual text.
-	mvaddstr(box_top, 0, text);
-
-	// set coloration.
-	for (size_t i = box_top; i < ws.ws_row; ++i)
-		mvchgat(i, 0, ws.ws_col, 0, conf_gnorm, NULL);
-
-	refresh();
+	size_t boxtop = ws.ws_row - textrows;
+	draw_fill(boxtop, 0, ws.ws_row, ws.ws_col, L' ', CONF_A_GNORM);
+	draw_putwstr(boxtop, 0, text, CONF_A_GNORM);
 }

@@ -4,85 +4,97 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+
+#include "prompt.h"
+
+VEC_DEFIMPL(pbuf)
+
 struct buf
 buf_create(bool writable)
 {
 	return (struct buf){
-		.conts = malloc(1),
+		.conts = malloc(sizeof(wchar_t)),
 		.size = 0,
 		.cap = 1,
-		.src_type = BUF_SRC_TYPE_FRESH,
 		.src = NULL,
-		.writable = writable,
-		.modified = false,
+		.srctype = BST_FRESH,
+		.flags = writable * BF_WRITABLE,
 	};
 }
 
 struct buf
-buf_from_str(char const *str, bool writable)
+buf_fromfile(char const *path)
 {
+	FILE *fp = fopen(path, "rb");
+	if (!fp) {
+		size_t mlen = sizeof(wchar_t) * (strlen(path) + 20);
+		wchar_t *msg = malloc(mlen);
+		swprintf(msg, mlen, L"cannot read file: %s!", path);
+		prompt_show(msg);
+		free(msg);
+		return buf_create(false);
+	}
+
 	struct buf b = buf_create(true);
+	b.srctype = BST_FILE;
+	b.src = strdup(path);
 
-	buf_write_str(&b, 0, str);
-	b.writable = writable;
-	b.modified = false;
-
+	wint_t wch;
+	while ((wch = fgetwc(fp)) != WEOF)
+		buf_writewch(&b, b.size, wch);
+	
+	int ea = euidaccess(path, W_OK);
+	if (ea != 0) {
+		size_t mlen = sizeof(wchar_t) * (strlen(path) + 24);
+		wchar_t *msg = malloc(mlen);
+		swprintf(msg, mlen, L"opening file readonly: %s", path);
+		prompt_show(msg);
+		free(msg);
+	}
+	
+	b.flags = !ea * BF_WRITABLE;
+	
 	return b;
 }
 
 struct buf
-buf_from_file(char const *path, bool writable)
+buf_fromwstr(wchar_t const *wstr, bool writable)
 {
-	FILE *fp = fopen(path, "rb");
-	if (!fp)
-		return buf_create(writable);
+	struct buf b = buf_create(true);
+	
+	buf_writewstr(&b, 0, wstr);
+	b.flags = writable * BF_WRITABLE;
 
-	fseek(fp, 0, SEEK_END);
-	size_t fsize = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-
-	size_t cap;
-	for (cap = 1; cap < fsize; cap *= 2);
-
-	char *fconts = malloc(cap);
-	fread(fconts, 1, fsize, fp);
-
-	fclose(fp);
-
-	return (struct buf){
-		.conts = fconts,
-		.size = fsize,
-		.cap = cap,
-		.src_type = BUF_SRC_TYPE_FILE,
-		.src = strdup(path),
-		.writable = writable,
-		.modified = false,
-	};
+	return b;
 }
 
 int
 buf_save(struct buf *b)
 {
-	// it doesnt make sense to save to anything other than a file.
-	// and since no file is specified as the buffer source, nothing is done.
-	if (b->src_type != BUF_SRC_TYPE_FILE)
+	// it doesnt make sense to save to anything other than a file and since
+	// no file is specified as the buffer source, nothing is done.
+	if (b->srctype != BST_FILE)
 		return 1;
 
 	// no point saving an unchanged file into itself.
-	// still, this isn't really an error.
-	if (!b->modified)
+	if (!(b->flags & BF_MODIFIED))
 		return 0;
 
 	FILE *fp = fopen(b->src, "wb");
 	if (!fp)
 		return 1;
 
-	if (fwrite(b->conts, 1, b->size, fp) != b->size)
-		return 1;
+	for (size_t i = 0; i < b->size; ++i) {
+		wchar_t wcs[] = {b->conts[i], 0};
+		char mbs[sizeof(wchar_t) + 1] = {0};
+		wcstombs(mbs, wcs, sizeof(wchar_t) + 1);
+		fputs(mbs, fp);
+	}
 
 	fclose(fp);
-	b->modified = false;
-
+	b->flags &= ~BF_MODIFIED;
+	
 	return 0;
 }
 
@@ -95,68 +107,68 @@ buf_destroy(struct buf *b)
 }
 
 void
-buf_write_ch(struct buf *b, size_t ind, char ch)
+buf_writewch(struct buf *b, size_t ind, wchar_t wch)
 {
-	if (!b->writable)
+	if (!(b->flags & BF_WRITABLE))
 		return;
 
 	if (b->size >= b->cap) {
 		b->cap *= 2;
-		b->conts = realloc(b->conts, b->cap);
+		b->conts = realloc(b->conts, sizeof(wchar_t) * b->cap);
 	}
 
-	memmove(b->conts + ind + 1, b->conts + ind, b->size - ind);
-	b->conts[ind] = ch;
+	memmove(b->conts + ind + 1, b->conts + ind, sizeof(wchar_t) * (b->size - ind));
+	b->conts[ind] = wch;
 	++b->size;
-	b->modified = true;
+	b->flags |= BF_MODIFIED;
 }
 
 void
-buf_write_str(struct buf *b, size_t ind, char const *s)
+buf_writewstr(struct buf *b, size_t ind, wchar_t const *wstr)
 {
-	if (!b->writable)
+	if (!(b->flags & BF_WRITABLE))
 		return;
 
-	size_t len = strlen(s);
-	size_t new_cap = b->cap;
-
+	size_t len = wcslen(wstr);
+	size_t newcap = b->cap;
+	
 	for (size_t i = 1; i <= len; ++i) {
-		if (b->size + i > new_cap)
-			new_cap *= 2;
+		if (b->size + i > newcap)
+			newcap *= 2;
 	}
 
-	if (b->cap != new_cap) {
-		b->cap = new_cap;
-		b->conts = realloc(b->conts, b->cap);
+	if (b->cap != newcap) {
+		b->cap = newcap;
+		b->conts = realloc(b->conts, sizeof(wchar_t) * b->cap);
 	}
 
-	memmove(b->conts + ind + len, b->conts + ind, b->size - ind);
-	memcpy(b->conts + ind, s, len);
+	memmove(b->conts + ind + len, b->conts + ind, sizeof(wchar_t) * (b->size - ind));
+	memcpy(b->conts + ind, wstr, sizeof(wchar_t) * len);
 	b->size += len;
-	b->modified = true;
+	b->flags |= BF_MODIFIED;
 }
 
 void
 buf_erase(struct buf *b, size_t lb, size_t ub)
 {
-	if (!b->writable)
+	if (!(b->flags & BF_WRITABLE))
 		return;
 
-	memmove(b->conts + lb, b->conts + ub, b->size - ub);
+	memmove(b->conts + lb, b->conts + ub, sizeof(wchar_t) * (b->size - ub));
 	b->size -= ub - lb;
-	b->modified = true;
+	b->flags |= BF_MODIFIED;
 }
 
 void
-buf_pos(struct buf const *b, size_t pos, unsigned *out_x, unsigned *out_y)
+buf_pos(struct buf const *b, size_t pos, unsigned *out_r, unsigned *out_c)
 {
-	*out_x = *out_y = 0;
+	*out_r = *out_c = 0;
 
-	for (size_t i = 0; i < pos; ++i) {
-		++*out_x;
-		if (b->conts[i] == '\n') {
-			*out_x = 0;
-			++*out_y;
+	for (size_t i = 0; i < pos && i < b->size; ++i) {
+		++*out_c;
+		if (b->conts[i] == L'\n') {
+			*out_c = 0;
+			++*out_r;
 		}
 	}
 }

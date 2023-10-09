@@ -2,7 +2,7 @@
 #define EDITOR_H__
 
 int editor_init(int argc, char const *argv[]);
-void editor_main_loop(void);
+void editor_mainloop(void);
 void editor_quit(void);
 
 #endif

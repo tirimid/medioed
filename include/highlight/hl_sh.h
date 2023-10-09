@@ -1,30 +1,15 @@
-#ifndef HL_SH_H__
-#define HL_SH_H__
-
-#include <ncurses.h>
-
-#define HIGHLIGHT_SH(hl, re_str_) \
+#define HIGHLIGHT_SH(a, re_str_) \
 	{ \
 		.localmode = "sh", \
-		.bg = hl##_BG_SH, \
-		.fg = hl##_FG_SH, \
-		.attr = hl##_ATTR_SH, \
 		.re_str = re_str_, \
+		.attr = a, \
 	},
 
-#define COMMENT_BG_SH CONF_NORM_BG
-#define COMMENT_FG_SH COLOR_RED
-#define COMMENT_ATTR_SH 0
-#define STRING_BG_SH CONF_NORM_BG
-#define STRING_FG_SH COLOR_YELLOW
-#define STRING_ATTR_SH 0
-#define TRAILINGWS_BG_SH COLOR_GREEN
-#define TRAILINGWS_FG_SH CONF_NORM_FG
-#define TRAILINGWS_ATTR_SH 0
+#define A_COMMENT_SH (A_RED | A_BGOF(CONF_A_NORM))
+#define A_STRING_SH (A_YELLOW | A_BGOF(CONF_A_NORM))
+#define A_TRAILINGWS_SH (A_FGOF(CONF_A_NORM) | A_BGREEN)
 
-HIGHLIGHT_SH(STRING, "\"(?:[^\"\\\\]|\\\\.)*\"")
-HIGHLIGHT_SH(STRING, "'(?:[^'\\\\]|\\\\.)*'")
-HIGHLIGHT_SH(COMMENT, "#.*")
-HIGHLIGHT_SH(TRAILINGWS, "\\s+$")
-
-#endif
+HIGHLIGHT_SH(A_STRING_SH, L"\"(?:[^\"\\\\]|\\\\.)*\"")
+HIGHLIGHT_SH(A_STRING_SH, L"'(?:[^'\\\\]|\\\\.)*'")
+HIGHLIGHT_SH(A_COMMENT_SH, L"#.*")
+HIGHLIGHT_SH(A_TRAILINGWS_SH, L"\\s+$")

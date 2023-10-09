@@ -1,10 +1,14 @@
 #ifndef UTIL_H__
 #define UTIL_H__
 
-#include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <wchar.h>
 
 #include <unistd.h>
+
+#define NOTHING__
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -12,30 +16,64 @@
 #define ABS(n) ((n) < 0 ? -(n) : (n))
 #define SIGN(n) ((n) / ABS(n))
 
-struct arraylist {
-	void **data;
-	size_t *data_sizes;
-	size_t size, cap;
-};
+#define K_CTL(k) (k - 'a' + 1)
+#define K_META(k) 27, k
+#define K_BACKSPC 127
+#define K_RET 13
 
-struct string {
-	char *data;
-	size_t len, cap;
-};
+#define VEC_DEFPROTO_EX(t, acclevel) \
+	struct vec_##t { \
+		t *data; \
+		size_t size, cap; \
+	}; \
+	acclevel struct vec_##t vec_##t##_create(void); \
+	acclevel void vec_##t##_destroy(struct vec_##t *v); \
+	acclevel void vec_##t##_add(struct vec_##t *v, t *new); \
+	acclevel void vec_##t##_rm(struct vec_##t *v, size_t ind); \
+	acclevel void vec_##t##_swap(struct vec_##t *v, size_t a, size_t b);
 
-struct arraylist arraylist_create(void);
-void arraylist_destroy(struct arraylist *al);
-void arraylist_add(struct arraylist *al, void const *new, size_t size);
-void arraylist_rm(struct arraylist *al, size_t ind);
-void arraylist_swap(struct arraylist *al, size_t ind_a, size_t ind_b);
-struct arraylist arraylist_copy(struct arraylist const *al);
-ssize_t arraylist_find(struct arraylist const *al, void const *item, size_t size);
+#define VEC_DEFIMPL_EX(t, acclevel) \
+	acclevel struct vec_##t \
+	vec_##t##_create(void) \
+	{ \
+		return (struct vec_##t){ \
+			.data = malloc(sizeof(t)), \
+			.size = 0, \
+			.cap = 1, \
+		}; \
+	} \
+	acclevel void \
+	vec_##t##_destroy(struct vec_##t *v) \
+	{ \
+		free(v->data); \
+	} \
+	acclevel void \
+	vec_##t##_add(struct vec_##t *v, t *new) \
+	{ \
+		if (v->size >= v->cap) { \
+			v->cap *= 2; \
+			v->data = realloc(v->data, sizeof(t) * v->cap); \
+		} \
+		v->data[v->size++] = *new; \
+	} \
+	acclevel void \
+	vec_##t##_rm(struct vec_##t *v, size_t ind) \
+	{ \
+		memmove(&v->data[ind], &v->data[ind + 1], sizeof(t) * (v->size - ind - 1)); \
+		--v->size; \
+	} \
+	acclevel void \
+	vec_##t##_swap(struct vec_##t *v, size_t a, size_t b) \
+	{ \
+		t tmp = v->data[a]; \
+		v->data[a] = v->data[b]; \
+		v->data[b] = tmp; \
+	}
 
-struct string string_create(void);
-void string_destroy(struct string *s);
-void string_push_ch(struct string *s, char ch);
-void string_push_str(struct string *s, char const *str);
-char *string_to_str(struct string const *s);
+#define VEC_DEFPROTO(t) VEC_DEFPROTO_EX(t, NOTHING__)
+#define VEC_DEFIMPL(t) VEC_DEFIMPL_EX(t, NOTHING__)
+#define VEC_DEFPROTO_STATIC(t) VEC_DEFPROTO_EX(t, static)
+#define VEC_DEFIMPL_STATIC(t) VEC_DEFIMPL_EX(t, static)
 
 char const *fileext(char const *path);
 

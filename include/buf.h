@@ -3,31 +3,41 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <wchar.h>
 
-enum buf_src_type {
-	BUF_SRC_TYPE_FRESH,
-	BUF_SRC_TYPE_FILE,
+#include "util.h"
+
+typedef struct buf *pbuf;
+
+enum bufsrctype {
+	BST_FRESH = 0,
+	BST_FILE,
+};
+
+enum bufflag {
+	BF_WRITABLE = 0x1,
+	BF_MODIFIED = 0x2,
 };
 
 struct buf {
-	char *conts;
+	wchar_t *conts;
 	size_t size, cap;
-
-	enum buf_src_type src_type;
 	void *src;
-
-	bool writable;
-	bool modified;
+	unsigned char srctype;
+	uint8_t flags;
 };
 
+VEC_DEFPROTO(pbuf)
+
 struct buf buf_create(bool writable);
-struct buf buf_from_str(char const *str, bool writable);
-struct buf buf_from_file(char const *path, bool writable);
+struct buf buf_fromfile(char const *path);
+struct buf buf_fromwstr(wchar_t const *wstr, bool writable);
 int buf_save(struct buf *b);
 void buf_destroy(struct buf *b);
-void buf_write_ch(struct buf *b, size_t ind, char ch);
-void buf_write_str(struct buf *b, size_t ind, char const *s);
+void buf_writewch(struct buf *b, size_t ind, wchar_t wch);
+void buf_writewstr(struct buf *b, size_t ind, wchar_t const *wstr);
 void buf_erase(struct buf *b, size_t lb, size_t ub);
-void buf_pos(struct buf const *b, size_t pos, unsigned *out_x, unsigned *out_y);
+void buf_pos(struct buf const *b, size_t pos, unsigned *out_r, unsigned *out_c);
 
 #endif

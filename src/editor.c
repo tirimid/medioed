@@ -6,24 +6,23 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
+#include <wchar.h>
 
-#include <ncurses.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 
 #include "buf.h"
 #include "conf.h"
+#include "draw.h"
 #include "frame.h"
 #include "keybd.h"
-#include "mode.h"
 #include "prompt.h"
-#include "util.h"
 
 static struct buf *addbuf(struct buf *b);
 static struct frame *addframe(struct frame *f);
 static void arrangeframes(void);
-static void drawframes(void);
+static void redrawall(void);
 static void bind_quit(void);
 static void bind_chgfwd_frame(void);
 static void bind_chgback_frame(void);
@@ -45,106 +44,85 @@ static void bind_del_word(void);
 static void bind_chgmode_global(void);
 static void bind_chgmode_local(void);
 static void bind_create_scrap(void);
+static void bind_newline(void);
 static void resetbinds(void);
 static void sigwinch_handler(int arg);
 
 static bool running;
-static size_t cur_frame;
-static struct arraylist frames;
-static struct arraylist bufs;
-static void (*old_sigwinch_handler)(int);
+static size_t curframe;
+static struct vec_frame frames;
+static struct vec_pbuf pbufs;
 
 int
 editor_init(int argc, char const *argv[])
 {
-	initscr();
-	start_color();
-	raw();
-	noecho();
-	curs_set(0);
-
-	if (conf_init() != 0) {
-		endwin();
+	draw_clear();
+	
+	if (conf_init()) {
 		fputs("failed on conf_init()!\n", stderr);
 		return 1;
 	}
 
 	keybd_init();
 
-	frames = arraylist_create();
-	bufs = arraylist_create();
-	cur_frame = 0;
+	frames = vec_frame_create();
+	pbufs = vec_pbuf_create();
+	curframe = 0;
+	
+	int firstarg = 1;
+	while (firstarg < argc && *argv[firstarg] == '-')
+		++firstarg;
 
-	if (argc <= 1) {
-		struct buf gb = buf_from_str(CONF_GREET_TEXT, false);
-		struct buf *gbp = addbuf(&gb);
-		struct frame gf = frame_create("*greeter*", gbp);
+	if (argc <= firstarg) {
+		struct buf gb = buf_fromwstr(CONF_GREETTEXT, false);
+		struct frame gf = frame_create(CONF_GREETNAME, addbuf(&gb));
 		addframe(&gf);
 	} else {
-		for (int i = 1; i < argc; ++i) {
-			struct stat s;
-			if (stat(argv[i], &s) || !S_ISREG(s.st_mode)) {
-				char *msg = malloc(strlen(argv[i]) + 22);
-				sprintf(msg, "could not open file: %s", argv[i]);
-
-				clear();
-				prompt_show(msg);
-
-				free(msg);
-				continue;
-			}
-
-			struct buf b = buf_from_file(argv[i], true);
-			struct buf *bp = addbuf(&b);
-			struct frame f = frame_create(argv[i], bp);
+		for (int i = firstarg; i < argc; ++i) {
+			size_t wnamen = strlen(argv[i]) + 1;
+			wchar_t *wname = malloc(sizeof(wchar_t) * wnamen);
+			mbstowcs(wname, argv[i], wnamen);
+			
+			struct buf b = buf_fromfile(argv[i]);
+			struct frame f = frame_create(wname, addbuf(&b));
 			addframe(&f);
+
+			free(wname);
 		}
 	}
 
 	struct sigaction sa;
 	sigaction(SIGWINCH, NULL, &sa);
-	old_sigwinch_handler = sa.sa_handler;
-
 	sa.sa_handler = sigwinch_handler;
 	sigaction(SIGWINCH, &sa, NULL);
 
 	resetbinds();
 	arrangeframes();
+	redrawall();
 
 	return 0;
 }
 
 void
-editor_main_loop(void)
+editor_mainloop(void)
 {
 	running = true;
 
 	while (running) {
 		// ensure frames sharing buffers are in a valid state.
 		for (size_t i = 0; i < frames.size; ++i) {
-			struct frame *f = frames.data[i];
-			f->cursor = MIN(f->cursor, f->buf->size);
+			struct frame *f = &frames.data[i];
+			f->csr = MIN(f->csr, f->buf->size);
 		}
 
-		drawframes();
-		refresh();
-
-		int key = keybd_await_input();
-		switch (key) {
-		case KEYBD_IGNORE_BIND:
-			break;
-		default: {
-			if (frames.size == 0)
-				break;
-
-			struct frame *f = frames.data[cur_frame];
-
-			buf_write_ch(f->buf, f->cursor, key);
-			frame_relmove_cursor(f, f->buf->writable, 0, true);
-			mode_keyupdate(f, key);
-
-			break;
-		}
+		struct frame *f = &frames.data[curframe];
+		frame_draw(f, true);
+		
+		wint_t key = keybd_awaitkey();
+		if (key != KEYBD_IGNORE) {
+			buf_writewch(f->buf, f->csr, key);
+			frame_relmvcsr(f, 0, !!(f->buf->flags & BF_WRITABLE), true);
+			mode_keyupdate(&frames.data[curframe], key);
 		}
 	}
 }
@@ -153,87 +131,77 @@ void
 editor_quit(void)
 {
 	for (size_t i = 0; i < frames.size; ++i)
-		frame_destroy(frames.data[i]);
+		frame_destroy(&frames.data[i]);
 
-	for (size_t i = 0; i < bufs.size; ++i)
-		buf_destroy(bufs.data[i]);
+	for (size_t i = 0; i < pbufs.size; ++i) {
+		buf_destroy(pbufs.data[i]);
+		free(pbufs.data[i]);
+	}
 
-	arraylist_destroy(&frames);
-	arraylist_destroy(&bufs);
+	vec_frame_destroy(&frames);
+	vec_pbuf_destroy(&pbufs);
 
 	keybd_quit();
 	conf_quit();
-	endwin();
 }
 
 static struct buf *
 addbuf(struct buf *b)
 {
-	for (size_t i = 0; i < bufs.size; ++i) {
-		struct buf *ob = bufs.data[i];
-
-		if (b->src_type == BUF_SRC_TYPE_FILE
-		    && ob->src_type == BUF_SRC_TYPE_FILE
-		    && !strcmp(b->src, ob->src)) {
-			buf_destroy(b);
-			return ob;
+	if (b->srctype == BST_FILE) {
+		for (size_t i = 0; i < pbufs.size; ++i) {
+			if (pbufs.data[i]->srctype == BST_FILE
+			    && !strcmp(b->src, pbufs.data[i]->src)) {
+				buf_destroy(b);
+				return pbufs.data[i];
+			}
 		}
 	}
 
-	arraylist_add(&bufs, b, sizeof(*b));
-	return bufs.data[bufs.size - 1];
+	struct buf *pb = malloc(sizeof(struct buf));
+	*pb = *b;
+	vec_pbuf_add(&pbufs, &pb);
+	
+	return pbufs.data[pbufs.size - 1];
 }
 
 static struct frame *
 addframe(struct frame *f)
 {
-	arraylist_add(&frames, f, sizeof(*f));
-	return frames.data[frames.size - 1];
+	vec_frame_add(&frames, f);
+	return &frames.data[frames.size - 1];
 }
 
 static void
 arrangeframes(void)
 {
-	if (frames.size == 0)
-		return;
+	struct winsize ws;
+	ioctl(0, TIOCGWINSZ, &ws);
 
-	struct winsize tty_size;
-	ioctl(0, TIOCGWINSZ, &tty_size);
+	struct frame *f = &frames.data[0];
 
-	struct frame *f = frames.data[0];
-
-	f->pos_x = f->pos_y = 0;
-	f->size_y = tty_size.ws_row;
-	f->size_x = frames.size == 1 ? tty_size.ws_col : 4 * tty_size.ws_col / 7;
+	f->pr = f->pc = 0;
+	f->sr = ws.ws_row;
+	f->sc = frames.size == 1 ? ws.ws_col : CONF_MNUM * ws.ws_col / CONF_MDENOM;
 
 	for (size_t i = 1; i < frames.size; ++i) {
-		f = frames.data[i];
+		f = &frames.data[i];
 
-		f->size_y = tty_size.ws_row / (frames.size - 1);
-		f->pos_y = (i - 1) * f->size_y;
-		f->pos_x = 4 * tty_size.ws_col / 7;
-		f->size_x = tty_size.ws_col - f->pos_x;
+		f->sr = ws.ws_row / (frames.size - 1);
+		f->pr = (i - 1) * f->sr;
+		f->pc = CONF_MNUM * ws.ws_col / CONF_MDENOM;
+		f->sc = ws.ws_col - f->pc;
 
-		if (f->pos_y + f->size_y > tty_size.ws_row)
-			f->size_y = tty_size.ws_row - f->pos_y;
+		if (f->pr + f->sr > ws.ws_row)
+			f->sr = ws.ws_row - f->pr;
 	}
 }
 
 static void
-drawframes(void)
+redrawall(void)
 {
-	// rather than calling `clear()`, manually wipe the screen.
-	// this reduces tearing in a TTY.
-	struct winsize tty_size;
-	ioctl(0, TIOCGWINSZ, &tty_size);
-	for (unsigned i = 0; i < tty_size.ws_row; ++i) {
-		mvchgat(i, 0, tty_size.ws_col, 0, conf_gnorm, NULL);
-		for (unsigned j = 0; j < tty_size.ws_col; ++j)
-			mvaddch(i, j, ' ');
-	}
-
 	for (size_t i = 0; i < frames.size; ++i)
-		frame_draw(frames.data[i], i == cur_frame);
+		frame_draw(&frames.data[i], i == curframe);
 }
 
 static void
@@ -245,71 +213,64 @@ bind_quit(void)
 static void
 bind_chgfwd_frame(void)
 {
-	cur_frame = (cur_frame + 1) % frames.size;
+	curframe = (curframe + 1) % frames.size;
 	resetbinds();
+	redrawall();
 }
 
 static void
 bind_chgback_frame(void)
 {
-	cur_frame = (cur_frame == 0 ? frames.size : cur_frame) - 1;
+	curframe = (curframe == 0 ? frames.size : curframe) - 1;
 	resetbinds();
+	redrawall();
 }
 
 static void
 bind_focus_frame(void)
 {
-	arraylist_swap(&frames, 0, cur_frame);
-	cur_frame = 0;
+	vec_frame_swap(&frames, 0, curframe);
+	curframe = 0;
 	arrangeframes();
+	redrawall();
 }
 
 static void
 bind_kill_frame(void)
 {
-ask_again:;
-	char *path = prompt_ask("kill active frame? (y/N) ", NULL, NULL);
-	if (!path)
+	int confirm = prompt_yesno(L"kill active frame?", false);
+	redrawall();
+	if (confirm != 1)
 		return;
+	
+	frame_destroy(&frames.data[curframe]);
+	vec_frame_rm(&frames, curframe);
+	curframe = curframe > 0 ? curframe - 1 : 0;
 
-	if (!strcmp(path, "y")) {
-		frame_destroy(frames.data[cur_frame]);
-		arraylist_rm(&frames, cur_frame);
-		cur_frame = cur_frame > 0 ? cur_frame - 1 : 0;
-
-		// destroy orphaned buffers.
-		for (size_t i = 0; i < bufs.size; ++i) {
-			bool orphan = true;
-			for (size_t j = 0; j < frames.size; ++j) {
-				struct frame const *f = frames.data[j];
-				if (bufs.data[i] == f->buf) {
-					orphan = false;
-					break;
-				}
-			}
-
-			if (orphan) {
-				buf_destroy(bufs.data[i]);
-				arraylist_rm(&bufs, i);
-				--i;
+	// destroy orphaned buffers.
+	for (size_t i = 0; i < pbufs.size; ++i) {
+		bool orphan = true;
+		for (size_t j = 0; j < frames.size; ++j) {
+			if (pbufs.data[i] == frames.data[j].buf) {
+				orphan = false;
+				break;
 			}
 		}
 
-		resetbinds();
-		arrangeframes();
-
-		free(path);
-	} else if (!strcmp(path, "n") || !*path)
-		free(path);
-	else {
-		free(path);
-		prompt_show("expected either 'y' or 'n'!");
-		goto ask_again;
+		if (orphan) {
+			buf_destroy(pbufs.data[i]);
+			free(pbufs.data[i]);
+			vec_pbuf_rm(&pbufs, i--);
+		}
 	}
+
+	resetbinds();
+	arrangeframes();
+	redrawall();
 
 	if (frames.size == 0) {
 		struct buf b = buf_create(true);
-		struct frame f = frame_create("*scratch*", addbuf(&b));
+		struct frame f = frame_create(CONF_SCRAPNAME, addbuf(&b));
 		addframe(&f);
 	}
 }
@@ -317,53 +278,91 @@ ask_again:;
 static void
 bind_open_file(void)
 {
-	char *path = prompt_ask("open file: ", prompt_complete_path, NULL);
-	if (!path)
+	wchar_t *wpath = prompt_ask(L"open file: ", prompt_comp_path, NULL);
+	redrawall();
+	if (!wpath)
 		return;
+
+	size_t pathsize = sizeof(wchar_t) * (wcslen(wpath) + 1);
+	char *path = malloc(pathsize);
+	wcstombs(path, wpath, pathsize);
 
 	struct stat s;
 	if (stat(path, &s) || !S_ISREG(s.st_mode)) {
-		prompt_show("could not open file!");
+		prompt_show(L"could not open file!");
+		redrawall();
 		free(path);
 		return;
 	}
 
-	struct buf buf = buf_from_file(path, true);
-	struct frame frame = frame_create(path, addbuf(&buf));
+	struct buf buf = buf_fromfile(path);
+	struct frame frame = frame_create(wpath, addbuf(&buf));
 	addframe(&frame);
 
-	cur_frame = frames.size - 1;
+	curframe = frames.size - 1;
 	resetbinds();
 	arrangeframes();
+	redrawall();
 
 	free(path);
+	free(wpath);
 }
 
 static void
 bind_save_file(void)
 {
-	struct frame *f = frames.data[cur_frame];
-	enum buf_src_type prevtype = f->buf->src_type;
+	struct frame *f = &frames.data[curframe];
+	enum bufsrctype prevtype = f->buf->srctype;
+	uint8_t prevflags = f->buf->flags;
 
-	if (f->buf->src_type == BUF_SRC_TYPE_FRESH) {
-		f->buf->src_type = BUF_SRC_TYPE_FILE;
-		f->buf->src = prompt_ask("save to file: ", prompt_complete_path, NULL);;
+	wchar_t *wpath;
+	if (f->buf->srctype == BST_FRESH) {
+		f->buf->srctype = BST_FILE;
+		
+		wpath = prompt_ask(L"save to file: ", prompt_comp_path, NULL);
+		redrawall();
+
+		if (wpath) {
+			size_t pathsize = sizeof(wchar_t) * (wcslen(wpath) + 1);
+			char *path = malloc(pathsize);
+			wcstombs(path, wpath, pathsize);
+
+			f->buf->src = strdup(path);
+			free(path);
+
+			// force resave and allow editing of newly made file.
+			f->buf->flags |= BF_MODIFIED | BF_WRITABLE;
+		} else
+			f->buf->src = NULL;
 	}
 
-	// no path was given as source for new buffer, so the type is reset.
-	if (!f->buf->src) {
-		f->buf->src_type = prevtype;
+	// no path was given as source for new buffer, so the buffer state is
+	// reset to how it was before the save.
+	if (f->buf->src && !*(uint8_t *)f->buf->src) {
+		prompt_show(L"no save path given, nothing will be done!");
+		redrawall();
+	}
+	
+	if (!f->buf->src || !*(uint8_t *)f->buf->src) {
+		f->buf->srctype = prevtype;
+		f->buf->flags = prevflags;
+		
+		if (wpath)
+			free(wpath);
+		
 		return;
 	}
 
 	if (buf_save(f->buf)) {
-		prompt_show("failed to write file!");
+		prompt_show(L"failed to write file!");
+		redrawall();
+		free(wpath);
 		return;
 	}
 
-	if (prevtype == BUF_SRC_TYPE_FRESH) {
+	if (prevtype == BST_FRESH) {
 		free(f->name);
-		f->name = strdup(f->buf->src);
+		f->name = wpath;
 	}
 
 	if (!f->localmode[0]) {
@@ -375,124 +374,153 @@ bind_save_file(void)
 static void
 bind_navfwd_ch(void)
 {
-	frame_relmove_cursor(frames.data[cur_frame], 1, 0, true);
+	frame_relmvcsr(&frames.data[curframe], 0, 1, true);
 }
 
 static void
 bind_navfwd_word(void)
 {
-	prompt_show("this keybind is not implemented yet!");
+	prompt_show(L"this bind is not implemented yet!");
+	redrawall();
 }
 
 static void
 bind_navback_ch(void)
 {
-	frame_relmove_cursor(frames.data[cur_frame], -1, 0, true);
+	frame_relmvcsr(&frames.data[curframe], 0, -1, true);
 }
 
 static void
 bind_navback_word(void)
 {
-	prompt_show("this keybind is not implemented yet!");
+	prompt_show(L"this bind is not implemented yet!");
+	redrawall();
 }
 
 static void
 bind_navdown(void)
 {
-	frame_relmove_cursor(frames.data[cur_frame], 0, 1, false);
+	frame_relmvcsr(&frames.data[curframe], 1, 0, true);
 }
 
 static void
 bind_navup(void)
 {
-	frame_relmove_cursor(frames.data[cur_frame], 0, -1, false);
+	frame_relmvcsr(&frames.data[curframe], -1, 0, true);
 }
 
 static void
 bind_navln_start(void)
 {
-	frame_relmove_cursor(frames.data[cur_frame], -INT_MAX, 0, false);
+	frame_relmvcsr(&frames.data[curframe], 0, -INT_MAX, false);
 }
 
 static void
 bind_navln_end(void)
 {
-	frame_relmove_cursor(frames.data[cur_frame], INT_MAX, 0, false);
+	frame_relmvcsr(&frames.data[curframe], 0, INT_MAX, false);
 }
 
 static void
 bind_navgoto(void)
 {
-ask_again:;
-	char *linum_text = prompt_ask("goto line: ", NULL, NULL);
-	if (!linum_text)
+askagain:;
+	wchar_t *wslinum = prompt_ask(L"goto line: ", NULL, NULL);
+	if (!wslinum)
 		return;
 
-	if (!*linum_text) {
-		free(linum_text);
-		prompt_show("expected a line number!");
-		goto ask_again;
+	if (!*wslinum) {
+		free(wslinum);
+		prompt_show(L"expected a line number!");
+		goto askagain;
 	}
 
-	for (char const *c = linum_text; *c; ++c) {
+	size_t slinumsize = sizeof(wchar_t) * (wcslen(wslinum) + 1);
+	char *slinum = malloc(slinumsize);
+	wcstombs(slinum, wslinum, slinumsize);
+	free(wslinum);
+
+	for (char const *c = slinum; *c; ++c) {
 		if (!isdigit(*c)) {
-			free(linum_text);
-			prompt_show("invalid line number!");
-			goto ask_again;
+			free(slinum);
+			prompt_show(L"invalid line number!");
+			goto askagain;
 		}
 	}
 
-	unsigned linum = atoi(linum_text);
+	unsigned linum = atoi(slinum);
+	free(slinum);
 	linum -= linum != 0;
-	free(linum_text);
 
-	frame_move_cursor(frames.data[cur_frame], 0, linum);
+	frame_mvcsr(&frames.data[curframe], linum, 0);
 }
 
 static void
 bind_del_ch(void)
 {
-	struct frame *f = frames.data[cur_frame];
+	struct frame *f = &frames.data[curframe];
 
-	if (f->cursor > 0 && f->buf->writable) {
-		buf_erase(f->buf, f->cursor - 1, f->cursor);
-		frame_relmove_cursor(f, -1, 0, true);
+	if (f->csr > 0 && f->buf->flags & BF_WRITABLE) {
+		buf_erase(f->buf, f->csr - 1, f->csr);
+		frame_relmvcsr(f, 0, -(f->csr < f->buf->size - 1), true);
 	}
 }
 
 static void
 bind_del_word(void)
 {
-	prompt_show("this keybind is not implemented yet!");
+	prompt_show(L"this bind is not implemented yet!");
+	redrawall();
 }
 
 static void
 bind_chgmode_global(void)
 {
-	char *new_gm = prompt_ask("new globalmode: ", NULL, NULL);
-	if (!new_gm)
+	wchar_t *wnewgm = prompt_ask(L"new globalmode: ", NULL, NULL);
+	redrawall();
+	if (!wnewgm)
 		return;
 
-	mode_set(new_gm, frames.data[cur_frame]);
-	free(new_gm);
+	size_t newgmsize = sizeof(wchar_t) * (wcslen(wnewgm) + 1);
+	char *newgm = malloc(newgmsize);
+	wcstombs(newgm, wnewgm, newgmsize);
+	free(wnewgm);
+
+	mode_set(newgm, &frames.data[curframe]);
+	free(newgm);
 }
 
 static void
 bind_chgmode_local(void)
 {
-	char *new_lm = prompt_ask("new frame localmode: ", NULL, NULL);
-	if (!new_lm)
+	wchar_t *wnewlm = prompt_ask(L"new frame localmode: ", NULL, NULL);
+	redrawall();
+	if (!wnewlm)
 		return;
 
-	struct frame *f = frames.data[cur_frame];
-	free(f->localmode);
-	f->localmode = new_lm;
+	size_t newlmsize = sizeof(wchar_t) * (wcslen(wnewlm) + 1);
+	char *newlm = malloc(newlmsize);
+	wcstombs(newlm, wnewlm, newlmsize);
+	free(wnewlm);
+
+	free(frames.data[curframe].localmode);
+	frames.data[curframe].localmode = strdup(newlm);
+	free(newlm);
 }
 
 static void
 bind_create_scrap(void)
 {
-	prompt_show("this keybind is not implemented yet!");
+	prompt_show(L"this bind is not implemented yet!");
+	redrawall();
+}
+
+static void
+bind_newline(void)
+{
+	struct frame *f = &frames.data[curframe];
+	buf_writewch(f->buf, f->csr, L'\n');
+	frame_relmvcsr(f, 0, 1, true);
 }
 
 static void
@@ -502,35 +530,33 @@ resetbinds(void)
 	keybd_quit();
 	keybd_init();
 
-	keybd_bind(CONF_BIND_QUIT, bind_quit);
-	keybd_bind(CONF_BIND_CHGFWD_FRAME, bind_chgfwd_frame);
-	keybd_bind(CONF_BIND_CHGBACK_FRAME, bind_chgback_frame);
-	keybd_bind(CONF_BIND_FOCUS_FRAME, bind_focus_frame);
-	keybd_bind(CONF_BIND_KILL_FRAME, bind_kill_frame);
-	keybd_bind(CONF_BIND_OPEN_FILE, bind_open_file);
-	keybd_bind(CONF_BIND_SAVE_FILE, bind_save_file);
-	keybd_bind(CONF_BIND_NAVFWD_CH, bind_navfwd_ch);
-	keybd_bind(CONF_BIND_NAVFWD_WORD, bind_navfwd_word);
-	keybd_bind(CONF_BIND_NAVBACK_CH, bind_navback_ch);
-	keybd_bind(CONF_BIND_NAVBACK_WORD, bind_navback_word);
-	keybd_bind(CONF_BIND_NAVDOWN, bind_navdown);
-	keybd_bind(CONF_BIND_NAVUP, bind_navup);
-	keybd_bind(CONF_BIND_NAVLN_START, bind_navln_start);
-	keybd_bind(CONF_BIND_NAVLN_END, bind_navln_end);
-	keybd_bind(CONF_BIND_NAVGOTO, bind_navgoto);
-	keybd_bind(CONF_BIND_DEL_CH, bind_del_ch);
-	keybd_bind(CONF_BIND_DEL_WORD, bind_del_word);
-	keybd_bind(CONF_BIND_CHGMODE_GLOBAL, bind_chgmode_global);
-	keybd_bind(CONF_BIND_CHGMODE_LOCAL, bind_chgmode_local);
-	keybd_bind(CONF_BIND_CREATE_SCRAP, bind_create_scrap);
+	keybd_bind(conf_bind_quit, bind_quit);
+	keybd_bind(conf_bind_chgfwd_frame, bind_chgfwd_frame);
+	keybd_bind(conf_bind_chgback_frame, bind_chgback_frame);
+	keybd_bind(conf_bind_focus_frame, bind_focus_frame);
+	keybd_bind(conf_bind_kill_frame, bind_kill_frame);
+	keybd_bind(conf_bind_open_file, bind_open_file);
+	keybd_bind(conf_bind_save_file, bind_save_file);
+	keybd_bind(conf_bind_navfwd_ch, bind_navfwd_ch);
+	keybd_bind(conf_bind_navfwd_word, bind_navfwd_word);
+	keybd_bind(conf_bind_navback_ch, bind_navback_ch);
+	keybd_bind(conf_bind_navback_word, bind_navback_word);
+	keybd_bind(conf_bind_navdown, bind_navdown);
+	keybd_bind(conf_bind_navup, bind_navup);
+	keybd_bind(conf_bind_navln_start, bind_navln_start);
+	keybd_bind(conf_bind_navln_end, bind_navln_end);
+	keybd_bind(conf_bind_navgoto, bind_navgoto);
+	keybd_bind(conf_bind_del_ch, bind_del_ch);
+	keybd_bind(conf_bind_del_word, bind_del_word);
+	keybd_bind(conf_bind_chgmode_global, bind_chgmode_global);
+	keybd_bind(conf_bind_chgmode_local, bind_chgmode_local);
+	keybd_bind(conf_bind_create_scrap, bind_create_scrap);
+	keybd_bind(conf_bind_newline, bind_newline);
 }
 
 static void
 sigwinch_handler(int arg)
 {
-	old_sigwinch_handler(arg);
-
 	arrangeframes();
-	drawframes();
-	refresh();
+	redrawall();
 }

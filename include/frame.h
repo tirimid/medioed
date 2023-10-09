@@ -3,34 +3,32 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
-#include <string.h>
-
-#include <unistd.h>
+#include <wchar.h>
 
 #include "buf.h"
 #include "util.h"
 
+typedef struct frame frame;
+
 struct frame {
-	char *name;
-	unsigned pos_x, pos_y;
-	unsigned size_x, size_y;
+	wchar_t *name;
+	unsigned pr, pc;
+	unsigned sr, sc;
 	struct buf *buf;
 
-	// use `frame_(rel)move_cursor()` instead of writing directly, otherwise
-	// visual frame effects will be messed up (scrolling, wrapping, etc.).
-	size_t buf_start, cursor;
-	unsigned linumw;
-
 	char *localmode;
+
+	size_t bufstart, csr;
+	unsigned linumw;
 };
 
-struct frame frame_create(char const *name, struct buf *buf);
+VEC_DEFPROTO(frame)
+
+struct frame frame_create(wchar_t const *name, struct buf *buf);
 void frame_destroy(struct frame *f);
-void frame_prepare_draw(struct frame *f);
 void frame_draw(struct frame const *f, bool active);
-void frame_pos(struct frame const *f, size_t pos, unsigned *out_x, unsigned *out_y);
-void frame_move_cursor(struct frame *f, unsigned x, unsigned y);
-void frame_relmove_cursor(struct frame *f, int x, int y, bool lwrap);
+void frame_pos(struct frame const *f, size_t pos, unsigned *out_r, unsigned *out_c);
+void frame_mvcsr(struct frame *f, unsigned r, unsigned c);
+void frame_relmvcsr(struct frame *f, int dr, int dc, bool lwrap);
 
 #endif
