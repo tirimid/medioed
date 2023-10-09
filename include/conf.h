@@ -70,6 +70,7 @@ extern int const conf_bind_chgmode_global[];
 extern int const conf_bind_chgmode_local[];
 extern int const conf_bind_create_scrap[];
 extern int const conf_bind_newline[];
+extern int const conf_bind_focus[];
 
 extern struct highlight conf_htab[];
 extern size_t const conf_htab_size;

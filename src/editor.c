@@ -46,6 +46,7 @@ static void bind_chgmode_global(void);
 static void bind_chgmode_local(void);
 static void bind_create_scrap(void);
 static void bind_newline(void);
+static void bind_focus(void);
 static void resetbinds(void);
 static void sigwinch_handler(int arg);
 
@@ -538,6 +539,13 @@ bind_newline(void)
 }
 
 static void
+bind_focus(void)
+{
+	prompt_show(L"this bind is not implemented yet!");
+	redrawall();
+}
+
+static void
 resetbinds(void)
 {
 	// quit and reinit to reset current keybind buffer and bind information.
@@ -567,6 +575,7 @@ resetbinds(void)
 	keybd_bind(conf_bind_chgmode_local, bind_chgmode_local);
 	keybd_bind(conf_bind_create_scrap, bind_create_scrap);
 	keybd_bind(conf_bind_newline, bind_newline);
+	keybd_bind(conf_bind_focus, bind_focus);
 }
 
 static void

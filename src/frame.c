@@ -60,11 +60,9 @@ frame_draw(struct frame const *f, bool active)
 	unsigned ledge = GUTTER + f->linumw;
 
 	// write frame name and buffer modification marker.
-	uint16_t decoattr = active ? CONF_A_GHIGH : CONF_A_GNORM;
-	
 	size_t namelen = wcslen(f->name);
 	for (unsigned i = 0; i < f->sc; ++i)
-		draw_putwch(f->pr, f->pc + i, i < namelen ? f->name[i] : L' ', decoattr);
+		draw_putwch(f->pr, f->pc + i, i < namelen ? f->name[i] : L' ');
 
 	if (f->buf->flags & BF_MODIFIED) {
 		wchar_t modmk[] = CONF_BUFMODMARK L"\0";
@@ -72,12 +70,13 @@ frame_draw(struct frame const *f, bool active)
 		if (f->sc >= 0 && f->sc < modmklen + 1)
 			modmk[f->sc] = 0;
 
-		draw_putwstr(f->pr, f->pc + f->sc - modmklen, modmk, decoattr);
+		draw_putwstr(f->pr, f->pc + f->sc - modmklen, modmk);
 	}
 
+	draw_putattr(f->pr, f->pc, active ? CONF_A_GHIGH : CONF_A_GNORM, f->sc);
+
 	// fill frame.
-	draw_fill(f->pr + 1, f->pc + ledge, f->sr - 1, f->sc - ledge, L' ', CONF_A_NORM);
-	draw_fill(f->pr + 1, f->pc, f->sr - 1, ledge, L' ', CONF_A_LINUM);
+	draw_fill(f->pr + 1, f->pc, f->sr - 1, f->sc, L' ', CONF_A_NORM);
 
 	// write margins.
 	unsigned befr, befc;
@@ -88,8 +87,8 @@ frame_draw(struct frame const *f, bool active)
 			continue;
 		
 		for (unsigned j = 1, end = MIN(befr + 1, f->sr); j < end; ++j) {
-			draw_putwch(f->pr + j, f->pc + dcol, conf_mtab[i].wch,
-			            conf_mtab[i].attr);
+			draw_putwch(f->pr + j, f->pc + dcol, conf_mtab[i].wch);
+			draw_putattr(f->pr + j, f->pc + dcol, conf_mtab[i].attr, 1);
 		}
 	}
 
@@ -100,8 +99,10 @@ frame_draw(struct frame const *f, bool active)
 		if (linumind++ <= ber - bsr) {
 			wchar_t drawtext[16];
 			swprintf(drawtext, 16, L"%u", bsr + linumind);
-			draw_putwstr(f->pr + i, f->pc + CONF_GUTTER_LEFT + f->linumw - wcslen(drawtext),
-			             drawtext, CONF_A_LINUM);
+
+			size_t dtlen = wcslen(drawtext);
+			draw_putwstr(f->pr + i, f->pc + CONF_GUTTER_LEFT + f->linumw - dtlen, drawtext);
+			draw_putattr(f->pr + i, f->pc, CONF_A_LINUM, GUTTER + dtlen);
 		}
 
 		drawline(f, &i, &dcsr);
@@ -112,12 +113,9 @@ frame_draw(struct frame const *f, bool active)
 		exechighlight(f, &conf_htab[i]);
 
 	// draw cursor.
-	wchar_t csrch = f->csr < f->buf->size ? f->buf->conts[f->csr] : L' ';
-	csrch = iswgraph(csrch) ? csrch : L' ';
-	
 	unsigned csrr, csrc;
 	frame_pos(f, f->csr, &csrr, &csrc);
-	draw_putwch(f->pr + csrr, f->pc + csrc, csrch, CONF_A_CURSOR);
+	draw_putattr(f->pr + csrr, f->pc + csrc, CONF_A_CURSOR, 1);
 }
 
 void
@@ -237,7 +235,7 @@ drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 			i += CONF_TABSIZE - i % CONF_TABSIZE - 1;
 			break;
 		default:
-			draw_putwch(f->pr + *line, f->pc + ledge + i, wch, CONF_A_NORM);
+			draw_putwch(f->pr + *line, f->pc + ledge + i, wch);
 			break;
 		}
 	}
@@ -289,11 +287,7 @@ exechighlight(struct frame const *f, struct highlight const *hl)
 				break;
 			}
 
-			for (size_t j = 0; j < w; ++j) {
-				wchar_t wch = f->buf->conts[i];
-				wch = iswgraph(wch) ? wch : L' ';
-				draw_putwch(f->pr + r, f->pc + ledge + c + j, wch, hl->attr);
-			}
+			draw_putattr(f->pr + r, f->pc + ledge + c, hl->attr, w);
 			
 			c += w;
 		}

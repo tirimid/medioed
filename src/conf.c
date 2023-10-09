@@ -31,6 +31,7 @@ int const conf_bind_chgmode_global[] = {K_CTL('c'), K_CTL('g'), 'g', -1};
 int const conf_bind_chgmode_local[] = {K_CTL('c'), K_CTL('g'), 'l', -1};
 int const conf_bind_create_scrap[] = {K_CTL('c'), 'n', -1};
 int const conf_bind_newline[] = {K_RET, -1};
+int const conf_bind_focus[] = {K_CTL('l'), -1};
 
 struct highlight conf_htab[] = {
 #include "highlight/hl_c.h"

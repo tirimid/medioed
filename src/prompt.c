@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wctype.h>
 
 #include <sys/ioctl.h>
 
@@ -49,7 +48,7 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, void *), void 
 
 	// a faux cursor is drawn before entering the keyboard loop, so that it
 	// doesn't look like it spontaneously appears upon a keypress.
-	draw_putwch(rrow, rcol, L' ', CONF_A_GHIGH);
+	draw_putattr(rrow, rcol, CONF_A_GHIGH, 1);
 	draw_refresh();
 
 	wchar_t *resp = malloc(sizeof(wchar_t));
@@ -88,13 +87,9 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, void *), void 
 			dstart = csr - ws.ws_col + rcol + 1;
 
 		draw_fill(ws.ws_row - 1, rcol, 1, ws.ws_col - rcol, L' ', CONF_A_GNORM);
-		
 		for (size_t i = 0; i < resplen - dstart && i < ws.ws_col - rcol; ++i)
-			draw_putwch(rrow, rcol + i, resp[dstart + i], CONF_A_GNORM);
-
-		wchar_t csrch = csr < resplen ? resp[csr] : L' ';
-		csrch = iswgraph(csrch) ? csrch : L' ';
-		draw_putwch(rrow, rcol + csr - dstart, csrch, CONF_A_GHIGH);
+			draw_putwch(rrow, rcol + i, resp[dstart + i]);
+		draw_putattr(rrow, rcol + csr - dstart, CONF_A_GHIGH, 1);
 
 		draw_refresh();
 	}
@@ -153,6 +148,6 @@ drawbox(wchar_t const *text)
 	}
 
 	size_t boxtop = ws.ws_row - textrows;
-	draw_fill(boxtop, 0, ws.ws_row, ws.ws_col, L' ', CONF_A_GNORM);
-	draw_putwstr(boxtop, 0, text, CONF_A_GNORM);
+	draw_fill(boxtop, 0, textrows, ws.ws_col, L' ', CONF_A_GNORM);
+	draw_putwstr(boxtop, 0, text);
 }

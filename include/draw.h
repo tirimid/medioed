@@ -40,8 +40,9 @@ int draw_init(void);
 int draw_quit(void);
 void draw_clear(wchar_t wch, uint16_t a);
 void draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch, uint16_t a);
-void draw_putwch(unsigned r, unsigned c, wchar_t wch, uint16_t a);
-void draw_putwstr(unsigned r, unsigned c, wchar_t const *wstr, uint16_t a);
+void draw_putwch(unsigned r, unsigned c, wchar_t wch);
+void draw_putwstr(unsigned r, unsigned c, wchar_t const *wstr);
+void draw_putattr(unsigned r, unsigned c, uint16_t a, unsigned n);
 void draw_refresh(void);
 
 #endif

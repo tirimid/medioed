@@ -104,28 +104,42 @@ void
 draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch, uint16_t a)
 {
 	for (size_t i = pr; i < pr + sr; ++i) {
-		for (size_t j = pc; j < pc + sc; ++j)
-			draw_putwch(i, j, wch, a);
+		for (size_t j = pc; j < pc + sc; ++j) {
+			cells[i][j] = (struct cell){
+				.wch = wch,
+				.a = a,
+			};
+		}
 	}
 }
 
 void
-draw_putwch(unsigned r, unsigned c, wchar_t wch, uint16_t a)
+draw_putwch(unsigned r, unsigned c, wchar_t wch)
 {
-	if (r >= ws.ws_row || c >= ws.ws_col)
-		return;
-	
-	cells[r][c] = (struct cell){
-		.wch = wch,
-		.a = a,
-	};
+	cells[r][c].wch = wch;
 }
 
 void
-draw_putwstr(unsigned r, unsigned c, wchar_t const *wstr, uint16_t a)
+draw_putwstr(unsigned r, unsigned c, wchar_t const *wstr)
 {
 	for (wchar_t const *wc = wstr; *wc; ++wc) {
-		draw_putwch(r, c, *wc, a);
+		cells[r][c].wch = *wc;
+
+		if (++c >= ws.ws_col) {
+			c = 0;
+			++r;
+		}
+
+		if (r >= ws.ws_row)
+			break;
+	}
+}
+
+void
+draw_putattr(unsigned r, unsigned c, uint16_t a, unsigned n)
+{
+	for (unsigned i = 0; i < n; ++i) {
+		cells[r][c].a = a;
 
 		if (++c >= ws.ws_col) {
 			c = 0;
@@ -151,7 +165,7 @@ draw_refresh(void)
 			uint8_t curbg = A_BGOF(cells[i][j].a) >> 8;
 			
 			if (curattr != prevattr)
-				wprintf(L"\033[%um", attrtab[curattr - 1]);
+				wprintf(L"\033[%um", attrtab[curattr]);
 			
 			if (curfg != prevfg)
 				wprintf(L"\033[%um", attrtab[curfg + 6]);
@@ -179,6 +193,7 @@ sigwinch_handler(int arg)
 			free(cells[i]);
 		cells = realloc(cells, sizeof(struct cell *) * ws.ws_row);
 	} else if (ws.ws_row > oldws.ws_row) {
+		cells = realloc(cells, sizeof(struct cell *) * ws.ws_row);
 		for (size_t i = oldws.ws_row; i < ws.ws_row; ++i)
 			cells[i] = malloc(sizeof(struct cell) * ws.ws_col);
 	}
