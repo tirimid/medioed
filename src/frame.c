@@ -38,6 +38,7 @@ frame_create(wchar_t const *name, struct buf *buf)
 		.buf = buf,
 		.csr = 0,
 		.bufstart = 0,
+		.csr_wantcol = 0,
 		.linumw = linumw,
 		.localmode = strdup(buf->srctype == BST_FILE ? fileext(buf->src) : "\0"),
 	};
@@ -109,8 +110,18 @@ frame_draw(struct frame const *f, bool active)
 	}
 
 	// execute highlights.
-	for (size_t i = 0; i < conf_htab_size; ++i)
-		exechighlight(f, &conf_htab[i]);
+	struct hbndry const *hbndry = NULL;
+	for (size_t i = 0; i < conf_hbtab_size; ++i) {
+		if (!strcmp(conf_hbtab[i].localmode, f->localmode)) {
+			hbndry = &conf_hbtab[i];
+			break;
+		}
+	}
+
+	if (hbndry) {
+		for (size_t i = hbndry->start; i < hbndry->end; ++i)
+			exechighlight(f, &conf_htab[i]);
+	}
 
 	// draw cursor.
 	unsigned csrr, csrc;
@@ -147,11 +158,14 @@ frame_mvcsr(struct frame *f, unsigned r, unsigned c)
 {
 	// adjust the actual cursor position.
 	f->csr = 0;
+	
 	while (f->csr < f->buf->size && r > 0) {
 		if (f->buf->conts[f->csr++] == L'\n')
 			--r;
 	}
-	while (f->csr < f->buf->size && f->buf->conts[f->csr] != L'\n' && c > 0) {
+	
+	while (f->csr < f->buf->size && f->buf->conts[f->csr] != L'\n'
+	       && c > 0) {
 		++f->csr;
 		--c;
 	}
@@ -163,8 +177,10 @@ frame_mvcsr(struct frame *f, unsigned r, unsigned c)
 	frame_pos(f, f->csr, &csrr, &csrc);
 	while (csrr >= bsr + f->sr - 1) {
 		++f->bufstart;
-		while (f->bufstart < f->buf->size && f->buf->conts[f->bufstart - 1] != L'\n')
+		while (f->bufstart < f->buf->size
+		       && f->buf->conts[f->bufstart - 1] != L'\n') {
 			++f->bufstart;
+		}
 
 		frame_pos(f, f->bufstart, &bsr, &bsc);
 		frame_pos(f, f->csr, &csrr, &csrc);
@@ -174,8 +190,10 @@ frame_mvcsr(struct frame *f, unsigned r, unsigned c)
 	buf_pos(f->buf, f->csr, &csrr, &csrc);
 	while (csrr < bsr) {
 		--f->bufstart;
-		while (f->bufstart > 0 && f->buf->conts[f->bufstart - 1] != L'\n')
+		while (f->bufstart > 0
+		       && f->buf->conts[f->bufstart - 1] != L'\n') {
 			--f->bufstart;
+		}
 
 		buf_pos(f->buf, f->bufstart, &bsr, &bsc);
 		buf_pos(f->buf, f->csr, &csrr, &csrc);
@@ -192,6 +210,8 @@ frame_mvcsr(struct frame *f, unsigned r, unsigned c)
 void
 frame_relmvcsr(struct frame *f, int dr, int dc, bool lwrap)
 {
+	int dcsv = dc;
+	
 	if (lwrap && dc != 0) {
 		int dir = SIGN(dc);
 		long bs_dst = -(long)f->csr;
@@ -209,7 +229,12 @@ frame_relmvcsr(struct frame *f, int dr, int dc, bool lwrap)
 
 	buf_pos(f->buf, f->csr, &csrr, &csrc);
 	csrr = (long)csrr + dr < 0 ? 0 : csrr + dr;
-	csrc = (long)csrc + dc < 0 ? 0 : csrc + dc;
+
+	if (dcsv != 0) {
+		csrc = (long)csrc + dc < 0 ? 0 : csrc + dc;
+		f->csr_wantcol = csrc;
+	} else
+		csrc = f->csr_wantcol;
 
 	frame_mvcsr(f, csrr, csrc);
 }
@@ -249,9 +274,6 @@ drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 static void
 exechighlight(struct frame const *f, struct highlight const *hl)
 {
-	if (strcmp(hl->localmode, f->localmode))
-		return;
-
 	pcre2_match_data *md = pcre2_match_data_create_from_pattern(hl->re, NULL);
 	PCRE2_SIZE off = f->bufstart;
 	unsigned ledge = GUTTER + f->linumw;

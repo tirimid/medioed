@@ -1,5 +1,6 @@
 #include "conf.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -33,11 +34,28 @@ int const conf_bind_create_scrap[] = {K_CTL('c'), 'n', -1};
 int const conf_bind_newline[] = {K_RET, -1};
 int const conf_bind_focus[] = {K_CTL('l'), -1};
 
+static bool highlight_haslm(struct highlight const *hl, char const *lm);
+
+static char const *htab_c_lms[] = {"c", "h", NULL};
+static char const *htab_sh_lms[] = {"sh", NULL};
 struct highlight conf_htab[] = {
 #include "highlight/hl_c.h"
 #include "highlight/hl_sh.h"
 };
-size_t const conf_htab_size = sizeof(conf_htab) / sizeof(conf_htab[0]);
+size_t const conf_htab_size = ARRAYSIZE(conf_htab);
+
+struct hbndry conf_hbtab[] = {
+	{
+		.localmode = "c",
+	},
+	{
+		.localmode = "h",
+	},
+	{
+		.localmode = "sh",
+	},
+};
+size_t const conf_hbtab_size = ARRAYSIZE(conf_hbtab);
 
 struct margin const conf_mtab[] = {
 	{
@@ -51,7 +69,7 @@ struct margin const conf_mtab[] = {
 		.attr = A_RED | A_BGOF(CONF_A_NORM),
 	},
 };
-size_t const conf_mtab_size = sizeof(conf_mtab) / sizeof(conf_mtab[0]);
+size_t const conf_mtab_size = ARRAYSIZE(conf_mtab);
 
 struct mode const conf_lmtab[] = {
 	{
@@ -67,11 +85,27 @@ struct mode const conf_lmtab[] = {
 		.keypress = mode_sh_keypress,
 	},
 };
-size_t const conf_lmtab_size = sizeof(conf_lmtab) / sizeof(conf_lmtab[0]);
+size_t const conf_lmtab_size = ARRAYSIZE(conf_lmtab);
 
 int
 conf_init(void)
 {
+	for (size_t i = 0; i < conf_hbtab_size; ++i) {
+		struct hbndry *hb = &conf_hbtab[i];
+
+		hb->start = 0;
+		while (hb->start < conf_htab_size
+		       && !highlight_haslm(&conf_htab[hb->start], hb->localmode)) {
+			++hb->start;
+		}
+
+		hb->end = hb->start;
+		while (hb->end < conf_htab_size
+		       && highlight_haslm(&conf_htab[hb->end], hb->localmode)) {
+			++hb->end;
+		}
+	}
+	
 	for (size_t i = 0; i < conf_htab_size; ++i) {
 		struct highlight *hl = &conf_htab[i];
 
@@ -93,4 +127,15 @@ conf_quit(void)
 {
 	for (size_t i = 0; i < conf_htab_size; ++i)
 		pcre2_code_free(conf_htab[i].re);
+}
+
+static bool
+highlight_haslm(struct highlight const *hl, char const *lm)
+{
+	for (size_t i = 0; hl->localmodes[i]; ++i) {
+		if (!strcmp(hl->localmodes[i], lm))
+			return true;
+	}
+	
+	return false;
 }

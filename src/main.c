@@ -35,7 +35,7 @@ main(int argc, char const *argv[])
 	}
 	stderr = logfp;
 	
-	if (!setlocale(LC_ALL, "C.UTF-8")) {
+	if (!setlocale(LC_ALL, LOCALE)) {
 		fputs("failed on setlocale() to " LOCALE "!\n", stderr);
 		fclose(logfp);
 		return 1;

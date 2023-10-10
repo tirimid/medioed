@@ -16,6 +16,8 @@
 #define ABS(n) ((n) < 0 ? -(n) : (n))
 #define SIGN(n) ((n) / ABS(n))
 
+#define ARRAYSIZE(a) (sizeof(a) / sizeof(a[0]))
+
 #define K_CTL(k) (k - 'a' + 1)
 #define K_META(k) 27, k
 #define K_BACKSPC 127

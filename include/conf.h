@@ -35,10 +35,15 @@
 	L"the source is available at https://gitlab.com/tirimid/medioed\n"
 
 struct highlight {
+	char const **localmodes;
 	pcre2_code *re;
 	wchar_t const *re_str;
-	char const *localmode;
 	uint16_t attr;
+};
+
+struct hbndry {
+	char const *localmode;
+	size_t start, end; // [start, end).
 };
 
 struct margin {
@@ -74,10 +79,10 @@ extern int const conf_bind_focus[];
 
 extern struct highlight conf_htab[];
 extern size_t const conf_htab_size;
-
+extern struct hbndry conf_hbtab[];
+extern size_t const conf_hbtab_size;
 extern struct margin const conf_mtab[];
 extern size_t const conf_mtab_size;
-
 extern struct mode const conf_lmtab[];
 extern size_t const conf_lmtab_size;
 

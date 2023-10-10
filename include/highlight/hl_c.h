@@ -1,6 +1,6 @@
 #define HIGHLIGHT_C(a, re_str_) \
 	{ \
-		.localmode = "c", \
+		.localmodes = htab_c_lms, \
 		.re_str = re_str_, \
 		.attr = a, \
 	},

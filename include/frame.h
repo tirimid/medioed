@@ -15,11 +15,10 @@ struct frame {
 	unsigned pr, pc;
 	unsigned sr, sc;
 	struct buf *buf;
-
 	char *localmode;
-
 	size_t bufstart, csr;
 	unsigned linumw;
+	unsigned csr_wantcol;
 };
 
 VEC_DEFPROTO(frame)

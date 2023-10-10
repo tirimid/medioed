@@ -1,6 +1,6 @@
 #define HIGHLIGHT_SH(a, re_str_) \
 	{ \
-		.localmode = "sh", \
+		.localmodes = htab_sh_lms, \
 		.re_str = re_str_, \
 		.attr = a, \
 	},
