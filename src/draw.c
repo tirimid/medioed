@@ -138,6 +138,9 @@ draw_putwstr(unsigned r, unsigned c, wchar_t const *wstr)
 void
 draw_putattr(unsigned r, unsigned c, uint16_t a, unsigned n)
 {
+	if (r >= ws.ws_row || c >= ws.ws_col)
+		return;
+	
 	for (unsigned i = 0; i < n; ++i) {
 		cells[r][c].a = a;
 
@@ -188,18 +191,14 @@ sigwinch_handler(int arg)
 	struct winsize oldws = ws;
 	ioctl(0, TIOCGWINSZ, &ws);
 
-	if (ws.ws_row < oldws.ws_row) {
-		for (size_t i = ws.ws_row; i < oldws.ws_row; ++i)
-			free(cells[i]);
-		cells = realloc(cells, sizeof(struct cell *) * ws.ws_row);
-	} else if (ws.ws_row > oldws.ws_row) {
+	if (ws.ws_row > oldws.ws_row) {
 		cells = realloc(cells, sizeof(struct cell *) * ws.ws_row);
 		for (size_t i = oldws.ws_row; i < ws.ws_row; ++i)
 			cells[i] = malloc(sizeof(struct cell) * ws.ws_col);
 	}
 
-	if (ws.ws_col != oldws.ws_col) {
-		for (size_t i = 0; i < MIN(oldws.ws_row, ws.ws_row); ++i)
+	if (ws.ws_col > oldws.ws_col) {
+		for (size_t i = 0; i < oldws.ws_row; ++i)
 			cells[i] = realloc(cells[i], sizeof(struct cell) * ws.ws_col);
 	}
 }

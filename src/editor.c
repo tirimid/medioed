@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <wchar.h>
+#include <wctype.h>
 
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -59,9 +60,6 @@ static struct vec_pbuf pbufs;
 int
 editor_init(int argc, char const *argv[])
 {
-	draw_clear(' ', CONF_A_GNORM);
-	draw_refresh();
-	
 	if (conf_init()) {
 		fputs("failed on conf_init()!\n", stderr);
 		return 1;
@@ -83,6 +81,15 @@ editor_init(int argc, char const *argv[])
 		addframe(&gf);
 	} else {
 		for (int i = firstarg; i < argc; ++i) {
+			struct stat s;
+			if (stat(argv[i], &s)) {
+				// TODO: show which file failed to open.
+				draw_clear(L' ', CONF_A_GNORM);
+				prompt_show(L"failed to open file!");
+				draw_refresh();
+				continue;
+			}
+			
 			size_t wnamen = strlen(argv[i]) + 1;
 			wchar_t *wname = malloc(sizeof(wchar_t) * wnamen);
 			mbstowcs(wname, argv[i], wnamen);
@@ -93,6 +100,12 @@ editor_init(int argc, char const *argv[])
 
 			free(wname);
 		}
+	}
+
+	if (frames.size == 0) {
+		struct buf b = buf_create(true);
+		struct frame f = frame_create(CONF_SCRAPNAME, addbuf(&b));
+		addframe(&f);
 	}
 
 	struct sigaction sa;
@@ -120,15 +133,16 @@ editor_mainloop(void)
 			f->csr = MIN(f->csr, f->buf->size);
 		}
 
+		// TODO: redraw ALL frames with newly modified buffer open.
 		struct frame *f = &frames.data[curframe];
 		frame_draw(f, true);
 		draw_refresh();
 		
-		wint_t key = keybd_awaitkey();
-		if (key != KEYBD_IGNORE) {
-			buf_writewch(f->buf, f->csr, key);
+		wint_t k = keybd_awaitkey();
+		if (k != KEYBD_IGNORE && (k == L'\n' || k == L'\t' || iswprint(k))) {
+			buf_writewch(f->buf, f->csr, k);
 			frame_relmvcsr(f, 0, !!(f->buf->flags & BF_WRITABLE), true);
-			mode_keyupdate(&frames.data[curframe], key);
+			mode_keyupdate(&frames.data[curframe], k);
 		}
 	}
 }
@@ -433,12 +447,14 @@ bind_navgoto(void)
 {
 askagain:;
 	wchar_t *wslinum = prompt_ask(L"goto line: ", NULL, NULL);
+	redrawall();
 	if (!wslinum)
 		return;
 
 	if (!*wslinum) {
 		free(wslinum);
 		prompt_show(L"expected a line number!");
+		redrawall();
 		goto askagain;
 	}
 
@@ -451,6 +467,7 @@ askagain:;
 		if (!isdigit(*c)) {
 			free(slinum);
 			prompt_show(L"invalid line number!");
+			redrawall();
 			goto askagain;
 		}
 	}
@@ -476,8 +493,8 @@ bind_delback_ch(void)
 	struct frame *f = &frames.data[curframe];
 
 	if (f->csr > 0 && f->buf->flags & BF_WRITABLE) {
-		buf_erase(f->buf, f->csr - 1, f->csr);
-		frame_relmvcsr(f, 0, -(f->csr < f->buf->size - 1), true);
+		frame_relmvcsr(f, 0, -1, true);
+		buf_erase(f->buf, f->csr, f->csr + 1);
 	}
 }
 
@@ -535,7 +552,7 @@ bind_newline(void)
 {
 	struct frame *f = &frames.data[curframe];
 	buf_writewch(f->buf, f->csr, L'\n');
-	frame_relmvcsr(f, 0, 1, true);
+	frame_relmvcsr(f, 0, !!(f->buf->flags & BF_WRITABLE), true);
 }
 
 static void
@@ -582,6 +599,11 @@ static void
 sigwinch_handler(int arg)
 {
 	old_sigwinch_handler(arg);
+	
 	arrangeframes();
+	
+	for (size_t i = 0; i < frames.size; ++i)
+		frame_compbndry(&frames.data[i]);
+	
 	redrawall();
 }

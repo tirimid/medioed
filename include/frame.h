@@ -29,5 +29,6 @@ void frame_draw(struct frame const *f, bool active);
 void frame_pos(struct frame const *f, size_t pos, unsigned *out_r, unsigned *out_c);
 void frame_mvcsr(struct frame *f, unsigned r, unsigned c);
 void frame_relmvcsr(struct frame *f, int dr, int dc, bool lwrap);
+void frame_compbndry(struct frame *f);
 
 #endif

@@ -133,7 +133,7 @@ void
 frame_pos(struct frame const *f, size_t pos, unsigned *out_r, unsigned *out_c)
 {
 	unsigned redge = f->sc - GUTTER - f->linumw;
-
+	
 	*out_r = 1;
 	*out_c = 0;
 
@@ -156,7 +156,6 @@ frame_pos(struct frame const *f, size_t pos, unsigned *out_r, unsigned *out_c)
 void
 frame_mvcsr(struct frame *f, unsigned r, unsigned c)
 {
-	// adjust the actual cursor position.
 	f->csr = 0;
 	
 	while (f->csr < f->buf->size && r > 0) {
@@ -170,6 +169,44 @@ frame_mvcsr(struct frame *f, unsigned r, unsigned c)
 		--c;
 	}
 
+	frame_compbndry(f);
+}
+
+void
+frame_relmvcsr(struct frame *f, int dr, int dc, bool lwrap)
+{
+	int dcsv = dc;
+	
+	if (lwrap && dc != 0) {
+		int dir = SIGN(dc);
+		long bs_dst = -(long)f->csr;
+		long be_dst = f->buf->size - f->csr;
+
+		dc = dir == -1 ? MAX(dc, bs_dst) : MIN(dc, be_dst);
+
+		while (f->csr >= 0 && f->csr <= f->buf->size && dc != 0) {
+			f->csr += dir;
+			dc -= dir;
+		}
+	}
+
+	unsigned csrr, csrc;
+
+	buf_pos(f->buf, f->csr, &csrr, &csrc);
+	csrr = (long)csrr + dr < 0 ? 0 : csrr + dr;
+
+	if (dcsv != 0) {
+		csrc = (long)csrc + dc < 0 ? 0 : csrc + dc;
+		f->csr_wantcol = csrc;
+	} else
+		csrc = f->csr_wantcol;
+
+	frame_mvcsr(f, csrr, csrc);
+}
+
+void
+frame_compbndry(struct frame *f)
+{
 	// redetermine buffer boundaries for rendering.
 	unsigned bsr, bsc, csrr, csrc;
 
@@ -207,38 +244,6 @@ frame_mvcsr(struct frame *f, unsigned r, unsigned c)
 		++f->linumw;
 }
 
-void
-frame_relmvcsr(struct frame *f, int dr, int dc, bool lwrap)
-{
-	int dcsv = dc;
-	
-	if (lwrap && dc != 0) {
-		int dir = SIGN(dc);
-		long bs_dst = -(long)f->csr;
-		long be_dst = f->buf->size - f->csr;
-
-		dc = dir == -1 ? MAX(dc, bs_dst) : MIN(dc, be_dst);
-
-		while (f->csr >= 0 && f->csr <= f->buf->size && dc != 0) {
-			f->csr += dir;
-			dc -= dir;
-		}
-	}
-
-	unsigned csrr, csrc;
-
-	buf_pos(f->buf, f->csr, &csrr, &csrc);
-	csrr = (long)csrr + dr < 0 ? 0 : csrr + dr;
-
-	if (dcsv != 0) {
-		csrc = (long)csrc + dc < 0 ? 0 : csrc + dc;
-		f->csr_wantcol = csrc;
-	} else
-		csrc = f->csr_wantcol;
-
-	frame_mvcsr(f, csrr, csrc);
-}
-
 static void
 drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 {
@@ -255,6 +260,7 @@ drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 			break;
 
 		wchar_t wch = f->buf->conts[*dcsr];
+		wch = wch == L'\t' || iswprint(wch) ? wch : L'?';
 		switch (wch) {
 		case L'\t':
 			i += CONF_TABSIZE - i % CONF_TABSIZE - 1;
