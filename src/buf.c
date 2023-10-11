@@ -43,6 +43,8 @@ buf_fromfile(char const *path)
 	wint_t wch;
 	while ((wch = fgetwc(fp)) != WEOF)
 		buf_writewch(&b, b.size, wch);
+
+	fclose(fp);
 	
 	int ea = euidaccess(path, W_OK);
 	if (ea != 0) {
