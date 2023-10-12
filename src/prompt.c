@@ -141,7 +141,7 @@ drawbox(wchar_t const *text)
 
 	size_t textrows = 1, linewidth = 0;
 	for (wchar_t const *c = text; *c; ++c) {
-		if (*c == L'\n' || ++linewidth > ws.ws_col) {
+		if (++linewidth >= ws.ws_col || *c == L'\n') {
 			linewidth = 0;
 			++textrows;
 		}

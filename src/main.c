@@ -12,17 +12,22 @@
 #define LOGFILE "medioed.log"
 #define LOCALE "C.UTF-8"
 
+static void usage(char const *name);
+
 int
 main(int argc, char const *argv[])
 {
 	bool flag_d = false;
 	
 	int ch;
-	while ((ch = getopt(argc, (char *const *)argv, "d")) != -1) {
+	while ((ch = getopt(argc, (char *const *)argv, "dh")) != -1) {
 		switch (ch) {
 		case 'd':
 			flag_d = true;
 			break;
+		case 'h':
+			usage(argv[0]);
+			return 1;
 		default:
 			return 1;
 		}
@@ -81,4 +86,15 @@ main(int argc, char const *argv[])
 	fclose(logfp);
 	
 	return 0;
+}
+
+static void
+usage(char const *name)
+{
+	printf("usage:\n"
+	       "\t%s [options] file ...\n"
+	       "\t%s [options]\n"
+	       "options:\n"
+	       "\t-d  try to write debug output to a logfile\n"
+	       "\t-h  display this menu\n", name, name);
 }

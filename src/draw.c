@@ -123,9 +123,10 @@ void
 draw_putwstr(unsigned r, unsigned c, wchar_t const *wstr)
 {
 	for (wchar_t const *wc = wstr; *wc; ++wc) {
-		cells[r][c].wch = *wc;
+		if (*wc != L'\n')
+			cells[r][c++].wch = *wc;
 
-		if (++c >= ws.ws_col) {
+		if (c >= ws.ws_col || *wc == L'\n') {
 			c = 0;
 			++r;
 		}

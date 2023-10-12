@@ -33,8 +33,10 @@ static void bind_open_file(void);
 static void bind_save_file(void);
 static void bind_navfwd_ch(void);
 static void bind_navfwd_word(void);
+static void bind_navfwd_page(void);
 static void bind_navback_ch(void);
 static void bind_navback_word(void);
+static void bind_navback_page(void);
 static void bind_navdown(void);
 static void bind_navup(void);
 static void bind_navln_start(void);
@@ -406,6 +408,13 @@ bind_navfwd_word(void)
 }
 
 static void
+bind_navfwd_page(void)
+{
+	prompt_show(L"this bind is not implemented yet!");
+	redrawall();
+}
+
+static void
 bind_navback_ch(void)
 {
 	frame_relmvcsr(&frames.data[curframe], 0, -1, true);
@@ -415,6 +424,13 @@ static void
 bind_navback_word(void)
 {
 	prompt_show(L"this bind is not implemented yet!");
+	redrawall();
+}
+
+static void
+bind_navback_page(void)
+{
+	prompt_show(L"this bind is not\nimplemented yet!");
 	redrawall();
 }
 
@@ -578,8 +594,10 @@ resetbinds(void)
 	keybd_bind(conf_bind_save_file, bind_save_file);
 	keybd_bind(conf_bind_navfwd_ch, bind_navfwd_ch);
 	keybd_bind(conf_bind_navfwd_word, bind_navfwd_word);
+	keybd_bind(conf_bind_navfwd_page, bind_navfwd_page);
 	keybd_bind(conf_bind_navback_ch, bind_navback_ch);
 	keybd_bind(conf_bind_navback_word, bind_navback_word);
+	keybd_bind(conf_bind_navback_page, bind_navback_page);
 	keybd_bind(conf_bind_navdown, bind_navdown);
 	keybd_bind(conf_bind_navup, bind_navup);
 	keybd_bind(conf_bind_navln_start, bind_navln_start);
