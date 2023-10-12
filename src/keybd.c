@@ -1,6 +1,10 @@
 #include "keybd.h"
 
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#include <unistd.h>
 
 #include "conf.h"
 #include "util.h"
@@ -8,12 +12,14 @@
 typedef struct bind bind;
 
 struct bind {
-	int keyseq[KEYBD_MAXBINDLEN];
+	int const *keyseq;
 	size_t len;
 	void (*fn)(void);
 };
 
 VEC_DEFPROTO_STATIC(bind)
+
+static int compbinds(void const *a, void const *b);
 
 static struct vec_bind binds;
 static int curbind[KEYBD_MAXBINDLEN];
@@ -48,12 +54,18 @@ keybd_bind(int const *keyseq, void (*fn)(void))
 	}
 
 	struct bind new = {
+		.keyseq = keyseq,
 		.len = len,
 		.fn = fn,
 	};
-	memcpy(&new.keyseq, keyseq, sizeof(int) * len);
 
 	vec_bind_add(&binds, &new);
+}
+
+void
+keybd_organize(void)
+{
+	qsort(binds.data, binds.size, sizeof(struct bind), compbinds);
 }
 
 wint_t
@@ -63,22 +75,57 @@ keybd_awaitkey(void)
 	
 	curbind[curbindlen++] = k;
 
-	for (size_t i = 0; i < binds.size; ++i) {
-		struct bind const *b = &binds.data[i];
-		
-		if (b->len == curbindlen
-		    && !memcmp(curbind, b->keyseq, sizeof(int) * b->len)) {
-			b->fn();
-			curbindlen = 0;
-			return KEYBD_IGNORE;
-		}
+	ssize_t low = 0, high = binds.size, mid;
+	while (low <= high) {
+		mid = (low + high) / 2;
 
-		if (!memcmp(curbind, b->keyseq, sizeof(int) * curbindlen))
-			return KEYBD_IGNORE;
+		struct bind curbind_b = {
+			.keyseq = curbind,
+			.len = curbindlen,
+		};
+		
+		int cmp = compbinds(&curbind_b, &binds.data[mid]);
+		switch (cmp) {
+		case -1:
+			high = mid - 1;
+			break;
+		case 0:
+			goto found;
+		case 1:
+			low = mid + 1;
+			break;
+		}
 	}
 
+	mid = -1;
+found:
+	if (mid != -1) {
+		struct bind const *b = &binds.data[mid];
+		if (b->len == curbindlen) {
+			b->fn();
+			curbindlen = 0;
+		}
+
+		return KEYBD_IGNORE;
+	}
+	
 	curbindlen = 0;
 	return k;
 }
 
 VEC_DEFIMPL_STATIC(bind)
+
+static int
+compbinds(void const *a, void const *b)
+{
+	struct bind const *binda = a, *bindb = b;
+
+	for (size_t i = 0; i < binda->len && i < bindb->len; ++i) {
+		if (binda->keyseq[i] > bindb->keyseq[i])
+			return 1;
+		else if (binda->keyseq[i] < bindb->keyseq[i])
+			return -1;
+	}
+
+	return 0;
+}

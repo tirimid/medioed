@@ -207,33 +207,32 @@ frame_relmvcsr(struct frame *f, int dr, int dc, bool lwrap)
 void
 frame_compbndry(struct frame *f)
 {
+	unsigned ledge = GUTTER + f->linumw, redge = f->sc - ledge;
+	
 	// redetermine buffer boundaries for rendering.
-	unsigned bsr, bsc, csrr, csrc;
-
-	frame_pos(f, f->bufstart, &bsr, &bsc);
+	unsigned csrr, csrc;
 	frame_pos(f, f->csr, &csrr, &csrc);
-	while (csrr >= bsr + f->sr - 1) {
+	
+	while (csrr >= f->sr) {
 		++f->bufstart;
 		while (f->bufstart < f->buf->size
 		       && f->buf->conts[f->bufstart - 1] != L'\n') {
 			++f->bufstart;
 		}
-
-		frame_pos(f, f->bufstart, &bsr, &bsc);
-		frame_pos(f, f->csr, &csrr, &csrc);
+		--csrr;
 	}
 
+	unsigned bsr, bsc;
 	buf_pos(f->buf, f->bufstart, &bsr, &bsc);
 	buf_pos(f->buf, f->csr, &csrr, &csrc);
+	
 	while (csrr < bsr) {
 		--f->bufstart;
 		while (f->bufstart > 0
 		       && f->buf->conts[f->bufstart - 1] != L'\n') {
 			--f->bufstart;
 		}
-
-		buf_pos(f->buf, f->bufstart, &bsr, &bsc);
-		buf_pos(f->buf, f->csr, &csrr, &csrc);
+		++csrr;
 	}
 
 	// fix linum width.

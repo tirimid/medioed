@@ -430,7 +430,7 @@ bind_navback_word(void)
 static void
 bind_navback_page(void)
 {
-	prompt_show(L"this bind is not\nimplemented yet!");
+	prompt_show(L"this bind is not implemented yet!");
 	redrawall();
 }
 
@@ -611,6 +611,7 @@ resetbinds(void)
 	keybd_bind(conf_bind_create_scrap, bind_create_scrap);
 	keybd_bind(conf_bind_newline, bind_newline);
 	keybd_bind(conf_bind_focus, bind_focus);
+	keybd_organize();
 }
 
 static void

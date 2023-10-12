@@ -10,6 +10,7 @@
 void keybd_init(void);
 void keybd_quit(void);
 void keybd_bind(int const *keyseq, void (*fn)(void));
+void keybd_organize(void);
 wint_t keybd_awaitkey(void);
 
 #endif
