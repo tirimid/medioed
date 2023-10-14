@@ -48,21 +48,12 @@ static uint8_t const attrtab[] = {
 	47,
 };
 
-static struct termios oldtios;
 static struct cell **cells;
 static struct winsize ws;
 
-int
+void
 draw_init(void)
 {
-	if (tcgetattr(STDOUT_FILENO, &oldtios))
-		return 1;
-
-	struct termios new = oldtios;
-	new.c_lflag &= ~ECHO;
-	if (tcsetattr(STDOUT_FILENO, TCSAFLUSH, &new))
-		return 1;
-
 	fputws(L"\033[?25l", stdout);
 
 	ioctl(0, TIOCGWINSZ, &ws);
@@ -75,11 +66,9 @@ draw_init(void)
 	sigaction(SIGWINCH, NULL, &sa);
 	sa.sa_handler = sigwinch_handler;
 	sigaction(SIGWINCH, &sa, NULL);
-	
-	return 0;
 }
 
-int
+void
 draw_quit(void)
 {
 	for (size_t i = 0; i < ws.ws_row; ++i)
@@ -87,11 +76,6 @@ draw_quit(void)
 	free(cells);
 	
 	fputws(L"\033[?25h", stdout);
-	
-	if (tcsetattr(STDOUT_FILENO, TCSAFLUSH, &oldtios))
-		return 1;
-	
-	return 0;
 }
 
 void

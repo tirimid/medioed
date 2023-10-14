@@ -36,8 +36,8 @@ enum attr {
 	A_BWHITE = 8 << 8,
 };
 
-int draw_init(void);
-int draw_quit(void);
+void draw_init(void);
+void draw_quit(void);
 void draw_clear(wchar_t wch, uint16_t a);
 void draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch, uint16_t a);
 void draw_putwch(unsigned r, unsigned c, wchar_t wch);
