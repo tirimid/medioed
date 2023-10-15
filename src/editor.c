@@ -83,19 +83,19 @@ editor_init(int argc, char const *argv[])
 		addframe(&gf);
 	} else {
 		for (int i = firstarg; i < argc; ++i) {
+			draw_clear(L' ', CONF_A_GNORM);
+			
 			struct stat s;
 			if (stat(argv[i], &s)) {
 				// TODO: show which file failed to open.
-				draw_clear(L' ', CONF_A_GNORM);
 				prompt_show(L"failed to open file!");
-				draw_refresh();
 				continue;
 			}
 			
 			size_t wnamen = strlen(argv[i]) + 1;
 			wchar_t *wname = malloc(sizeof(wchar_t) * wnamen);
 			mbstowcs(wname, argv[i], wnamen);
-			
+
 			struct buf b = buf_fromfile(argv[i]);
 			struct frame f = frame_create(wname, addbuf(&b));
 			addframe(&f);
@@ -403,8 +403,15 @@ bind_navfwd_ch(void)
 static void
 bind_navfwd_word(void)
 {
-	prompt_show(L"this bind is not implemented yet!");
-	redrawall();
+	struct frame *f = &frames.data[curframe];
+
+	while (f->csr < f->buf->size && !iswalnum(f->buf->conts[f->csr]))
+		++f->csr;
+	while (f->csr < f->buf->size && iswalnum(f->buf->conts[f->csr]))
+		++f->csr;
+	
+	++f->csr;
+	frame_relmvcsr(f, 0, -1, true);
 }
 
 static void
@@ -423,8 +430,15 @@ bind_navback_ch(void)
 static void
 bind_navback_word(void)
 {
-	prompt_show(L"this bind is not implemented yet!");
-	redrawall();
+	struct frame *f = &frames.data[curframe];
+
+	while (f->csr > 0 && !iswalnum(f->buf->conts[f->csr - 1]))
+		--f->csr;
+	while (f->csr > 0 && iswalnum(f->buf->conts[f->csr - 1]))
+		--f->csr;
+
+	++f->csr;
+	frame_relmvcsr(f, 0, -1, true);
 }
 
 static void
@@ -517,8 +531,20 @@ bind_delback_ch(void)
 static void
 bind_delback_word(void)
 {
-	prompt_show(L"this bind is not implemented yet!");
-	redrawall();
+	struct frame *f = &frames.data[curframe];
+	if (!(f->buf->flags & BF_WRITABLE))
+		return;
+
+	size_t ub = f->csr;
+
+	while (f->csr > 0 && !iswalnum(f->buf->conts[f->csr - 1]))
+		--f->csr;
+	while (f->csr > 0 && iswalnum(f->buf->conts[f->csr - 1]))
+		--f->csr;
+
+	++f->csr;
+	frame_relmvcsr(f, 0, -1, true);
+	buf_erase(f->buf, f->csr, ub);
 }
 
 static void

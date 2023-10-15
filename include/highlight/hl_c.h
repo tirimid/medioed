@@ -62,7 +62,7 @@ HIGHLIGHT_C(A_SPECIAL_C, L"[\\+\\-\\(\\)\\[\\]\\.\\<\\>\\{\\}\\!\\~\\*\\&\\/\\%\
 HIGHLIGHT_C(A_PREPROC_C, L"^\\s*\\K#\\s*[a-zA-Z_][a-zA-Z0-9_]*")
 HIGHLIGHT_C(A_STRING_C, L"^\\s*#\\s*include\\s*\\K<.*>")
 HIGHLIGHT_C(A_STRING_C, L"\"(?:[^\"\\\\\\n]|\\\\.)*\"")
-HIGHLIGHT_C(A_STRING_C, L"'(?:[^'\\\\\\n]|\\\\.)*'")
+HIGHLIGHT_C(A_STRING_C, L"'([^'\\\\]|\\\\.)'")
 HIGHLIGHT_C(A_COMMENT_C, L"//.*")
 HIGHLIGHT_C(A_COMMENT_C, L"\\/\\*(\\*(?!\\/)|[^*])*\\*\\/")
 HIGHLIGHT_C(A_TRAILINGWS_C, L"\\s+$")
