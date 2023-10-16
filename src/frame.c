@@ -163,7 +163,8 @@ frame_mvcsr(struct frame *f, unsigned r, unsigned c)
 			--r;
 	}
 	
-	while (f->csr < f->buf->size && f->buf->conts[f->csr] != L'\n'
+	while (f->csr < f->buf->size
+	       && f->buf->conts[f->csr] != L'\n'
 	       && c > 0) {
 		++f->csr;
 		--c;
@@ -247,11 +248,11 @@ static void
 drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 {
 	unsigned ledge = GUTTER + f->linumw, redge = f->sc - ledge;
-	unsigned i;
+	unsigned c = 0;
 
-	for (i = 0; *dcsr < f->buf->size && f->buf->conts[*dcsr] != L'\n'; ++i, ++*dcsr) {
-		if (i >= redge) {
-			i = 0;
+	while (*dcsr < f->buf->size && f->buf->conts[*dcsr] != L'\n') {
+		if (c >= redge) {
+			c = 0;
 			++*line;
 		}
 
@@ -262,15 +263,18 @@ drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 		wch = wch == L'\t' || iswprint(wch) ? wch : L'?';
 		switch (wch) {
 		case L'\t':
-			i += CONF_TABSIZE - i % CONF_TABSIZE - 1;
+			c += CONF_TABSIZE - c % CONF_TABSIZE;
 			break;
 		default:
-			draw_putwch(f->pr + *line, f->pc + ledge + i, wch);
+			draw_putwch(f->pr + *line, f->pc + ledge + c, wch);
+			++c;
 			break;
 		}
+
+		++*dcsr;
 	}
 
-	if (i >= redge)
+	if (c >= redge)
 		++*line;
 
 	++*dcsr;

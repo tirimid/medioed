@@ -214,7 +214,7 @@ arrangeframes(void)
 		f->pc = CONF_MNUM * ws.ws_col / CONF_MDENOM;
 		f->sc = ws.ws_col - f->pc;
 
-		if (f->pr + f->sr > ws.ws_row)
+		if (f->pr + f->sr > ws.ws_row || i == frames.size - 1)
 			f->sr = ws.ws_row - f->pr;
 	}
 }
@@ -222,8 +222,11 @@ arrangeframes(void)
 static void
 redrawall(void)
 {
-	for (size_t i = 0; i < frames.size; ++i)
+	for (size_t i = 0; i < frames.size; ++i) {
+		frame_compbndry(&frames.data[i]);
 		frame_draw(&frames.data[i], i == curframe);
+	}
+	
 	draw_refresh();
 }
 
@@ -585,7 +588,13 @@ bind_chgmode_local(void)
 static void
 bind_create_scrap(void)
 {
-	prompt_show(L"this bind is not implemented yet!");
+	struct buf b = buf_create(true);
+	struct frame f = frame_create(CONF_SCRAPNAME, addbuf(&b));
+	addframe(&f);
+	
+	curframe = frames.size - 1;
+	resetbinds();
+	arrangeframes();
 	redrawall();
 }
 
