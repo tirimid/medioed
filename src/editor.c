@@ -422,6 +422,8 @@ bind_navfwd_page(void)
 	f->bufstart = f->csr;
 	while (f->bufstart > 0 && f->buf->conts[f->bufstart - 1] != L'\n')
 		--f->bufstart;
+
+	frame_compbndry(f);
 }
 
 static void
@@ -624,6 +626,8 @@ bind_focus(void)
 		if (f->buf->conts[f->bufstart++] == L'\n')
 			++bsr;
 	}
+
+	frame_compbndry(f);
 }
 
 static void

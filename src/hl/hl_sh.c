@@ -7,7 +7,6 @@
 #define A_COMMENT (A_RED | A_BGOF(CONF_A_NORM))
 #define A_VAR (A_CYAN | A_BGOF(CONF_A_NORM))
 #define A_STRING (A_YELLOW | A_BGOF(CONF_A_NORM))
-#define A_TRAILINGWS (A_FGOF(CONF_A_NORM) | A_BGREEN)
 
 int
 hl_sh_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
