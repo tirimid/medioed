@@ -609,8 +609,19 @@ bind_newline(void)
 static void
 bind_focus(void)
 {
-	prompt_show(L"this bind is not implemented yet!");
-	redrawall();
+	struct frame *f = &frames.data[curframe];
+	
+	unsigned csrr, csrc;
+	buf_pos(f->buf, f->csr, &csrr, &csrc);
+
+	f->bufstart = 0;
+	unsigned bsr = 0;
+	long dstbsr = (long)csrr - f->sr / 2;
+	dstbsr = MAX(dstbsr, 0);
+	while (f->bufstart < f->buf->size && bsr < dstbsr) {
+		if (f->buf->conts[f->bufstart++] == L'\n')
+			++bsr;
+	}
 }
 
 static void
