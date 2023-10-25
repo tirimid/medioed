@@ -527,7 +527,7 @@ bind_delback_ch(void)
 	struct frame *f = &frames.data[curframe];
 
 	if (f->csr > 0 && f->buf->flags & BF_WRITABLE) {
-		--f->csr;
+		frame_relmvcsr(f, 0, -1, true);
 		buf_erase(f->buf, f->csr, f->csr + 1);
 		frame_compbndry(f);
 	}
@@ -547,8 +547,9 @@ bind_delback_word(void)
 	while (f->csr > 0 && iswalnum(f->buf->conts[f->csr - 1]))
 		--f->csr;
 
+	++f->csr;
+	frame_relmvcsr(f, 0, -1, false);
 	buf_erase(f->buf, f->csr, ub);
-	frame_compbndry(f);
 }
 
 static void
