@@ -62,11 +62,6 @@ static struct vec_pbuf pbufs;
 int
 editor_init(int argc, char const *argv[])
 {
-	if (conf_init()) {
-		fputs("failed on conf_init()!\n", stderr);
-		return 1;
-	}
-
 	keybd_init();
 
 	frames = vec_frame_create();
@@ -164,7 +159,6 @@ editor_quit(void)
 	vec_pbuf_destroy(&pbufs);
 
 	keybd_quit();
-	conf_quit();
 }
 
 static struct buf *
@@ -420,8 +414,14 @@ bind_navfwd_word(void)
 static void
 bind_navfwd_page(void)
 {
-	prompt_show(L"this bind is not implemented yet!");
-	redrawall();
+	struct frame *f = &frames.data[curframe];
+
+	f->csr = f->bufstart;
+	frame_relmvcsr(f, f->sr - 1, 0, false);
+	
+	f->bufstart = f->csr;
+	while (f->bufstart > 0 && f->buf->conts[f->bufstart - 1] != L'\n')
+		--f->bufstart;
 }
 
 static void
@@ -447,20 +447,21 @@ bind_navback_word(void)
 static void
 bind_navback_page(void)
 {
-	prompt_show(L"this bind is not implemented yet!");
-	redrawall();
+	struct frame *f = &frames.data[curframe];
+	f->csr = f->bufstart;
+	frame_relmvcsr(f, 1 - f->sr, 0, false);
 }
 
 static void
 bind_navdown(void)
 {
-	frame_relmvcsr(&frames.data[curframe], 1, 0, true);
+	frame_relmvcsr(&frames.data[curframe], 1, 0, false);
 }
 
 static void
 bind_navup(void)
 {
-	frame_relmvcsr(&frames.data[curframe], -1, 0, true);
+	frame_relmvcsr(&frames.data[curframe], -1, 0, false);
 }
 
 static void
@@ -526,8 +527,9 @@ bind_delback_ch(void)
 	struct frame *f = &frames.data[curframe];
 
 	if (f->csr > 0 && f->buf->flags & BF_WRITABLE) {
-		frame_relmvcsr(f, 0, -1, true);
+		--f->csr;
 		buf_erase(f->buf, f->csr, f->csr + 1);
+		frame_compbndry(f);
 	}
 }
 
@@ -545,9 +547,8 @@ bind_delback_word(void)
 	while (f->csr > 0 && iswalnum(f->buf->conts[f->csr - 1]))
 		--f->csr;
 
-	++f->csr;
-	frame_relmvcsr(f, 0, -1, true);
 	buf_erase(f->buf, f->csr, ub);
+	frame_compbndry(f);
 }
 
 static void
@@ -616,7 +617,7 @@ bind_focus(void)
 
 	f->bufstart = 0;
 	unsigned bsr = 0;
-	long dstbsr = (long)csrr - f->sr / 2;
+	long dstbsr = (long)csrr - (f->sr - 1) / 2;
 	dstbsr = MAX(dstbsr, 0);
 	while (f->bufstart < f->buf->size && bsr < dstbsr) {
 		if (f->buf->conts[f->bufstart++] == L'\n')

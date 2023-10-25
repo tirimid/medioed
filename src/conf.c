@@ -5,10 +5,13 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "hl/hl_c.h"
+#include "hl/hl_sh.h"
 #include "mode/mode_c.h"
 #include "mode/mode_sh.h"
 #include "util.h"
 
+// binds.
 int const conf_bind_quit[] = {K_CTL('x'), K_CTL('c'), -1};
 int const conf_bind_chgfwd_frame[] = {K_CTL('x'), 'b', -1};
 int const conf_bind_chgback_frame[] = {K_CTL('c'), 'b', -1};
@@ -36,29 +39,24 @@ int const conf_bind_create_scrap[] = {K_CTL('c'), 'n', -1};
 int const conf_bind_newline[] = {K_RET, -1};
 int const conf_bind_focus[] = {K_CTL('l'), -1};
 
-static bool highlight_haslm(struct highlight const *hl, char const *lm);
+// language mode extensions.
+static char const *ext_c[] = {"c", "h", NULL};
+static char const *ext_sh[] = {"sh", NULL};
 
-static char const *htab_c_lms[] = {"c", "h", NULL};
-static char const *htab_sh_lms[] = {"sh", NULL};
-struct highlight conf_htab[] = {
-#include "highlight/hl_c.h"
-#include "highlight/hl_sh.h"
+// highlight table.
+struct highlight const conf_htab[] = {
+	{
+		.localmodes = ext_c,
+		.find = hl_c_find,
+	},
+	{
+		.localmodes = ext_sh,
+		.find = hl_sh_find,
+	},
 };
 size_t const conf_htab_size = ARRAYSIZE(conf_htab);
 
-struct hbndry conf_hbtab[] = {
-	{
-		.localmode = "c",
-	},
-	{
-		.localmode = "h",
-	},
-	{
-		.localmode = "sh",
-	},
-};
-size_t const conf_hbtab_size = ARRAYSIZE(conf_hbtab);
-
+// margin table.
 struct margin const conf_mtab[] = {
 	{
 		.col = 80,
@@ -73,6 +71,7 @@ struct margin const conf_mtab[] = {
 };
 size_t const conf_mtab_size = ARRAYSIZE(conf_mtab);
 
+// language mode table.
 struct mode const conf_lmtab[] = {
 	{
 		.name = "c",
@@ -89,55 +88,15 @@ struct mode const conf_lmtab[] = {
 };
 size_t const conf_lmtab_size = ARRAYSIZE(conf_lmtab);
 
-int
-conf_init(void)
-{
-	for (size_t i = 0; i < conf_hbtab_size; ++i) {
-		struct hbndry *hb = &conf_hbtab[i];
-
-		hb->start = 0;
-		while (hb->start < conf_htab_size
-		       && !highlight_haslm(&conf_htab[hb->start], hb->localmode)) {
-			++hb->start;
-		}
-
-		hb->end = hb->start;
-		while (hb->end < conf_htab_size
-		       && highlight_haslm(&conf_htab[hb->end], hb->localmode)) {
-			++hb->end;
-		}
-	}
-	
-	for (size_t i = 0; i < conf_htab_size; ++i) {
-		struct highlight *hl = &conf_htab[i];
-
-		int rc;
-		uint64_t flags = PCRE2_MULTILINE;
-		PCRE2_SIZE erroff;
-		PCRE2_SPTR pat = (PCRE2_SPTR)hl->re_str;
-		if (!(hl->re = pcre2_compile(pat, wcslen(hl->re_str), flags, &rc, &erroff, NULL))) {
-			fprintf(stderr, "failed to compile regex: '%ls'!\n", hl->re_str);
-			return 1;
-		}
-	}
-	
-	return 0;
-}
-
-void
-conf_quit(void)
-{
-	for (size_t i = 0; i < conf_htab_size; ++i)
-		pcre2_code_free(conf_htab[i].re);
-}
-
-static bool
-highlight_haslm(struct highlight const *hl, char const *lm)
-{
-	for (size_t i = 0; hl->localmodes[i]; ++i) {
-		if (!strcmp(hl->localmodes[i], lm))
-			return true;
-	}
-	
-	return false;
-}
+// mode extension table.
+struct modeext const conf_metab[] = {
+	{
+		.exts = ext_c,
+		.mode = "c",
+	},
+	{
+		.exts = ext_sh,
+		.mode = "sh",
+	},
+};
+size_t const conf_metab_size = ARRAYSIZE(conf_metab);

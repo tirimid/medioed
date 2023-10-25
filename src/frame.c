@@ -26,7 +26,7 @@ frame_create(wchar_t const *name, struct buf *buf)
 	unsigned ber, bec;
 	buf_pos(buf, buf->size, &ber, &bec);
 	unsigned linumw = 0;
-	for (unsigned i = MIN(ber, ws.ws_row) + 1; i > 0; i /= 10)
+	for (unsigned i = MIN(ber, ws.ws_row - 1) + 1; i > 0; i /= 10)
 		++linumw;
 
 	return (struct frame){
@@ -100,28 +100,23 @@ frame_draw(struct frame const *f, bool active)
 		if (linumind++ <= ber - bsr) {
 			wchar_t drawtext[16];
 			swprintf(drawtext, 16, L"%u", bsr + linumind);
-
-			size_t dtlen = wcslen(drawtext);
-			draw_putwstr(f->pr + i, f->pc + CONF_GUTTER_LEFT + f->linumw - dtlen, drawtext);
-			draw_putattr(f->pr + i, f->pc, CONF_A_LINUM, GUTTER + dtlen);
+			draw_putwstr(f->pr + i, f->pc + CONF_GUTTER_LEFT + f->linumw - wcslen(drawtext), drawtext);
+			draw_putattr(f->pr + i, f->pc, CONF_A_LINUM, GUTTER + f->linumw);
 		}
 
 		drawline(f, &i, &dcsr);
 	}
 
-	// execute highlights.
-	struct hbndry const *hbndry = NULL;
-	for (size_t i = 0; i < conf_hbtab_size; ++i) {
-		if (!strcmp(conf_hbtab[i].localmode, f->localmode)) {
-			hbndry = &conf_hbtab[i];
-			break;
+	// execute highlight.
+	for (size_t i = 0; i < conf_htab_size; ++i) {
+		for (char const **lm = conf_htab[i].localmodes; *lm; ++lm) {
+			if (!strcmp(*lm, f->localmode)) {
+				exechighlight(f, &conf_htab[i]);
+				goto donehl;
+			}
 		}
 	}
-
-	if (hbndry) {
-		for (size_t i = hbndry->start; i < hbndry->end; ++i)
-			exechighlight(f, &conf_htab[i]);
-	}
+donehl:;
 
 	// draw cursor.
 	unsigned csrr, csrc;
@@ -240,7 +235,7 @@ frame_compbndry(struct frame *f)
 	unsigned ber, bec;
 	buf_pos(f->buf, f->buf->size, &ber, &bec);
 	f->linumw = 0;
-	for (unsigned i = bsr + MIN(ber - bsr, f->sr) + 1; i > 0; i /= 10)
+	for (unsigned i = MIN(ber, bsr + f->sr - 1) + 1; i > 0; i /= 10)
 		++f->linumw;
 }
 
@@ -283,19 +278,19 @@ drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 static void
 exechighlight(struct frame const *f, struct highlight const *hl)
 {
-	pcre2_match_data *md = pcre2_match_data_create_from_pattern(hl->re, NULL);
-	PCRE2_SIZE off = f->bufstart;
 	unsigned ledge = GUTTER + f->linumw;
-	while (pcre2_match(hl->re, (PCRE2_SPTR)f->buf->conts, f->buf->size, off, 0, md, NULL) >= 0) {
-		PCRE2_SIZE const *offv = pcre2_get_ovector_pointer(md);
-
+	
+	size_t off = f->bufstart;
+	size_t lb, ub;
+	uint16_t a;
+	while (!hl->find(f->buf->conts, f->buf->size, off, &lb, &ub, &a)) {
 		unsigned hlr, hlc;
-		frame_pos(f, offv[0], &hlr, &hlc);
+		frame_pos(f, lb, &hlr, &hlc);
 		if (hlr >= f->sr)
 			break;
 
 		unsigned c = hlc - ledge, r = hlr;
-		for (size_t i = offv[0]; i < offv[1]; ++i) {
+		for (size_t i = lb; i < ub; ++i) {
 			if (c >= f->sc - ledge) {
 				c = 0;
 				++r;
@@ -318,13 +313,11 @@ exechighlight(struct frame const *f, struct highlight const *hl)
 				break;
 			}
 
-			draw_putattr(f->pr + r, f->pc + ledge + c, hl->attr, w);
+			draw_putattr(f->pr + r, f->pc + ledge + c, a, w);
 			
 			c += w;
 		}
 
-		off = offv[1];
+		off = ub;
 	}
-
-	pcre2_match_data_free(md);
 }

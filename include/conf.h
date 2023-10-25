@@ -5,8 +5,6 @@
 #include <stdint.h>
 #include <wchar.h>
 
-#include <pcre2.h>
-
 #include "draw.h"
 #include "mode.h"
 
@@ -36,20 +34,18 @@
 
 struct highlight {
 	char const **localmodes;
-	pcre2_code *re;
-	wchar_t const *re_str;
-	uint16_t attr;
-};
-
-struct hbndry {
-	char const *localmode;
-	size_t start, end; // [start, end).
+	int (*find)(wchar_t const *, size_t, size_t, size_t *, size_t *, uint16_t *);
 };
 
 struct margin {
 	unsigned col;
 	wchar_t wch;
 	uint16_t attr;
+};
+
+struct modeext {
+	char const **exts;
+	char const *mode;
 };
 
 extern int const conf_bind_quit[];
@@ -79,16 +75,13 @@ extern int const conf_bind_create_scrap[];
 extern int const conf_bind_newline[];
 extern int const conf_bind_focus[];
 
-extern struct highlight conf_htab[];
+extern struct highlight const conf_htab[];
 extern size_t const conf_htab_size;
-extern struct hbndry conf_hbtab[];
-extern size_t const conf_hbtab_size;
 extern struct margin const conf_mtab[];
 extern size_t const conf_mtab_size;
 extern struct mode const conf_lmtab[];
 extern size_t const conf_lmtab_size;
-
-int conf_init(void);
-void conf_quit(void);
+extern struct modeext const conf_metab[];
+extern size_t const conf_metab_size;
 
 #endif
