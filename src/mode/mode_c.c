@@ -1,5 +1,6 @@
 #include "mode/mode_c.h"
 
+#include <stdbool.h>
 #include <string.h>
 #include <wctype.h>
 
@@ -19,6 +20,7 @@ static void bind_pclose_bc(void);
 static void bind_delback_ch(void);
 static void bind_indent(void);
 static void bind_newline(void);
+static long nopenat(size_t pos, wchar_t open, wchar_t close, bool reqpos);
 
 static struct frame *mf;
 
@@ -172,13 +174,7 @@ bind_indent(void)
 		++firstch;
 	}
 	
-	unsigned ntab = 0;
-	if (src[firstch] != L'#') {
-		for (size_t i = 0; i < ln; ++i) {
-			ntab += src[i] == L'{';
-			ntab -= (src[i] == L'}') * (ntab > 0);
-		}
-	}
+	unsigned ntab = nopenat(firstch, L'{', L'}', true);
 	for (size_t i = firstch; ntab > 0 && i < mf->buf->size && src[i] == L'}'; ++i)
 		--ntab;
 
@@ -190,15 +186,12 @@ bind_indent(void)
 	while (prevfirstch < mf->buf->size && iswspace(src[prevfirstch]))
 		++prevfirstch;
 	
-	if (src[prevfirstch] != L'#' && src[prevlastch] == L')') {
-		int nopen = 0;
-		for (size_t i = 0; i <= prevlastch; ++i) {
-			nopen += src[i] == L'(';
-			nopen -= src[i] == L')';
-		}
-		if (nopen == 0 && src[firstch] != L'{' && src[firstch] != L'}')
+	if (src[prevlastch] == L')') {
+		if (nopenat(prevlastch + 1, L'(', L')', false) == 0
+		    && src[firstch] != L'{' && src[firstch] != L'}') {
 			++ntab;
-	} else if (src[prevfirstch] == L'#' && src[prevlastch] == L'\\')
+		}
+	} else if (src[prevlastch] == L'\\')
 		++ntab;
 
 	unsigned nspace = 0;
@@ -220,15 +213,48 @@ bind_indent(void)
 		    && ntab == prevntab) {
 			nspace = off;
 		} else if (off == 0 && ntab == prevntab) {
+			// unfortunately, `nopenat()` cannot be used for this as
+			// the functionality implemented here requires internal
+			// knowledge that would be impossible to obtain via the
+			// function call.
+			bool instr = false, inch = false;
 			while (firstspace + off < ln
-			       && src[firstspace + off] != L'(') {
+			       && src[firstspace + off] != L'('
+			       || instr
+			       || inch) {
+				wchar_t wch = src[firstspace + off];
+				
+				if (wch == L'\\' && (instr || inch)) {
+					if (src[firstspace + ++off] == L'\n')
+						instr = inch = false;
+					continue;
+				} else if (wch == L'"' && !inch)
+					instr = !instr;
+				else if (wch == L'\'' && !instr)
+					inch = !inch;
+				else if (wch == L'\n')
+					instr = inch = false;
+				
 				++off;
 			}
 			
-			int nopen = 0;
+			long nopen = 0;
 			for (size_t i = firstspace + off; i < ln; ++i) {
-				nopen += src[i] == L'(';
-				nopen -= src[i] == L')';
+				wchar_t wch = src[firstspace + off];
+				
+				if (wch == L'\\' && (instr || inch)) {
+					if (src[firstspace + ++off] == L'\n')
+						instr = inch = false;
+					continue;
+				} else if (wch == L'"' && !inch)
+					instr = !instr;
+				else if (wch == L'\'' && !instr)
+					inch = !inch;
+				else if (wch == L'\n')
+					instr = inch = false;
+				
+				nopen += src[i] == L'(' && !instr && !inch;
+				nopen -= src[i] == L')' && !instr && !inch;
 			}
 			
 			if (src[firstch] != L'{'
@@ -249,11 +275,10 @@ bind_indent(void)
 
 	// fix cursor.
 	if (mf->csr <= firstch)
-		mf->csr = ln + ntab + nspace;
-	else {
+		mf->csr = ln;
+	else
 		mf->csr -= firstch - ln;
-		mf->csr += ntab + nspace;
-	}
+	frame_relmvcsr(mf, 0, ntab + nspace, false);
 }
 
 static void
@@ -265,4 +290,30 @@ bind_newline(void)
 	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 	
 	bind_indent();
+}
+
+static long
+nopenat(size_t pos, wchar_t open, wchar_t close, bool reqpos)
+{
+	long nopen = 0;
+	bool instr = false, inch = false;
+	for (size_t i = 0; i < pos; ++i) {
+		wchar_t wch = mf->buf->conts[i];
+		
+		if (wch == L'\\' && (instr || inch)) {
+			if (mf->buf->conts[++i] == L'\n')
+				instr = inch = false;
+			continue;
+		} else if (wch == L'"' && !inch)
+			instr = !instr;
+		else if (wch == L'\'' && !instr)
+			inch = !inch;
+		else if (wch == L'\n')
+			instr = inch = false;
+
+		nopen += wch == open && !instr && !inch;
+		nopen -= wch == close && !instr && !inch && (reqpos && nopen > 0 || !reqpos);
+	}
+
+	return nopen;
 }

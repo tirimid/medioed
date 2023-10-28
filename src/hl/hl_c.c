@@ -7,13 +7,13 @@
 #include "conf.h"
 #include "draw.h"
 
-#define A_PREPROC (A_CYAN | A_BGOF(CONF_A_NORM))
-#define A_KEYWORD (A_GREEN | A_BGOF(CONF_A_NORM))
+#define A_PREPROC (A_YELLOW | A_BGOF(CONF_A_NORM))
+#define A_KEYWORD (A_MAGENTA | A_BGOF(CONF_A_NORM) | A_BRIGHT)
 #define A_COMMENT (A_RED | A_BGOF(CONF_A_NORM))
-#define A_STRING (A_YELLOW | A_BGOF(CONF_A_NORM))
-#define A_FUNC (A_BRIGHT | A_MAGENTA | A_BGOF(CONF_A_NORM))
-#define A_MACRO (A_CYAN | A_BGOF(CONF_A_NORM))
-#define A_SPECIAL (A_BLUE | A_BGOF(CONF_A_NORM))
+#define A_STRING (A_WHITE | A_BRED)
+#define A_FUNC (A_WHITE | A_BGOF(CONF_A_NORM) | A_BRIGHT)
+#define A_MACRO (A_MAGENTA | A_BGOF(CONF_A_NORM))
+#define A_SPECIAL (A_WHITE | A_BGOF(CONF_A_NORM) | A_DIM)
 
 #define SPECIAL "+-()[].<>{}!~*&/%=?:|;,"
 
