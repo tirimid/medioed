@@ -577,7 +577,7 @@ bind_delback_word(void)
 		--f->csr;
 
 	++f->csr;
-	frame_relmvcsr(f, 0, -1, false);
+	frame_relmvcsr(f, 0, -1, true);
 	buf_erase(f->buf, f->csr, ub);
 }
 
