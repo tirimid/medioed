@@ -8,9 +8,11 @@
 #include "hl/hl_c.h"
 #include "hl/hl_sh.h"
 #include "hl/hl_rs.h"
+#include "hl/hl_s.h"
 #include "mode/mode_c.h"
 #include "mode/mode_sh.h"
 #include "mode/mode_rs.h"
+#include "mode/mode_s.h"
 #include "util.h"
 
 // binds.
@@ -45,20 +47,25 @@ int const conf_bind_focus[] = {K_CTL('l'), -1};
 static char const *ext_c[] = {"c", "h", NULL};
 static char const *ext_sh[] = {"sh", NULL};
 static char const *ext_rs[] = {"rs", NULL};
+static char const *ext_s[] = {"s", "asm", "S", NULL};
 
 // highlight table.
 struct highlight const conf_htab[] = {
 	{
-		.localmodes = ext_c,
+		.localmode = "c",
 		.find = hl_c_find,
 	},
 	{
-		.localmodes = ext_sh,
+		.localmode = "sh",
 		.find = hl_sh_find,
 	},
 	{
-		.localmodes = ext_rs,
+		.localmode = "rs",
 		.find = hl_rs_find,
+	},
+	{
+		.localmode = "s",
+		.find = hl_s_find,
 	},
 };
 size_t const conf_htab_size = ARRAYSIZE(conf_htab);
@@ -101,6 +108,13 @@ struct mode const conf_lmtab[] = {
 		.update = mode_rs_update,
 		.keypress = mode_rs_keypress,
 	},
+	{
+		.name = "s",
+		.init = mode_s_init,
+		.quit = mode_s_quit,
+		.update = mode_s_update,
+		.keypress = mode_s_keypress,
+	},
 };
 size_t const conf_lmtab_size = ARRAYSIZE(conf_lmtab);
 
@@ -117,6 +131,10 @@ struct modeext const conf_metab[] = {
 	{
 		.exts = ext_rs,
 		.mode = "rs",
+	},
+	{
+		.exts = ext_rs,
+		.mode = "s",
 	},
 };
 size_t const conf_metab_size = ARRAYSIZE(conf_metab);

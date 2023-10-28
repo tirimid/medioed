@@ -29,6 +29,22 @@ frame_create(wchar_t const *name, struct buf *buf)
 	for (unsigned i = MIN(ber, ws.ws_row - 1) + 1; i > 0; i /= 10)
 		++linumw;
 
+	char *localmode;
+	if (buf->srctype == BST_FILE) {
+		char const *bufext = fileext(buf->src);
+		for (size_t i = 0; i < conf_metab_size; ++i) {
+			for (char const **ext = conf_metab[i].exts; *ext; ++ext) {
+				if (!strcmp(*ext, bufext)) {
+					localmode = strdup(bufext);
+					goto done_findlm;
+				}
+			}
+		}
+		localmode = strdup("\0");
+	done_findlm:;
+	} else
+		localmode = strdup("\0");
+	
 	return (struct frame){
 		.name = wcsdup(name),
 		.pr = 0,
@@ -40,7 +56,7 @@ frame_create(wchar_t const *name, struct buf *buf)
 		.bufstart = 0,
 		.csr_wantcol = 0,
 		.linumw = linumw,
-		.localmode = strdup(buf->srctype == BST_FILE ? fileext(buf->src) : "\0"),
+		.localmode = localmode,
 	};
 }
 
@@ -109,11 +125,9 @@ frame_draw(struct frame const *f, bool active)
 
 	// execute highlight.
 	for (size_t i = 0; i < conf_htab_size; ++i) {
-		for (char const **lm = conf_htab[i].localmodes; *lm; ++lm) {
-			if (!strcmp(*lm, f->localmode)) {
-				exechighlight(f, &conf_htab[i]);
-				goto donehl;
-			}
+		if (!strcmp(conf_htab[i].localmode, f->localmode)) {
+			exechighlight(f, &conf_htab[i]);
+			goto donehl;
 		}
 	}
 donehl:;

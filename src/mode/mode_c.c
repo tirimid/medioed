@@ -178,24 +178,24 @@ bind_indent(void)
 	for (size_t i = firstch; ntab > 0 && i < mf->buf->size && src[i] == L'}'; ++i)
 		--ntab;
 
-	size_t prevlastch = ln - 2 * (ln > 0);
-	while (prevlastch > prevln && iswspace(prevlastch))
-		--prevlastch;
-
-	size_t prevfirstch = prevln;
-	while (prevfirstch < mf->buf->size && iswspace(src[prevfirstch]))
-		++prevfirstch;
-	
-	if (src[prevlastch] == L')') {
-		if (nopenat(prevlastch + 1, L'(', L')', false) == 0
-		    && src[firstch] != L'{' && src[firstch] != L'}') {
-			++ntab;
-		}
-	} else if (src[prevlastch] == L'\\')
-		++ntab;
-
 	unsigned nspace = 0;
 	if (prevln != ln) {
+		size_t prevlastch = ln - 2 * (ln > 0);
+		while (prevlastch > prevln && iswspace(src[prevlastch]))
+			--prevlastch;
+
+		size_t prevfirstch = prevln;
+		while (prevfirstch < mf->buf->size && iswspace(src[prevfirstch]))
+			++prevfirstch;
+	
+		if (src[prevlastch] == L')') {
+			if (nopenat(prevlastch + 1, L'(', L')', false) == 0
+			    && src[firstch] != L'{' && src[firstch] != L'}') {
+				++ntab;
+			}
+		} else if (src[prevlastch] == L'\\')
+			++ntab;
+		
 		unsigned prevntab = 0, off = 0;
 		size_t firstspace = prevln;
 		

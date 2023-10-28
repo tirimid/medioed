@@ -33,7 +33,7 @@
 	L"the source is available at https://gitlab.com/tirimid/medioed\n"
 
 struct highlight {
-	char const **localmodes;
+	char const *localmode;
 	int (*find)(wchar_t const *, size_t, size_t, size_t *, size_t *, uint16_t *);
 };
 

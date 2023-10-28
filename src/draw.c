@@ -153,7 +153,7 @@ draw_refresh(void)
 			uint8_t curbg = A_BGOF(cells[i][j].a) >> 8;
 			
 			if (curattr != prevattr)
-				wprintf(L"\033[%um", attrtab[curattr]);
+				wprintf(L"\033[0m\033[%um", attrtab[curattr]);
 			
 			if (curfg != prevfg)
 				wprintf(L"\033[%um", attrtab[curfg + 6]);
