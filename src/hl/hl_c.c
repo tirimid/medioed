@@ -111,7 +111,10 @@ hl_preproc(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 		++j;
 		if (src[j] == L'\\') {
 			++j;
-			continue;
+			while (iswspace(src[j]) && src[j] != L'\n')
+				++j;
+			if (src[j] == L'\n')
+				++j;
 		} else if (src[j] == L'\n')
 			break;
 	}

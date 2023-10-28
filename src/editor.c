@@ -51,6 +51,7 @@ static void bind_create_scrap(void);
 static void bind_newline(void);
 static void bind_focus(void);
 static void resetbinds(void);
+static void setglobalmode(void);
 static void sigwinch_handler(int arg);
 
 static void (*old_sigwinch_handler)(int);
@@ -112,6 +113,7 @@ editor_init(int argc, char const *argv[])
 	sigaction(SIGWINCH, &sa, NULL);
 
 	resetbinds();
+	setglobalmode();
 	arrangeframes();
 	redrawall();
 
@@ -130,8 +132,11 @@ editor_mainloop(void)
 			f->csr = MIN(f->csr, f->buf->size);
 		}
 
-		// TODO: redraw ALL frames with newly modified buffer open.
 		struct frame *f = &frames.data[curframe];
+
+		mode_update();
+
+		// TODO: redraw ALL frames with newly modified buffer open.
 		frame_draw(f, true);
 		draw_refresh();
 		
@@ -139,7 +144,7 @@ editor_mainloop(void)
 		if (k != KEYBD_IGNORE && (k == L'\n' || k == L'\t' || iswprint(k))) {
 			buf_writewch(f->buf, f->csr, k);
 			frame_relmvcsr(f, 0, !!(f->buf->flags & BF_WRITABLE), true);
-			mode_keyupdate(&frames.data[curframe], k);
+			mode_keyupdate(k);
 		}
 	}
 }
@@ -227,6 +232,21 @@ redrawall(void)
 static void
 bind_quit(void)
 {
+	bool modexists = false;
+	for (size_t i = 0; i < pbufs.size; ++i) {
+		if ((*pbufs.data[i]).flags & BF_MODIFIED) {
+			modexists = true;
+			break;
+		}
+	}
+
+	if (modexists) {
+		int confirm = prompt_yesno(L"there are unsaved modified buffers! quit anyway?", false);
+		redrawall();
+		if (confirm != 1)
+			return;
+	}
+	
 	running = false;
 }
 
@@ -235,6 +255,7 @@ bind_chgfwd_frame(void)
 {
 	curframe = (curframe + 1) % frames.size;
 	resetbinds();
+	setglobalmode();
 	redrawall();
 }
 
@@ -243,6 +264,7 @@ bind_chgback_frame(void)
 {
 	curframe = (curframe == 0 ? frames.size : curframe) - 1;
 	resetbinds();
+	setglobalmode();
 	redrawall();
 }
 
@@ -285,6 +307,7 @@ bind_kill_frame(void)
 	}
 
 	resetbinds();
+	setglobalmode();
 	arrangeframes();
 	redrawall();
 
@@ -321,6 +344,7 @@ bind_open_file(void)
 
 	curframe = frames.size - 1;
 	resetbinds();
+	setglobalmode();
 	arrangeframes();
 	redrawall();
 
@@ -389,6 +413,9 @@ bind_save_file(void)
 		free(f->localmode);
 		f->localmode = strdup(fileext(f->buf->src));
 	}
+
+	if (!mode_get())
+		setglobalmode();
 }
 
 static void
@@ -567,7 +594,9 @@ bind_chgmode_global(void)
 	wcstombs(newgm, wnewgm, newgmsize);
 	free(wnewgm);
 
+	resetbinds();
 	mode_set(newgm, &frames.data[curframe]);
+	
 	free(newgm);
 }
 
@@ -586,6 +615,7 @@ bind_chgmode_local(void)
 
 	free(frames.data[curframe].localmode);
 	frames.data[curframe].localmode = strdup(newlm);
+	
 	free(newlm);
 }
 
@@ -598,6 +628,7 @@ bind_create_scrap(void)
 	
 	curframe = frames.size - 1;
 	resetbinds();
+	setglobalmode();
 	arrangeframes();
 	redrawall();
 }
@@ -664,6 +695,26 @@ resetbinds(void)
 	keybd_bind(conf_bind_newline, bind_newline);
 	keybd_bind(conf_bind_focus, bind_focus);
 	keybd_organize();
+}
+
+static void
+setglobalmode(void)
+{
+	struct frame *f = &frames.data[curframe];
+	if (f->buf->srctype != BST_FILE)
+		return;
+
+	char const *bufext = fileext(f->buf->src);
+	for (size_t i = 0; i < conf_metab_size; ++i) {
+		for (char const **ext = conf_metab[i].exts; *ext; ++ext) {
+			if (!strcmp(bufext, *ext)) {
+				mode_set(conf_metab[i].mode, f);
+				return;
+			}
+		}
+	}
+
+	mode_set(NULL, f);
 }
 
 static void

@@ -257,11 +257,17 @@ drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 		wchar_t wch = f->buf->conts[*dcsr];
 		wch = wch == L'\t' || iswprint(wch) ? wch : L'?';
 		switch (wch) {
-		case L'\t':
+		case L'\t': {
+			unsigned nch = CONF_TABSIZE - c % CONF_TABSIZE;
+			for (unsigned i = 0; i < nch; ++i)
+				draw_putwch(f->pr + *line, f->pc + ledge + c + i, L' ');
+			draw_putattr(f->pr + *line, f->pc + ledge + c, CONF_A_NORM, nch);
 			c += CONF_TABSIZE - c % CONF_TABSIZE;
 			break;
+		}
 		default:
 			draw_putwch(f->pr + *line, f->pc + ledge + c, wch);
+			draw_putattr(f->pr + *line, f->pc + ledge + c, CONF_A_NORM, 1);
 			++c;
 			break;
 		}

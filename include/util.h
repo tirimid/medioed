@@ -22,6 +22,7 @@
 #define K_META(k) 27, k
 #define K_BACKSPC 127
 #define K_RET 13
+#define K_TAB 9
 
 #define VEC_DEFPROTO_EX(t, acclevel) \
 	struct vec_##t { \

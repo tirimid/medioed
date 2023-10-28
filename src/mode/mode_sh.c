@@ -6,11 +6,16 @@ mode_sh_init(struct frame *f)
 }
 
 void
-mode_sh_quit(struct frame *f)
+mode_sh_quit(void)
 {
 }
 
 void
-mode_sh_keypress(struct frame *f, wint_t k)
+mode_sh_update(void)
+{
+}
+
+void
+mode_sh_keypress(wint_t k)
 {
 }

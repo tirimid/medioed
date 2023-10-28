@@ -11,7 +11,6 @@ the same person.
 ## Dependencies
 Software / system dependencies are:
 * A shell environment for program execution
-* libpcre2-32
 
 ## Management
 * To build the program, run `mincbuild`

@@ -14,7 +14,7 @@
 #define BIND_NAVFWD K_CTL('f')
 #define BIND_NAVBACK K_CTL('b')
 #define BIND_DEL K_BACKSPC
-#define BIND_COMPLETE L'\t'
+#define BIND_COMPLETE K_TAB
 
 static void drawbox(wchar_t const *text);
 
