@@ -8,18 +8,28 @@
 #include "keybd.h"
 #include "util.h"
 
-static void bind_pair_paren(void);
-static void bind_pair_bracket(void);
-static void bind_pair_brace(void);
+static void bind_pair_sq(void);
+static void bind_pair_dq(void);
+static void bind_popen_pn(void);
+static void bind_popen_bk(void);
+static void bind_popen_bc(void);
+static void bind_pclose_pn(void);
+static void bind_pclose_bk(void);
+static void bind_pclose_bc(void);
 static void bind_delback_ch(void);
 static void bind_indent(void);
 static void bind_newline(void);
 
 static struct frame *mf;
 
-static int c_bind_pair_paren[] = {'(', -1};
-static int c_bind_pair_bracket[] = {'[', -1};
-static int c_bind_pair_brace[] = {'{', -1};
+static int c_bind_pair_sq[] = {'\'', -1};
+static int c_bind_pair_dq[] = {'"', -1};
+static int c_bind_popen_pn[] = {'(', -1};
+static int c_bind_popen_bk[] = {'[', -1};
+static int c_bind_popen_bc[] = {'{', -1};
+static int c_bind_pclose_pn[] = {')', -1};
+static int c_bind_pclose_bk[] = {']', -1};
+static int c_bind_pclose_bc[] = {'}', -1};
 static int c_bind_indent[] = {K_TAB, -1};
 static int c_bind_newline[] = {K_RET, -1};
 
@@ -27,10 +37,15 @@ void
 mode_c_init(struct frame *f)
 {
 	mf = f;
-
-	keybd_bind(c_bind_pair_paren, bind_pair_paren);
-	keybd_bind(c_bind_pair_bracket, bind_pair_bracket);
-	keybd_bind(c_bind_pair_brace, bind_pair_brace);
+	
+	keybd_bind(c_bind_pair_sq, bind_pair_sq);
+	keybd_bind(c_bind_pair_dq, bind_pair_dq);
+	keybd_bind(c_bind_popen_pn, bind_popen_pn);
+	keybd_bind(c_bind_popen_bk, bind_popen_bk);
+	keybd_bind(c_bind_popen_bc, bind_popen_bc);
+	keybd_bind(c_bind_pclose_pn, bind_pclose_pn);
+	keybd_bind(c_bind_pclose_bk, bind_pclose_bk);
+	keybd_bind(c_bind_pclose_bc, bind_pclose_bc);
 	keybd_bind(conf_bind_delback_ch, bind_delback_ch);
 	keybd_bind(c_bind_indent, bind_indent);
 	keybd_bind(c_bind_newline, bind_newline);
@@ -53,23 +68,61 @@ mode_c_keypress(wint_t k)
 }
 
 static void
-bind_pair_paren(void)
+bind_pair_sq(void)
+{
+	buf_writewstr(mf->buf, mf->csr, L"''");
+	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+}
+
+static void
+bind_pair_dq(void)
+{
+	buf_writewstr(mf->buf, mf->csr, L"\"\"");
+	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+}
+
+static void
+bind_popen_pn(void)
 {
 	buf_writewstr(mf->buf, mf->csr, L"()");
 	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
-bind_pair_bracket(void)
+bind_popen_bk(void)
 {
 	buf_writewstr(mf->buf, mf->csr, L"[]");
 	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
-bind_pair_brace(void)
+bind_popen_bc(void)
 {
 	buf_writewstr(mf->buf, mf->csr, L"{}");
+	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+}
+
+static void
+bind_pclose_pn(void)
+{
+	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L')')
+		buf_writewch(mf->buf, mf->csr, L')');
+	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+}
+
+static void
+bind_pclose_bk(void)
+{
+	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L']')
+		buf_writewch(mf->buf, mf->csr, L']');
+	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+}
+
+static void
+bind_pclose_bc(void)
+{
+	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L'}')
+		buf_writewch(mf->buf, mf->csr, L'}');
 	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
@@ -80,10 +133,14 @@ bind_delback_ch(void)
 		frame_relmvcsr(mf, 0, -1, true);
 		
 		size_t nch = 1;
-		if (!wcsncmp(mf->buf->conts + mf->csr, L"()", 2)
-		    || !wcsncmp(mf->buf->conts + mf->csr, L"[]", 2)
-		    || !wcsncmp(mf->buf->conts + mf->csr, L"{}", 2)) {
-			nch = 2;
+		if (mf->buf->size > 1) {
+			if (!wcsncmp(mf->buf->conts + mf->csr, L"()", 2)
+			    || !wcsncmp(mf->buf->conts + mf->csr, L"[]", 2)
+			    || !wcsncmp(mf->buf->conts + mf->csr, L"{}", 2)
+			    || !wcsncmp(mf->buf->conts + mf->csr, L"\"\"", 2)
+			    || !wcsncmp(mf->buf->conts + mf->csr, L"''", 2)) {
+				nch = 2;
+			}
 		}
 			
 		buf_erase(mf->buf, mf->csr, mf->csr + nch);
