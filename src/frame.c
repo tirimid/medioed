@@ -35,7 +35,7 @@ frame_create(wchar_t const *name, struct buf *buf)
 		for (size_t i = 0; i < conf_metab_size; ++i) {
 			for (char const **ext = conf_metab[i].exts; *ext; ++ext) {
 				if (!strcmp(*ext, bufext)) {
-					localmode = strdup(bufext);
+					localmode = strdup(conf_metab[i].mode);
 					goto done_findlm;
 				}
 			}
