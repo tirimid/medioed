@@ -6,10 +6,12 @@
 #include <string.h>
 
 #include "hl/hl_c.h"
+#include "hl/hl_md.h"
 #include "hl/hl_sh.h"
 #include "hl/hl_rs.h"
 #include "hl/hl_s.h"
 #include "mode/mode_c.h"
+#include "mode/mode_md.h"
 #include "mode/mode_sh.h"
 #include "mode/mode_rs.h"
 #include "mode/mode_s.h"
@@ -42,9 +44,12 @@ int const conf_bind_chgmode_local[] = {K_CTL('c'), K_CTL('g'), 'l', -1};
 int const conf_bind_create_scrap[] = {K_CTL('c'), 'n', -1};
 int const conf_bind_newline[] = {K_RET, -1};
 int const conf_bind_focus[] = {K_CTL('l'), -1};
+int const conf_bind_kill[] = {K_CTL('k'), -1};
+int const conf_bind_paste[] = {K_CTL('y'), -1};
 
 // language mode extensions.
 static char const *ext_c[] = {"c", "h", NULL};
+static char const *ext_md[] = {"md", NULL};
 static char const *ext_sh[] = {"sh", NULL};
 static char const *ext_rs[] = {"rs", NULL};
 static char const *ext_s[] = {"s", "asm", "S", NULL};
@@ -54,6 +59,10 @@ struct highlight const conf_htab[] = {
 	{
 		.localmode = "c",
 		.find = hl_c_find,
+	},
+	{
+		.localmode = "md",
+		.find = hl_md_find,
 	},
 	{
 		.localmode = "sh",
@@ -95,6 +104,13 @@ struct mode const conf_lmtab[] = {
 		.keypress = mode_c_keypress,
 	},
 	{
+		.name = "md",
+		.init = mode_md_init,
+		.quit = mode_md_quit,
+		.update = mode_md_update,
+		.keypress = mode_md_keypress,
+	},
+	{
 		.name = "sh",
 		.init = mode_sh_init,
 		.quit = mode_sh_quit,
@@ -123,6 +139,10 @@ struct modeext const conf_metab[] = {
 	{
 		.exts = ext_c,
 		.mode = "c",
+	},
+	{
+		.exts = ext_md,
+		.mode = "md",
 	},
 	{
 		.exts = ext_sh,

@@ -152,15 +152,13 @@ draw_refresh(void)
 			uint8_t curfg = A_FGOF(cells[i][j].a) >> 3;
 			uint8_t curbg = A_BGOF(cells[i][j].a) >> 8;
 			
-			if (curattr != prevattr)
-				wprintf(L"\033[0m\033[%um", attrtab[curattr]);
+			if (curattr != prevattr
+			    || curfg != prevfg
+			    || curbg != prevbg) {
+				wprintf(L"\033[0m\033[%u;%u;%um", attrtab[curattr],
+				        attrtab[curfg + 6], attrtab[curbg + 14]);
+			}
 			
-			if (curfg != prevfg)
-				wprintf(L"\033[%um", attrtab[curfg + 6]);
-
-			if (curbg != prevbg)
-				wprintf(L"\033[%um", attrtab[curbg + 14]);
-
 			fputwc(cells[i][j].wch, stdout);
 
 			prevattr = curattr;

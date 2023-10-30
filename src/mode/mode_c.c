@@ -187,8 +187,8 @@ bind_indent(void)
 		size_t prevfirstch = prevln;
 		while (prevfirstch < mf->buf->size && iswspace(src[prevfirstch]))
 			++prevfirstch;
-	
-		if (src[prevlastch] == L')') {
+		
+		if (src[prevlastch] == L')' && src[prevfirstch] != L'#') {
 			if (nopenat(prevlastch + 1, L'(', L')', false) == 0
 			    && src[firstch] != L'{' && src[firstch] != L'}') {
 				++ntab;

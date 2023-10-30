@@ -50,6 +50,8 @@ static void bind_chgmode_local(void);
 static void bind_create_scrap(void);
 static void bind_newline(void);
 static void bind_focus(void);
+static void bind_kill(void);
+static void bind_paste(void);
 static void resetbinds(void);
 static void setglobalmode(void);
 static void sigwinch_handler(int arg);
@@ -662,6 +664,20 @@ bind_focus(void)
 }
 
 static void
+bind_kill(void)
+{
+	prompt_show(L"C-k is not implemented yet!");
+	redrawall();
+}
+
+static void
+bind_paste(void)
+{
+	prompt_show(L"C-y is not implemented yet!");
+	redrawall();
+}
+
+static void
 resetbinds(void)
 {
 	// quit and reinit to reset current keybind buffer and bind information.
@@ -694,6 +710,8 @@ resetbinds(void)
 	keybd_bind(conf_bind_create_scrap, bind_create_scrap);
 	keybd_bind(conf_bind_newline, bind_newline);
 	keybd_bind(conf_bind_focus, bind_focus);
+	keybd_bind(conf_bind_kill, bind_kill);
+	keybd_bind(conf_bind_paste, bind_paste);
 	keybd_organize();
 }
 
