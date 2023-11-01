@@ -1,5 +1,6 @@
 #include "buf.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,10 +40,19 @@ buf_fromfile(char const *path)
 	struct buf b = buf_create(true);
 	b.srctype = BST_FILE;
 	b.src = strdup(path);
-
+	
+	errno = 0;
 	wint_t wch;
 	while ((wch = fgetwc(fp)) != WEOF)
 		buf_writewch(&b, b.size, wch);
+	
+	if (errno == EILSEQ) {
+		size_t mlen = sizeof(wchar_t) * (strlen(path) + 31);
+		wchar_t *msg = malloc(mlen);
+		swprintf(msg, mlen, L"file contains invalid UTF-8: %s!", path);
+		prompt_show(msg);
+		free(msg);
+	}
 
 	fclose(fp);
 	

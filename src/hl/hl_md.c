@@ -1,5 +1,7 @@
 #include "hl/hl_md.h"
 
+#include <wctype.h>
+
 #include "conf.h"
 #include "draw.h"
 
@@ -23,6 +25,28 @@ hl_md_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
            size_t *out_ub, uint16_t *out_a)
 {
 	for (size_t i = off; i < len; ++i) {
+		if (src[i] == L'#') {
+			if (!hl_heading(src, len, &i, out_lb, out_ub, out_a))
+				return 0;
+		} else if (src[i] == L'>') {
+			if (!hl_block(src, len, &i, out_lb, out_ub, out_a))
+				return 0;
+		} else if (i < len - 3 && !wcscmp(&src[i], L"```")) {
+			if (!hl_codeblock(src, len, &i, out_lb, out_ub, out_a))
+				return 0;
+		} else if (src[i] == L'!') {
+			if (!hl_img(src, len, &i, out_lb, out_ub, out_a))
+				return 0;
+		} else if (src[i] == L'*' || src[i] == L'-') {
+			if (!hl_ulist(src, len, &i, out_lb, out_ub, out_a))
+				return 0;
+		} else if (iswdigit(src[i])) {
+			if (!hl_olist(src, len, &i, out_lb, out_ub, out_a))
+				return 0;
+		} else if (src[i] == L'[') {
+			if (!hl_link(src, len, &i, out_lb, out_ub, out_a))
+				return 0;
+		}
 	}
 	
 	return 1;

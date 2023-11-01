@@ -269,7 +269,7 @@ drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 			break;
 
 		wchar_t wch = f->buf->conts[*dcsr];
-		wch = wch == L'\t' || iswprint(wch) ? wch : L'?';
+		wch = wch == L'\t' || iswprint(wch) ? wch : 0xfffd;
 		switch (wch) {
 		case L'\t': {
 			unsigned nch = CONF_TABSIZE - c % CONF_TABSIZE;
@@ -285,7 +285,7 @@ drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 			++c;
 			break;
 		}
-
+		
 		++*dcsr;
 	}
 
