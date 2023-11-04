@@ -136,7 +136,7 @@ bind_delback_ch(void)
 		frame_relmvcsr(mf, 0, -1, true);
 		
 		size_t nch = 1;
-		if (mf->buf->size > 1) {
+		if (mf->buf->size > 1 && mf->csr < mf->buf->size - 1) {
 			if (!wcsncmp(mf->buf->conts + mf->csr, L"()", 2)
 			    || !wcsncmp(mf->buf->conts + mf->csr, L"[]", 2)
 			    || !wcsncmp(mf->buf->conts + mf->csr, L"{}", 2)
