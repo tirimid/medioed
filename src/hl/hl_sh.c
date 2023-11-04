@@ -1,5 +1,6 @@
 #include "hl/hl_sh.h"
 
+#include "conf.h"
 #include "draw.h"
 
 #define A_KEYWORD (A_GREEN | A_BGOF(CONF_A_NORM))
