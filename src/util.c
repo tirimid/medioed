@@ -2,6 +2,8 @@
 
 #include <string.h>
 
+STK_DEFIMPL(long)
+
 char const *
 fileext(char const *path)
 {

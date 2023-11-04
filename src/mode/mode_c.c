@@ -20,7 +20,8 @@ static void bind_pclose_bc(void);
 static void bind_delback_ch(void);
 static void bind_indent(void);
 static void bind_newline(void);
-static long nopenat(size_t pos, wchar_t open, wchar_t close, bool reqpos);
+static long levelat(size_t pos, wchar_t open, wchar_t close, wchar_t pause,
+                    wchar_t cancelpause, bool reqpos);
 
 static struct frame *mf;
 
@@ -174,9 +175,21 @@ bind_indent(void)
 		++firstch;
 	}
 	
-	unsigned ntab = nopenat(firstch, L'{', L'}', true);
+	unsigned ntab = levelat(firstch, L'{', L'}', L':', L'\n', true);
 	for (size_t i = firstch; ntab > 0 && i < mf->buf->size && src[i] == L'}'; ++i)
 		--ntab;
+
+	size_t lastsigch = ln;
+	while (lastsigch < mf->buf->size && src[lastsigch] != L'\n')
+		++lastsigch;
+	while (lastsigch > ln
+	       && !iswalnum(src[lastsigch])
+	       && src[lastsigch] != L':') {
+		--lastsigch;
+	}
+
+	ntab -= ntab > 0 && src[lastsigch] == L':';
+	ntab *= src[firstch] != L'#';
 
 	unsigned nspace = 0;
 	if (prevln != ln) {
@@ -189,8 +202,9 @@ bind_indent(void)
 			++prevfirstch;
 		
 		if (src[prevlastch] == L')' && src[prevfirstch] != L'#') {
-			if (nopenat(prevlastch + 1, L'(', L')', false) == 0
-			    && src[firstch] != L'{' && src[firstch] != L'}') {
+			if (levelat(prevlastch + 1, L'(', L')', 0, 0, false) == 0
+			    && src[firstch] != L'{'
+			    && src[firstch] != L'}') {
 				++ntab;
 			}
 		} else if (src[prevlastch] == L'\\')
@@ -293,27 +307,73 @@ bind_newline(void)
 }
 
 static long
-nopenat(size_t pos, wchar_t open, wchar_t close, bool reqpos)
+levelat(size_t pos, wchar_t open, wchar_t close, wchar_t pause,
+        wchar_t cancelpause, bool reqpos)
 {
-	long nopen = 0;
+	long level = 0;
 	bool instr = false, inch = false;
+	struct stk_long pausestk_open = stk_long_create();
+	struct stk_long pausestk_close = stk_long_create();
+	size_t prevnpause = 0;
+	
 	for (size_t i = 0; i < pos; ++i) {
 		wchar_t wch = mf->buf->conts[i];
-		
-		if (wch == L'\\' && (instr || inch)) {
-			if (mf->buf->conts[++i] == L'\n')
+
+		switch (wch) {
+		case L'\\':
+			if ((instr || inch) && mf->buf->conts[++i] == L'\n')
 				instr = inch = false;
 			continue;
-		} else if (wch == L'"' && !inch)
-			instr = !instr;
-		else if (wch == L'\'' && !instr)
-			inch = !inch;
-		else if (wch == L'\n')
+		case L'"':
+			if (!inch)
+				instr = !instr;
+			break;
+		case L'\'':
+			if (!instr)
+				inch = !inch;
+			break;
+		case L'\n':
 			instr = inch = false;
+			break;
+		default:
+			break;
+		}
 
-		nopen += wch == open && !instr && !inch;
-		nopen -= wch == close && !instr && !inch && (reqpos && nopen > 0 || !reqpos);
+		if (instr || inch)
+			continue;
+
+		if (wch == open) {
+			if (stk_long_peek(&pausestk_open)
+			    && *stk_long_peek(&pausestk_open) == level) {
+				free(stk_long_pop(&pausestk_open));
+			} else
+				++level;
+		}
+
+		if (wch == cancelpause && pausestk_open.size > prevnpause) {
+			free(stk_long_pop(&pausestk_open));
+			free(stk_long_pop(&pausestk_close));
+		}
+
+		if (reqpos && level <= 0)
+			continue;
+		
+		if (wch == close) {
+			if (stk_long_peek(&pausestk_close)
+			    && *stk_long_peek(&pausestk_close) == level) {
+				free(stk_long_pop(&pausestk_close));
+			} else
+				--level;
+		}
+
+		if (wch == pause) {
+			stk_long_push(&pausestk_open, &level);
+			stk_long_push(&pausestk_close, &level);
+		}
 	}
 
-	return nopen;
+	stk_long_destroy(&pausestk_open);
+	stk_long_destroy(&pausestk_close);
+
+	return level;
 }

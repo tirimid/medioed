@@ -133,17 +133,19 @@ editor_mainloop(void)
 			struct frame *f = &frames.data[i];
 			f->csr = MIN(f->csr, f->buf->size);
 		}
-
-		struct frame *f = &frames.data[curframe];
-
+		
 		mode_update();
 
-		// TODO: redraw ALL frames with newly modified buffer open.
-		frame_draw(f, true);
+		for (size_t i = 0; i < frames.size; ++i) {
+			if (frames.data[i].buf == frames.data[curframe].buf)
+				frame_draw(&frames.data[i], i == curframe);
+		}
 		draw_refresh();
 		
 		wint_t k = keybd_awaitkey();
 		if (k != KEYBD_IGNORE && (k == L'\n' || k == L'\t' || iswprint(k))) {
+			struct frame *f = &frames.data[curframe];
+			
 			buf_writewch(f->buf, f->csr, k);
 			frame_relmvcsr(f, 0, !!(f->buf->flags & BF_WRITABLE), true);
 			mode_keyupdate(k);

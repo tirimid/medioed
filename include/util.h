@@ -73,10 +73,66 @@
 		v->data[b] = tmp; \
 	}
 
+#define STK_DEFPROTO_EX(t, acclevel) \
+	struct stk_##t { \
+		t *data; \
+		size_t size, cap; \
+	}; \
+	acclevel struct stk_##t stk_##t##_create(void); \
+	acclevel void stk_##t##_destroy(struct stk_##t *s); \
+	acclevel void stk_##t##_push(struct stk_##t *s, t *new); \
+	acclevel t *stk_##t##_pop(struct stk_##t *s); \
+	acclevel t const *stk_##t##_peek(struct stk_##t const *s);
+
+#define STK_DEFIMPL_EX(t, acclevel) \
+	acclevel struct stk_##t \
+	stk_##t##_create(void) \
+	{ \
+		return (struct stk_##t){ \
+			.data = malloc(sizeof(t)), \
+			.size = 0, \
+			.cap = 1, \
+		}; \
+	} \
+	acclevel void \
+	stk_##t##_destroy(struct stk_##t *s) \
+	{ \
+		free(s->data); \
+	} \
+	acclevel void \
+	stk_##t##_push(struct stk_##t *s, t *new) \
+	{ \
+		if (s->size >= s->cap) { \
+			s->cap *= 2; \
+			s->data = realloc(s->data, sizeof(t) * s->cap); \
+		} \
+		s->data[s->size++] = *new; \
+	} \
+	acclevel t * \
+	stk_##t##_pop(struct stk_##t *s) \
+	{ \
+		if (!s->size) \
+			return NULL; \
+		t *item = malloc(sizeof(t)); \
+		memcpy(item, &s->data[--s->size], sizeof(t)); \
+		return item; \
+	} \
+	acclevel t const * \
+	stk_##t##_peek(struct stk_##t const *s) \
+	{ \
+		return !s->size ? NULL : &s->data[s->size - 1]; \
+	}
+
 #define VEC_DEFPROTO(t) VEC_DEFPROTO_EX(t, NOTHING__)
 #define VEC_DEFIMPL(t) VEC_DEFIMPL_EX(t, NOTHING__)
 #define VEC_DEFPROTO_STATIC(t) VEC_DEFPROTO_EX(t, static)
 #define VEC_DEFIMPL_STATIC(t) VEC_DEFIMPL_EX(t, static)
+#define STK_DEFPROTO(t) STK_DEFPROTO_EX(t, NOTHING__)
+#define STK_DEFIMPL(t) STK_DEFIMPL_EX(t, NOTHING__)
+#define STK_DEFPROTO_STATIC(t) STK_DEFPROTO_EX(t, static)
+#define STK_DEFIMPL_STATIC(t) STK_DEFIMPL_EX(t, static)
+
+STK_DEFPROTO(long)
 
 char const *fileext(char const *path);
 
