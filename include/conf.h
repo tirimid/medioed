@@ -76,6 +76,7 @@ extern int const conf_bind_newline[];
 extern int const conf_bind_focus[];
 extern int const conf_bind_kill[];
 extern int const conf_bind_paste[];
+extern int const conf_bind_undo[];
 
 extern struct highlight const conf_htab[];
 extern size_t const conf_htab_size;

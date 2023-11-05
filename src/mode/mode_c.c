@@ -143,6 +143,7 @@ bind_newline(void)
 {
 	bind_indent();
 
+	buf_pushhistbrk(mf->buf);
 	buf_writewch(mf->buf, mf->csr, L'\n');
 	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 	

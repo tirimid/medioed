@@ -52,6 +52,7 @@ static void bind_newline(void);
 static void bind_focus(void);
 static void bind_kill(void);
 static void bind_paste(void);
+static void bind_undo(void);
 static void resetbinds(void);
 static void setglobalmode(void);
 static void sigwinch_handler(int arg);
@@ -310,16 +311,16 @@ bind_kill_frame(void)
 		}
 	}
 
-	resetbinds();
-	setglobalmode();
-	arrangeframes();
-	redrawall();
-
 	if (frames.size == 0) {
 		struct buf b = buf_create(true);
 		struct frame f = frame_create(CONF_SCRAPNAME, addbuf(&b));
 		addframe(&f);
 	}
+
+	resetbinds();
+	setglobalmode();
+	arrangeframes();
+	redrawall();
 }
 
 static void
@@ -641,6 +642,7 @@ static void
 bind_newline(void)
 {
 	struct frame *f = &frames.data[curframe];
+	buf_pushhistbrk(f->buf);
 	buf_writewch(f->buf, f->csr, L'\n');
 	frame_relmvcsr(f, 0, !!(f->buf->flags & BF_WRITABLE), true);
 }
@@ -680,6 +682,42 @@ bind_paste(void)
 }
 
 static void
+bind_undo(void)
+{
+	struct frame *f = &frames.data[curframe];
+
+	if (f->buf->hist.size == 0) {
+		prompt_show(L"no further undo information!");
+		redrawall();
+		return;
+	}
+
+	struct bufop const *bo = &f->buf->hist.data[f->buf->hist.size - 1];
+	while (bo > f->buf->hist.data && bo->type == BOT_BRK)
+		--bo;
+	
+	size_t csrdst;
+	switch (bo->type) {
+	case BOT_WRITE:
+		csrdst = bo->lb;
+		break;
+	case BOT_ERASE:
+		csrdst = bo->ub;
+		break;
+	}
+
+	if (buf_undo(f->buf)) {
+		prompt_show(L"failed to undo last operation!");
+		redrawall();
+		return;
+	}
+
+	unsigned csrr, csrc;
+	buf_pos(f->buf, csrdst, &csrr, &csrc);
+	frame_mvcsr(f, csrr, csrc);
+}
+
+static void
 resetbinds(void)
 {
 	// quit and reinit to reset current keybind buffer and bind information.
@@ -714,6 +752,7 @@ resetbinds(void)
 	keybd_bind(conf_bind_focus, bind_focus);
 	keybd_bind(conf_bind_kill, bind_kill);
 	keybd_bind(conf_bind_paste, bind_paste);
+	keybd_bind(conf_bind_undo, bind_undo);
 	
 	keybd_organize();
 }

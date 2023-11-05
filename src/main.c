@@ -14,20 +14,23 @@
 
 static void usage(char const *name);
 
+bool flag_d = false, flag_r = false;
+
 int
 main(int argc, char const *argv[])
-{
-	bool flag_d = false;
-	
+{	
 	int ch;
-	while ((ch = getopt(argc, (char *const *)argv, "dh")) != -1) {
+	while ((ch = getopt(argc, (char *const *)argv, "dhr")) != -1) {
 		switch (ch) {
 		case 'd':
 			flag_d = true;
 			break;
 		case 'h':
 			usage(argv[0]);
-			return 1;
+			return 0;
+		case 'r':
+			flag_r = true;
+			break;
 		default:
 			return 1;
 		}
@@ -96,5 +99,6 @@ usage(char const *name)
 	       "\t%s [options]\n"
 	       "options:\n"
 	       "\t-d  try to write debug output to a logfile\n"
-	       "\t-h  display this menu\n", name, name);
+	       "\t-h  display this menu\n"
+	       "\t-r  existing files will be opened read-only\n", name, name);
 }
