@@ -7,51 +7,31 @@
 #include "buf.h"
 #include "conf.h"
 #include "keybd.h"
+#include "mode/mutil.h"
 #include "util.h"
 
-static void bind_pair_sq(void);
-static void bind_pair_dq(void);
-static void bind_popen_pn(void);
-static void bind_popen_bk(void);
-static void bind_popen_bc(void);
-static void bind_pclose_pn(void);
-static void bind_pclose_bk(void);
-static void bind_pclose_bc(void);
-static void bind_delback_ch(void);
 static void bind_indent(void);
 static void bind_newline(void);
-static long levelat(size_t pos, wchar_t open, wchar_t close, wchar_t pause,
-                    wchar_t cancelpause, bool reqpos);
+static unsigned comptabs(size_t firstch, size_t lastsigch);
+static unsigned compsmartspaces(size_t firstspc, size_t off, size_t ln, size_t firstch);
+static long nopenat(size_t pos, wchar_t open, wchar_t close);
 
 static struct frame *mf;
 
-static int c_bind_pair_sq[] = {'\'', -1};
-static int c_bind_pair_dq[] = {'"', -1};
-static int c_bind_popen_pn[] = {'(', -1};
-static int c_bind_popen_bk[] = {'[', -1};
-static int c_bind_popen_bc[] = {'{', -1};
-static int c_bind_pclose_pn[] = {')', -1};
-static int c_bind_pclose_bk[] = {']', -1};
-static int c_bind_pclose_bc[] = {'}', -1};
 static int c_bind_indent[] = {K_TAB, -1};
-static int c_bind_newline[] = {K_RET, -1};
 
 void
 mode_c_init(struct frame *f)
 {
 	mf = f;
-	
-	keybd_bind(c_bind_pair_sq, bind_pair_sq);
-	keybd_bind(c_bind_pair_dq, bind_pair_dq);
-	keybd_bind(c_bind_popen_pn, bind_popen_pn);
-	keybd_bind(c_bind_popen_bk, bind_popen_bk);
-	keybd_bind(c_bind_popen_bc, bind_popen_bc);
-	keybd_bind(c_bind_pclose_pn, bind_pclose_pn);
-	keybd_bind(c_bind_pclose_bk, bind_pclose_bk);
-	keybd_bind(c_bind_pclose_bc, bind_pclose_bc);
-	keybd_bind(conf_bind_delback_ch, bind_delback_ch);
+	mu_init(f);
+
+	mu_setbase();
+	mu_setpairing();
+
 	keybd_bind(c_bind_indent, bind_indent);
-	keybd_bind(c_bind_newline, bind_newline);
+	keybd_bind(conf_bind_newline, bind_newline);
+	
 	keybd_organize();
 }
 
@@ -71,92 +51,11 @@ mode_c_keypress(wint_t k)
 }
 
 static void
-bind_pair_sq(void)
-{
-	buf_writewstr(mf->buf, mf->csr, L"''");
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-}
-
-static void
-bind_pair_dq(void)
-{
-	buf_writewstr(mf->buf, mf->csr, L"\"\"");
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-}
-
-static void
-bind_popen_pn(void)
-{
-	buf_writewstr(mf->buf, mf->csr, L"()");
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-}
-
-static void
-bind_popen_bk(void)
-{
-	buf_writewstr(mf->buf, mf->csr, L"[]");
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-}
-
-static void
-bind_popen_bc(void)
-{
-	buf_writewstr(mf->buf, mf->csr, L"{}");
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-}
-
-static void
-bind_pclose_pn(void)
-{
-	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L')')
-		buf_writewch(mf->buf, mf->csr, L')');
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-}
-
-static void
-bind_pclose_bk(void)
-{
-	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L']')
-		buf_writewch(mf->buf, mf->csr, L']');
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-}
-
-static void
-bind_pclose_bc(void)
-{
-	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L'}')
-		buf_writewch(mf->buf, mf->csr, L'}');
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-}
-
-static void
-bind_delback_ch(void)
-{
-	if (mf->csr > 0 && mf->buf->flags & BF_WRITABLE) {
-		frame_relmvcsr(mf, 0, -1, true);
-		
-		size_t nch = 1;
-		if (mf->buf->size > 1 && mf->csr < mf->buf->size - 1) {
-			if (!wcsncmp(mf->buf->conts + mf->csr, L"()", 2)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"[]", 2)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"{}", 2)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"\"\"", 2)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"''", 2)) {
-				nch = 2;
-			}
-		}
-			
-		buf_erase(mf->buf, mf->csr, mf->csr + nch);
-		frame_compbndry(mf);
-	}
-}
-
-static void
 bind_indent(void)
 {
 	if (!(mf->buf->flags & BF_WRITABLE))
 		return;
-
+	
 	wchar_t const *src = mf->buf->conts;
 
 	// figure out identation parameters.
@@ -175,10 +74,6 @@ bind_indent(void)
 		++firstch;
 	}
 	
-	unsigned ntab = levelat(firstch, L'{', L'}', L':', L'\n', true);
-	for (size_t i = firstch; ntab > 0 && i < mf->buf->size && src[i] == L'}'; ++i)
-		--ntab;
-
 	size_t lastsigch = ln;
 	while (lastsigch < mf->buf->size && src[lastsigch] != L'\n')
 		++lastsigch;
@@ -188,21 +83,19 @@ bind_indent(void)
 		--lastsigch;
 	}
 
-	ntab -= ntab > 0 && src[lastsigch] == L':';
-	ntab *= src[firstch] != L'#';
-
-	unsigned nspace = 0;
+	unsigned ntab = comptabs(firstch, lastsigch), nspace = 0;
+	
 	if (prevln != ln) {
 		size_t prevlastch = ln - 2 * (ln > 0);
 		while (prevlastch > prevln && iswspace(src[prevlastch]))
 			--prevlastch;
 
 		size_t prevfirstch = prevln;
-		while (prevfirstch < mf->buf->size && iswspace(src[prevfirstch]))
+		while (prevfirstch < ln - 1 && iswspace(src[prevfirstch]))
 			++prevfirstch;
 		
 		if (src[prevlastch] == L')' && src[prevfirstch] != L'#') {
-			if (levelat(prevlastch + 1, L'(', L')', 0, 0, false) == 0
+			if (nopenat(prevlastch + 1, L'(', L')') == 0
 			    && src[firstch] != L'{'
 			    && src[firstch] != L'}') {
 				++ntab;
@@ -211,73 +104,23 @@ bind_indent(void)
 			++ntab;
 		
 		unsigned prevntab = 0, off = 0;
-		size_t firstspace = prevln;
+		size_t firstspc = prevln;
 		
-		while (src[firstspace] == L'\t') {
-			++firstspace;
+		while (src[firstspc] == L'\t') {
+			++firstspc;
 			++prevntab;
 		}
-		while (src[firstspace + off] == L' ')
+		while (src[firstspc + off] == L' ')
 			++off;
 		
 		if (src[firstch] != L'{'
 		    && src[firstch] != L'}'
 		    && off != 0
-		    && !iswspace(src[firstspace + off])
+		    && !iswspace(src[firstspc + off])
 		    && ntab == prevntab) {
 			nspace = off;
-		} else if (off == 0 && ntab == prevntab) {
-			// unfortunately, `nopenat()` cannot be used for this as
-			// the functionality implemented here requires internal
-			// knowledge that would be impossible to obtain via the
-			// function call.
-			bool instr = false, inch = false;
-			while (firstspace + off < ln
-			       && src[firstspace + off] != L'('
-			       || instr
-			       || inch) {
-				wchar_t wch = src[firstspace + off];
-				
-				if (wch == L'\\' && (instr || inch)) {
-					if (src[firstspace + ++off] == L'\n')
-						instr = inch = false;
-					continue;
-				} else if (wch == L'"' && !inch)
-					instr = !instr;
-				else if (wch == L'\'' && !instr)
-					inch = !inch;
-				else if (wch == L'\n')
-					instr = inch = false;
-				
-				++off;
-			}
-			
-			long nopen = 0;
-			for (size_t i = firstspace + off; i < ln; ++i) {
-				wchar_t wch = src[firstspace + off];
-				
-				if (wch == L'\\' && (instr || inch)) {
-					if (src[firstspace + ++off] == L'\n')
-						instr = inch = false;
-					continue;
-				} else if (wch == L'"' && !inch)
-					instr = !instr;
-				else if (wch == L'\'' && !instr)
-					inch = !inch;
-				else if (wch == L'\n')
-					instr = inch = false;
-				
-				nopen += src[i] == L'(' && !instr && !inch;
-				nopen -= src[i] == L')' && !instr && !inch;
-			}
-			
-			if (src[firstch] != L'{'
-			    && src[firstch] != L'}'
-			    && firstspace + off < ln
-			    && nopen > 0) {
-				nspace = off + 1;
-			}
-		}
+		} else if (off == 0 && ntab == prevntab)
+			nspace = compsmartspaces(firstspc, off, ln, firstch);
 	}
 	
 	// do indentation.
@@ -306,24 +149,26 @@ bind_newline(void)
 	bind_indent();
 }
 
-static long
-levelat(size_t pos, wchar_t open, wchar_t close, wchar_t pause,
-        wchar_t cancelpause, bool reqpos)
+static unsigned
+comptabs(size_t firstch, size_t lastsigch)
 {
-	long level = 0;
+	wchar_t const *src = mf->buf->conts;
+	
+	unsigned ntab = 0;
+	
 	bool instr = false, inch = false;
-	struct stk_long pausestk_open = stk_long_create();
-	struct stk_long pausestk_close = stk_long_create();
+	struct stk_unsigned pstk_open = stk_unsigned_create();
+	struct stk_unsigned pstk_close = stk_unsigned_create();
 	size_t prevnpause = 0;
 	
-	for (size_t i = 0; i < pos; ++i) {
-		wchar_t wch = mf->buf->conts[i];
+	for (size_t i = 0; i < firstch; ++i) {
+		wchar_t wch = src[i];
 
 		switch (wch) {
 		case L'\\':
 			if ((instr || inch) && mf->buf->conts[++i] == L'\n')
 				instr = inch = false;
-			continue;
+			break;
 		case L'"':
 			if (!inch)
 				instr = !instr;
@@ -334,46 +179,124 @@ levelat(size_t pos, wchar_t open, wchar_t close, wchar_t pause,
 			break;
 		case L'\n':
 			instr = inch = false;
+			if (pstk_open.size > prevnpause) {
+				free(stk_unsigned_pop(&pstk_open));
+				free(stk_unsigned_pop(&pstk_close));
+			}
+			break;
+		case L'{':
+			if (instr || inch)
+				break;
+			if (pstk_open.size > 0
+			    && *stk_unsigned_peek(&pstk_open) == ntab) {
+				free(stk_unsigned_pop(&pstk_open));
+			} else
+				++ntab;
+			break;
+		case L'}':
+			if (instr || inch || ntab == 0)
+				break;
+			if (pstk_close.size > 0
+			    && *stk_unsigned_peek(&pstk_close) == ntab) {
+				free(stk_unsigned_pop(&pstk_close));
+			} else
+				ntab -= ntab > 0;
+			break;
+		case L':':
+			stk_unsigned_push(&pstk_open, &ntab);
+			stk_unsigned_push(&pstk_close, &ntab);
 			break;
 		default:
 			break;
 		}
-
-		if (instr || inch)
-			continue;
-
-		if (wch == open) {
-			if (stk_long_peek(&pausestk_open)
-			    && *stk_long_peek(&pausestk_open) == level) {
-				free(stk_long_pop(&pausestk_open));
-			} else
-				++level;
-		}
-
-		if (wch == cancelpause && pausestk_open.size > prevnpause) {
-			free(stk_long_pop(&pausestk_open));
-			free(stk_long_pop(&pausestk_close));
-		}
-
-		if (reqpos && level <= 0)
-			continue;
-		
-		if (wch == close) {
-			if (stk_long_peek(&pausestk_close)
-			    && *stk_long_peek(&pausestk_close) == level) {
-				free(stk_long_pop(&pausestk_close));
-			} else
-				--level;
-		}
-
-		if (wch == pause) {
-			stk_long_push(&pausestk_open, &level);
-			stk_long_push(&pausestk_close, &level);
-		}
 	}
 
-	stk_long_destroy(&pausestk_open);
-	stk_long_destroy(&pausestk_close);
+	stk_unsigned_destroy(&pstk_open);
+	stk_unsigned_destroy(&pstk_close);
+	
+	for (size_t i = firstch; ntab > 0 && i < mf->buf->size && src[i] == L'}'; ++i)
+		--ntab;
 
-	return level;
+	ntab -= ntab > 0 && src[lastsigch] == L':';
+	ntab *= src[firstch] != L'#';
+	
+	return ntab;
+}
+
+static unsigned
+compsmartspaces(size_t firstspc, size_t off, size_t ln, size_t firstch)
+{
+	wchar_t const *src = mf->buf->conts;
+	
+	bool instr = false, inch = false;
+	while (firstspc + off < ln && src[firstspc + off] != L'(' || instr || inch) {
+		wchar_t wch = src[firstspc + off];
+				
+		if (wch == L'\\' && (instr || inch)) {
+			if (src[firstspc + ++off] == L'\n')
+				instr = inch = false;
+			continue;
+		} else if (wch == L'"' && !inch)
+			instr = !instr;
+		else if (wch == L'\'' && !instr)
+			inch = !inch;
+		else if (wch == L'\n')
+			instr = inch = false;
+				
+		++off;
+	}
+			
+	unsigned nopen = 0;
+	for (size_t i = firstspc + off; i < ln; ++i) {
+		wchar_t wch = src[firstspc + off];
+				
+		if (wch == L'\\' && (instr || inch)) {
+			if (src[firstspc + ++off] == L'\n')
+				instr = inch = false;
+			continue;
+		} else if (wch == L'"' && !inch)
+			instr = !instr;
+		else if (wch == L'\'' && !instr)
+			inch = !inch;
+		else if (wch == L'\n')
+			instr = inch = false;
+				
+		nopen += src[i] == L'(' && !instr && !inch;
+		nopen -= src[i] == L')' && !instr && !inch && nopen > 0;
+	}
+			
+	if (src[firstch] != L'{'
+	    && src[firstch] != L'}'
+	    && firstspc + off < ln
+	    && nopen > 0) {
+		return off + 1;
+	}
+
+	return 0;
+}
+
+static long
+nopenat(size_t pos, wchar_t open, wchar_t close)
+{
+	long nopen = 0;
+	bool instr = false, inch = false;
+	for (size_t i = 0; i < pos; ++i) {
+		wchar_t wch = mf->buf->conts[i];
+				
+		if (wch == L'\\' && (instr || inch)) {
+			if (mf->buf->conts[++i] == L'\n')
+				instr = inch = false;
+			continue;
+		} else if (wch == L'"' && !inch)
+			instr = !instr;
+		else if (wch == L'\'' && !instr)
+			inch = !inch;
+		else if (wch == L'\n')
+			instr = inch = false;
+
+		nopen += !instr && !inch && wch == open;
+		nopen -= !instr && !inch && wch == close;
+	}
+
+	return nopen;
 }

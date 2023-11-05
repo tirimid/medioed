@@ -714,6 +714,7 @@ resetbinds(void)
 	keybd_bind(conf_bind_focus, bind_focus);
 	keybd_bind(conf_bind_kill, bind_kill);
 	keybd_bind(conf_bind_paste, bind_paste);
+	
 	keybd_organize();
 }
 

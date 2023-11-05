@@ -132,7 +132,7 @@
 #define STK_DEFPROTO_STATIC(t) STK_DEFPROTO_EX(t, static)
 #define STK_DEFIMPL_STATIC(t) STK_DEFIMPL_EX(t, static)
 
-STK_DEFPROTO(long)
+STK_DEFPROTO(unsigned)
 
 char const *fileext(char const *path);
 

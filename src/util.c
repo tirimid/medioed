@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-STK_DEFIMPL(long)
+STK_DEFIMPL(unsigned)
 
 char const *
 fileext(char const *path)
