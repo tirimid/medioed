@@ -85,7 +85,7 @@ editor_init(int argc, char const *argv[])
 			draw_clear(L' ', CONF_A_GNORM);
 			
 			struct stat s;
-			if (stat(argv[i], &s)) {
+			if (stat(argv[i], &s) || !S_ISREG(s.st_mode)) {
 				// TODO: show which file failed to open.
 				prompt_show(L"failed to open file!");
 				continue;
