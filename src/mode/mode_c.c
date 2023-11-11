@@ -20,6 +20,11 @@ static struct frame *mf;
 
 static int c_bind_indent[] = {K_TAB, -1};
 
+static wchar_t const *indentkw[] = {
+	L"do",
+	L"else",
+};
+
 void
 mode_c_init(struct frame *f)
 {
@@ -102,6 +107,17 @@ bind_indent(void)
 			}
 		} else if (src[prevlastch] == L'\\')
 			++ntab;
+
+		for (size_t i = 0; i < ARRAYSIZE(indentkw); ++i) {
+			size_t len = wcslen(indentkw[i]);
+			
+			if (len <= prevlastch + 1
+			    && !iswalnum(src[prevlastch - len])
+			    && !wcsncmp(indentkw[i], &src[prevlastch - len + 1], len)) {
+				++ntab;
+				break;
+			}
+		}
 		
 		unsigned prevntab = 0, off = 0;
 		size_t firstspc = prevln;
