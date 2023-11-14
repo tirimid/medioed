@@ -8,6 +8,7 @@
 
 #include "conf.h"
 #include "draw.h"
+#include "util.h"
 
 // padding size around line numbers.
 #define GUTTER (CONF_GUTTER_LEFT + CONF_GUTTER_RIGHT)
@@ -273,10 +274,13 @@ drawline(struct frame const *f, unsigned *line, size_t *dcsr)
 		switch (wch) {
 		case L'\t': {
 			unsigned nch = CONF_TABSIZE - c % CONF_TABSIZE;
-			for (unsigned i = 0; i < nch; ++i)
+			nch = MIN(nch, redge - c);
+			
+			for (unsigned i = 0; i < nch && c + i < redge; ++i)
 				draw_putwch(f->pr + *line, f->pc + ledge + c + i, L' ');
 			draw_putattr(f->pr + *line, f->pc + ledge + c, CONF_A_NORM, nch);
 			c += CONF_TABSIZE - c % CONF_TABSIZE;
+			
 			break;
 		}
 		default:
