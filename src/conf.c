@@ -47,6 +47,8 @@ int const conf_bind_focus[] = {K_CTL('l'), -1};
 int const conf_bind_kill[] = {K_CTL('k'), -1};
 int const conf_bind_paste[] = {K_CTL('y'), -1};
 int const conf_bind_undo[] = {K_CTL('x'), 'u', -1};
+int const conf_bind_copy[] = {K_CTL('c'), K_SPC, K_META('w'), -1};
+int const conf_bind_ncopy[] = {K_CTL('c'), K_SPC, K_META('n'), -1};
 
 // language mode extensions.
 static char const *ext_c[] = {"c", "h", NULL};

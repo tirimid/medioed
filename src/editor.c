@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
 #include <wctype.h>
@@ -53,6 +54,8 @@ static void bind_focus(void);
 static void bind_kill(void);
 static void bind_paste(void);
 static void bind_undo(void);
+static void bind_copy(void);
+static void bind_ncopy(void);
 static void resetbinds(void);
 static void setglobalmode(void);
 static void sigwinch_handler(int arg);
@@ -62,6 +65,7 @@ static bool running;
 static size_t curframe;
 static struct vec_frame frames;
 static struct vec_pbuf pbufs;
+static wchar_t *clipbuf = NULL;
 
 int
 editor_init(int argc, char const *argv[])
@@ -157,6 +161,9 @@ editor_mainloop(void)
 void
 editor_quit(void)
 {
+	if (clipbuf)
+		free(clipbuf);
+	
 	for (size_t i = 0; i < frames.size; ++i)
 		frame_destroy(&frames.data[i]);
 
@@ -670,15 +677,41 @@ bind_focus(void)
 static void
 bind_kill(void)
 {
-	prompt_show(L"C-k is not implemented yet!");
-	redrawall();
+	struct frame *f = &frames.data[curframe];
+	if (!(f->buf->flags & BF_WRITABLE))
+		return;
+	
+	if (clipbuf)
+		free(clipbuf);
+	
+	size_t lnend = f->csr;
+	while (lnend < f->buf->size && f->buf->conts[lnend] != L'\n')
+		++lnend;
+	
+	size_t cpsize = (lnend - f->csr) * sizeof(wchar_t);
+	clipbuf = malloc(cpsize + sizeof(wchar_t));
+	clipbuf[lnend - f->csr] = 0;
+	memcpy(clipbuf, f->buf->conts + f->csr, cpsize);
+	
+	buf_erase(f->buf, f->csr, lnend);
 }
 
 static void
 bind_paste(void)
 {
-	prompt_show(L"C-y is not implemented yet!");
-	redrawall();
+	struct frame *f = &frames.data[curframe];
+	if (!(f->buf->flags & BF_WRITABLE))
+		return;
+	
+	if (!clipbuf) {
+		prompt_show(L"clipbuffer is empty!");
+		redrawall();
+		return;
+	}
+	
+	buf_writewstr(f->buf, f->csr, clipbuf);
+	f->csr += wcslen(clipbuf);
+	frame_compbndry(f);
 }
 
 static void
@@ -718,6 +751,89 @@ bind_undo(void)
 }
 
 static void
+bind_copy(void)
+{
+	if (clipbuf)
+		free(clipbuf);
+	
+	struct frame *f = &frames.data[curframe];
+	
+	size_t ln = f->csr;
+	while (ln > 0 && f->buf->conts[ln - 1] != L'\n')
+		--ln;
+	
+	size_t lnend = f->csr;
+	while (lnend < f->buf->size && f->buf->conts[lnend] != L'\n')
+		++lnend;
+	
+	size_t cpsize = (lnend - ln) * sizeof(wchar_t);
+	clipbuf = malloc(cpsize + sizeof(wchar_t));
+	clipbuf[lnend - ln] = 0;
+	memcpy(clipbuf, f->buf->conts + ln, cpsize);
+}
+
+static void
+bind_ncopy(void)
+{
+askagain:;
+	wchar_t *wslcnt = prompt_ask(L"copy lines: ", NULL, NULL);
+	redrawall();
+	if (!wslcnt)
+		return;
+	
+	if (!*wslcnt) {
+		free(wslcnt);
+		prompt_show(L"expected a line count!");
+		redrawall();
+		goto askagain;
+	}
+	
+	size_t slcntsize = sizeof(wchar_t) * (wcslen(wslcnt) + 1);
+	char *slcnt = malloc(slcntsize);
+	wcstombs(slcnt, wslcnt, slcntsize);
+	free(wslcnt);
+	
+	for (char const *c = slcnt; *c; ++c) {
+		if (!isdigit(*c)) {
+			free(slcnt);
+			prompt_show(L"invalid line count!");
+			redrawall();
+			goto askagain;
+		}
+	}
+	
+	unsigned lcnt = atoi(slcnt);
+	free(slcnt);
+	if (!lcnt) {
+		prompt_show(L"cannot copy zero lines!");
+		redrawall();
+		goto askagain;
+	}
+	
+	if (clipbuf)
+		free(clipbuf);
+	
+	struct frame *f = &frames.data[curframe];
+	
+	size_t reglb = f->csr;
+	while (reglb > 0 && f->buf->conts[reglb - 1] != L'\n')
+		--reglb;
+	
+	size_t regub = f->csr;
+	while (regub < f->buf->size && lcnt > 0) {
+		while (f->buf->conts[regub] != L'\n')
+			++regub;
+		--lcnt;
+		regub += lcnt > 0;
+	}
+	
+	size_t cpsize = (regub - reglb) * sizeof(wchar_t);
+	clipbuf = malloc(cpsize + sizeof(wchar_t));
+	clipbuf[regub - reglb] = 0;
+	memcpy(clipbuf, f->buf->conts + reglb, cpsize);
+}
+
+static void
 resetbinds(void)
 {
 	// quit and reinit to reset current keybind buffer and bind information.
@@ -753,6 +869,8 @@ resetbinds(void)
 	keybd_bind(conf_bind_kill, bind_kill);
 	keybd_bind(conf_bind_paste, bind_paste);
 	keybd_bind(conf_bind_undo, bind_undo);
+	keybd_bind(conf_bind_copy, bind_copy);
+	keybd_bind(conf_bind_ncopy, bind_ncopy);
 	
 	keybd_organize();
 }

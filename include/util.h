@@ -23,6 +23,7 @@
 #define K_BACKSPC 127
 #define K_RET 13
 #define K_TAB 9
+#define K_SPC 32
 
 #define VEC_DEFPROTO_EX(t, acclevel) \
 	struct vec_##t { \
