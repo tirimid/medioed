@@ -220,6 +220,8 @@ comptabs(size_t firstch, size_t lastsigch)
 				ntab -= ntab > 0;
 			break;
 		case L':':
+			if (instr || inch)
+				break;
 			stk_unsigned_push(&pstk_open, &ntab);
 			stk_unsigned_push(&pstk_close, &ntab);
 			break;
