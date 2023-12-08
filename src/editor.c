@@ -24,7 +24,6 @@
 static struct buf *addbuf(struct buf *b);
 static struct frame *addframe(struct frame *f);
 static void arrangeframes(void);
-static void redrawall(void);
 static void bind_quit(void);
 static void bind_chgfwd_frame(void);
 static void bind_chgback_frame(void);
@@ -123,7 +122,7 @@ editor_init(int argc, char const *argv[])
 	resetbinds();
 	setglobalmode();
 	arrangeframes();
-	redrawall();
+	editor_redraw();
 
 	return 0;
 }
@@ -179,6 +178,17 @@ editor_quit(void)
 	keybd_quit();
 }
 
+void
+editor_redraw(void)
+{
+	for (size_t i = 0; i < frames.size; ++i) {
+		frame_compbndry(&frames.data[i]);
+		frame_draw(&frames.data[i], i == curframe);
+	}
+	
+	draw_refresh();
+}
+
 static struct buf *
 addbuf(struct buf *b)
 {
@@ -232,17 +242,6 @@ arrangeframes(void)
 }
 
 static void
-redrawall(void)
-{
-	for (size_t i = 0; i < frames.size; ++i) {
-		frame_compbndry(&frames.data[i]);
-		frame_draw(&frames.data[i], i == curframe);
-	}
-	
-	draw_refresh();
-}
-
-static void
 bind_quit(void)
 {
 	bool modexists = false;
@@ -255,7 +254,7 @@ bind_quit(void)
 
 	if (modexists) {
 		int confirm = prompt_yesno(L"there are unsaved modified buffers! quit anyway?", false);
-		redrawall();
+		editor_redraw();
 		if (confirm != 1)
 			return;
 	}
@@ -269,7 +268,7 @@ bind_chgfwd_frame(void)
 	curframe = (curframe + 1) % frames.size;
 	resetbinds();
 	setglobalmode();
-	redrawall();
+	editor_redraw();
 }
 
 static void
@@ -278,7 +277,7 @@ bind_chgback_frame(void)
 	curframe = (curframe == 0 ? frames.size : curframe) - 1;
 	resetbinds();
 	setglobalmode();
-	redrawall();
+	editor_redraw();
 }
 
 static void
@@ -290,7 +289,7 @@ bind_focus_frame(void)
 		resetbinds();
 		setglobalmode();
 		arrangeframes();
-		redrawall();
+		editor_redraw();
 	}
 }
 
@@ -298,7 +297,7 @@ static void
 bind_kill_frame(void)
 {
 	int confirm = prompt_yesno(L"kill active frame?", false);
-	redrawall();
+	editor_redraw();
 	if (confirm != 1)
 		return;
 	
@@ -332,14 +331,14 @@ bind_kill_frame(void)
 	resetbinds();
 	setglobalmode();
 	arrangeframes();
-	redrawall();
+	editor_redraw();
 }
 
 static void
 bind_open_file(void)
 {
 	wchar_t *wpath = prompt_ask(L"open file: ", prompt_comp_path, NULL);
-	redrawall();
+	editor_redraw();
 	if (!wpath)
 		return;
 
@@ -350,7 +349,7 @@ bind_open_file(void)
 	struct stat s;
 	if (stat(path, &s) || !S_ISREG(s.st_mode)) {
 		prompt_show(L"could not open file!");
-		redrawall();
+		editor_redraw();
 		free(path);
 		return;
 	}
@@ -363,7 +362,7 @@ bind_open_file(void)
 	resetbinds();
 	setglobalmode();
 	arrangeframes();
-	redrawall();
+	editor_redraw();
 
 	free(path);
 	free(wpath);
@@ -381,7 +380,7 @@ bind_save_file(void)
 		f->buf->srctype = BST_FILE;
 		
 		wpath = prompt_ask(L"save to file: ", prompt_comp_path, NULL);
-		redrawall();
+		editor_redraw();
 
 		if (wpath) {
 			size_t pathsize = sizeof(wchar_t) * (wcslen(wpath) + 1);
@@ -401,7 +400,7 @@ bind_save_file(void)
 	// reset to how it was before the save.
 	if (f->buf->src && !*(uint8_t *)f->buf->src) {
 		prompt_show(L"no save path given, nothing will be done!");
-		redrawall();
+		editor_redraw();
 	}
 	
 	if (!f->buf->src || !*(uint8_t *)f->buf->src) {
@@ -416,7 +415,7 @@ bind_save_file(void)
 
 	if (buf_save(f->buf)) {
 		prompt_show(L"failed to write file!");
-		redrawall();
+		editor_redraw();
 		free(wpath);
 		return;
 	}
@@ -527,14 +526,14 @@ bind_navgoto(void)
 {
 askagain:;
 	wchar_t *wslinum = prompt_ask(L"goto line: ", NULL, NULL);
-	redrawall();
+	editor_redraw();
 	if (!wslinum)
 		return;
 
 	if (!*wslinum) {
 		free(wslinum);
 		prompt_show(L"expected a line number!");
-		redrawall();
+		editor_redraw();
 		goto askagain;
 	}
 
@@ -547,7 +546,7 @@ askagain:;
 		if (!isdigit(*c)) {
 			free(slinum);
 			prompt_show(L"invalid line number!");
-			redrawall();
+			editor_redraw();
 			goto askagain;
 		}
 	}
@@ -602,7 +601,7 @@ static void
 bind_chgmode_global(void)
 {
 	wchar_t *wnewgm = prompt_ask(L"new globalmode: ", NULL, NULL);
-	redrawall();
+	editor_redraw();
 	if (!wnewgm)
 		return;
 
@@ -621,7 +620,7 @@ static void
 bind_chgmode_local(void)
 {
 	wchar_t *wnewlm = prompt_ask(L"new frame localmode: ", NULL, NULL);
-	redrawall();
+	editor_redraw();
 	if (!wnewlm)
 		return;
 
@@ -647,7 +646,7 @@ bind_create_scrap(void)
 	resetbinds();
 	setglobalmode();
 	arrangeframes();
-	redrawall();
+	editor_redraw();
 }
 
 static void
@@ -710,7 +709,7 @@ bind_paste(void)
 	
 	if (!clipbuf) {
 		prompt_show(L"clipbuffer is empty!");
-		redrawall();
+		editor_redraw();
 		return;
 	}
 	
@@ -726,7 +725,7 @@ bind_undo(void)
 
 	if (f->buf->hist.size == 0) {
 		prompt_show(L"no further undo information!");
-		redrawall();
+		editor_redraw();
 		return;
 	}
 
@@ -746,13 +745,14 @@ bind_undo(void)
 
 	if (buf_undo(f->buf)) {
 		prompt_show(L"failed to undo last operation!");
-		redrawall();
+		editor_redraw();
 		return;
 	}
 
 	unsigned csrr, csrc;
 	buf_pos(f->buf, csrdst, &csrr, &csrc);
 	frame_mvcsr(f, csrr, csrc);
+	f->csr_wantcol = csrc;
 }
 
 static void
@@ -782,14 +782,14 @@ bind_ncopy(void)
 {
 askagain:;
 	wchar_t *wslcnt = prompt_ask(L"copy lines: ", NULL, NULL);
-	redrawall();
+	editor_redraw();
 	if (!wslcnt)
 		return;
 	
 	if (!*wslcnt) {
 		free(wslcnt);
 		prompt_show(L"expected a line count!");
-		redrawall();
+		editor_redraw();
 		goto askagain;
 	}
 	
@@ -802,7 +802,7 @@ askagain:;
 		if (!isdigit(*c)) {
 			free(slcnt);
 			prompt_show(L"invalid line count!");
-			redrawall();
+			editor_redraw();
 			goto askagain;
 		}
 	}
@@ -811,7 +811,7 @@ askagain:;
 	free(slcnt);
 	if (!lcnt) {
 		prompt_show(L"cannot copy zero lines!");
-		redrawall();
+		editor_redraw();
 		goto askagain;
 	}
 	
@@ -843,14 +843,14 @@ bind_findlit(void)
 {
 askagain:;
 	wchar_t *needle = prompt_ask(L"find literally: ", NULL, NULL);
-	redrawall();
+	editor_redraw();
 	if (!needle)
 		return;
 	
 	if (!*needle) {
 		free(needle);
 		prompt_show(L"expected a needle!");
-		redrawall();
+		editor_redraw();
 		goto askagain;
 	}
 	
@@ -865,7 +865,7 @@ askagain:;
 	
 	if (spos == f->buf->size) {
 		prompt_show(L"did not find needle in haystack!");
-		redrawall();
+		editor_redraw();
 		return;
 	}
 	
@@ -947,5 +947,5 @@ sigwinch_handler(int arg)
 	for (size_t i = 0; i < frames.size; ++i)
 		frame_compbndry(&frames.data[i]);
 	
-	redrawall();
+	editor_redraw();
 }

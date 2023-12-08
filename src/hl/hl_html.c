@@ -19,7 +19,7 @@ hl_html_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
              size_t *out_ub, uint16_t *out_a)
 {
 	for (size_t i = off; i < len; ++i) {
-		if (i < len - 3 && !wcsncmp(&src[i], L"<!--", 4)) {
+		if (i + 3 < len && !wcsncmp(&src[i], L"<!--", 4)) {
 			if (!hl_comment(src, len, &i, out_lb, out_ub, out_a))
 				return 0;
 		} else if (src[i] == L'<') {

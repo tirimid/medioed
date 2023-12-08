@@ -95,7 +95,7 @@ hl_rs_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 		if (src[i] == L'"') {
 			if (!hl_string(src, len, &i, out_lb, out_ub, out_a))
 				return 0;
-		} else if (i < len - 1
+		} else if (i + 1 < len
 		           && src[i] == L'r'
 		           && (src[i + 1] == L'"' || src[i + 1] == L'#')) {
 			if (!hl_rstring(src, len, &i, out_lb, out_ub, out_a))
@@ -103,7 +103,7 @@ hl_rs_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 		} else if (src[i] == L'\'') {
 			if (!hl_quote(src, len, &i, out_lb, out_ub, out_a))
 				return 0;
-		} else if (i < len - 1
+		} else if (i + 1 < len
 		           && src[i] == L'/'
 		           && (src[i + 1] == L'/' || src[i + 1] == L'*')) {
 			switch (src[i + 1]) {
@@ -228,7 +228,7 @@ hl_bcomment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 {
 	unsigned nopen = 1;
 	size_t j = *i + 2;
-	while (j < len - 1) {
+	while (j + 1 < len) {
 		if (!wcsncmp(&src[j], L"*/", 2)) {
 			--nopen;
 			++j;
@@ -307,7 +307,7 @@ hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 		// highlight handling, but noone really ever does that in Rust,
 		// so it is not handled.
 		
-		if (k < len - 2 && !wcsncmp(&src[k], L"::<", 3)) {
+		if (k + 2 < len && !wcsncmp(&src[k], L"::<", 3)) {
 			k += 3;
 			unsigned nopen = 1;
 			while (k < len && nopen > 0) {

@@ -30,7 +30,7 @@ hl_md_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 		} else if (src[i] == L'>') {
 			if (!hl_block(src, len, &i, out_lb, out_ub, out_a))
 				return 0;
-		} else if (i < len - 2 && !wcsncmp(&src[i], L"```", 3)) {
+		} else if (i + 2 < len && !wcsncmp(&src[i], L"```", 3)) {
 			if (!hl_codeblock(src, len, &i, out_lb, out_ub, out_a))
 				return 0;
 		} else if (src[i] == L'*' || src[i] == L'-') {
@@ -55,7 +55,7 @@ hl_codeblock(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 	if (firstlnch(src, len, *i) != *i)
 		return 1;
 	
-	for (size_t j = *i + 3; j < len - 2; ++j) {
+	for (size_t j = *i + 3; j + 2 < len; ++j) {
 		if (src[j] == L'\\') {
 			++j;
 			continue;
@@ -153,7 +153,7 @@ hl_olist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 	size_t j = *i + 1;
 	while (j < len && iswdigit(src[j]))
 		++j;
-	if (j >= len - 1
+	if (j + 1 >= len
 	    || src[j] != L'.'
 	    || !iswspace(src[j + 1])
 	    || src[j + 1] == L'\n') {

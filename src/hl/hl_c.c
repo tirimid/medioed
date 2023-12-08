@@ -85,7 +85,7 @@ hl_c_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 		} else if (src[i] == L'\'') {
 			if (!hl_char(src, len, &i, out_lb, out_ub, out_a))
 				return 0;
-		} else if (i < len - 1
+		} else if (i + 1 < len
 		           && src[i] == L'/'
 		           && (src[i + 1] == L'/' || src[i + 1] == L'*')) {
 			if (!hl_comment(src, len, &i, out_lb, out_ub, out_a))
