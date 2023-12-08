@@ -24,7 +24,7 @@ mode_rs_init(struct frame *f)
 	mu_init(f);
 
 	mu_setbase();
-	mu_setpairing();
+	mu_setpairing(PF_PAREN | PF_BRACKET | PF_BRACE | PF_ANGLE | PF_SQUOTE | PF_DQUOTE);
 
 	keybd_bind(conf_bind_newline, bind_newline);
 	keybd_bind(rs_bind_indent, bind_indent);
@@ -120,7 +120,7 @@ bind_indent(void)
 	// do indentation.
 	buf_erase(mf->buf, ln, firstch);
 	for (unsigned i = 0; i < ntab; ++i)
-		buf_writewch(mf->buf, ln, L'\t');
+		buf_writewch(mf->buf, ln + i, L'\t');
 
 	// fix cursor.
 	if (mf->csr <= firstch)

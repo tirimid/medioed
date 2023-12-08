@@ -6,15 +6,17 @@
 #include <string.h>
 
 #include "hl/hl_c.h"
+#include "hl/hl_html.h"
 #include "hl/hl_md.h"
-#include "hl/hl_sh.h"
 #include "hl/hl_rs.h"
 #include "hl/hl_s.h"
+#include "hl/hl_sh.h"
 #include "mode/mode_c.h"
+#include "mode/mode_html.h"
 #include "mode/mode_md.h"
-#include "mode/mode_sh.h"
 #include "mode/mode_rs.h"
 #include "mode/mode_s.h"
+#include "mode/mode_sh.h"
 #include "util.h"
 
 // binds.
@@ -49,13 +51,15 @@ int const conf_bind_paste[] = {K_CTL('y'), -1};
 int const conf_bind_undo[] = {K_CTL('x'), 'u', -1};
 int const conf_bind_copy[] = {K_CTL('c'), K_SPC, K_META('w'), -1};
 int const conf_bind_ncopy[] = {K_CTL('c'), K_SPC, K_META('n'), -1};
+int const conf_bind_findlit[] = {K_CTL('s'), 'l', -1};
 
 // language mode extensions.
 static char const *ext_c[] = {"c", "h", NULL};
 static char const *ext_md[] = {"md", NULL};
 static char const *ext_sh[] = {"sh", NULL};
 static char const *ext_rs[] = {"rs", NULL};
-static char const *ext_s[] = {"s", "asm", "S", NULL};
+static char const *ext_s[] = {"s", "S", NULL};
+static char const *ext_html[] = {"html", NULL};
 
 // highlight table.
 struct highlight const conf_htab[] = {
@@ -78,6 +82,10 @@ struct highlight const conf_htab[] = {
 	{
 		.localmode = "s",
 		.find = hl_s_find,
+	},
+	{
+		.localmode = "html",
+		.find = hl_html_find,
 	},
 };
 size_t const conf_htab_size = ARRAYSIZE(conf_htab);
@@ -134,6 +142,13 @@ struct mode const conf_lmtab[] = {
 		.update = mode_s_update,
 		.keypress = mode_s_keypress,
 	},
+	{
+		.name = "html",
+		.init = mode_html_init,
+		.quit = mode_html_quit,
+		.update = mode_s_update,
+		.keypress = mode_s_keypress,
+	},
 };
 size_t const conf_lmtab_size = ARRAYSIZE(conf_lmtab);
 
@@ -158,6 +173,10 @@ struct modeext const conf_metab[] = {
 	{
 		.exts = ext_rs,
 		.mode = "s",
+	},
+	{
+		.exts = ext_html,
+		.mode = "html",
 	},
 };
 size_t const conf_metab_size = ARRAYSIZE(conf_metab);

@@ -56,6 +56,7 @@ static void bind_paste(void);
 static void bind_undo(void);
 static void bind_copy(void);
 static void bind_ncopy(void);
+static void bind_findlit(void);
 static void resetbinds(void);
 static void setglobalmode(void);
 static void sigwinch_handler(int arg);
@@ -283,10 +284,14 @@ bind_chgback_frame(void)
 static void
 bind_focus_frame(void)
 {
-	vec_frame_swap(&frames, 0, curframe);
-	curframe = 0;
-	arrangeframes();
-	redrawall();
+	if (curframe != 0) {
+		vec_frame_swap(&frames, 0, curframe);
+		curframe = 0;
+		resetbinds();
+		setglobalmode();
+		arrangeframes();
+		redrawall();
+	}
 }
 
 static void
@@ -834,6 +839,42 @@ askagain:;
 }
 
 static void
+bind_findlit(void)
+{
+askagain:;
+	wchar_t *needle = prompt_ask(L"find literally: ", NULL, NULL);
+	redrawall();
+	if (!needle)
+		return;
+	
+	if (!*needle) {
+		free(needle);
+		prompt_show(L"expected a needle!");
+		redrawall();
+		goto askagain;
+	}
+	
+	size_t spos, needlen = wcslen(needle);
+	struct frame *f = &frames.data[curframe];
+	for (spos = f->csr + 1; spos < f->buf->size; ++spos) {
+		if (!wcsncmp(&f->buf->conts[spos], needle, needlen))
+			break;
+	}
+	
+	free(needle);
+	
+	if (spos == f->buf->size) {
+		prompt_show(L"did not find needle in haystack!");
+		redrawall();
+		return;
+	}
+	
+	unsigned r, c;
+	buf_pos(f->buf, spos, &r, &c);
+	frame_mvcsr(f, r, c);
+}
+
+static void
 resetbinds(void)
 {
 	// quit and reinit to reset current keybind buffer and bind information.
@@ -871,6 +912,7 @@ resetbinds(void)
 	keybd_bind(conf_bind_undo, bind_undo);
 	keybd_bind(conf_bind_copy, bind_copy);
 	keybd_bind(conf_bind_ncopy, bind_ncopy);
+	keybd_bind(conf_bind_findlit, bind_findlit);
 	
 	keybd_organize();
 }
