@@ -150,8 +150,10 @@ bind_indent(void)
 	// fix cursor.
 	if (mf->csr <= firstch)
 		mf->csr = ln;
-	else
+	else {
 		mf->csr -= firstch - ln;
+		mf->csr_wantcol -= firstch - ln;
+	}
 	frame_relmvcsr(mf, 0, ntab + nspace, false);
 }
 
