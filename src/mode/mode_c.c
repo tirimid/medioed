@@ -84,14 +84,14 @@ bind_indent(void)
 		++lastsigch;
 	while (lastsigch > ln
 	       && !iswalnum(src[lastsigch])
-	       && src[lastsigch] != L':') {
+	       && !wcschr(L":;", src[lastsigch])) {
 		--lastsigch;
 	}
 
 	unsigned ntab = comptabs(firstch, lastsigch), nspace = 0;
 	
 	if (prevln != ln) {
-		size_t prevlastch = ln - 2 * (ln > 0);
+		size_t prevlastch = ln - 2 * (ln > 1);
 		while (prevlastch > prevln && iswspace(src[prevlastch]))
 			--prevlastch;
 
@@ -111,7 +111,7 @@ bind_indent(void)
 		for (size_t i = 0; i < ARRAYSIZE(indentkw); ++i) {
 			size_t len = wcslen(indentkw[i]);
 			
-			if (len <= prevlastch + 1
+			if (len <= prevlastch
 			    && !iswalnum(src[prevlastch - len])
 			    && !wcsncmp(indentkw[i], &src[prevlastch - len + 1], len)) {
 				++ntab;
@@ -129,7 +129,8 @@ bind_indent(void)
 		while (src[firstspc + off] == L' ')
 			++off;
 		
-		if (src[firstch] != L'{'
+		if (firstch < mf->buf->size
+		    && src[firstch] != L'{'
 		    && src[firstch] != L'}'
 		    && off != 0
 		    && !iswspace(src[firstspc + off])
@@ -235,9 +236,10 @@ comptabs(size_t firstch, size_t lastsigch)
 	
 	for (size_t i = firstch; ntab > 0 && i < mf->buf->size && src[i] == L'}'; ++i)
 		--ntab;
-
+	
 	ntab -= ntab > 0 && src[lastsigch] == L':';
-	ntab *= src[firstch] != L'#';
+	if (firstch != mf->buf->size)
+		ntab *= src[firstch] != L'#';
 	
 	return ntab;
 }
@@ -284,7 +286,8 @@ compsmartspaces(size_t firstspc, size_t off, size_t ln, size_t firstch)
 		nopen -= src[i] == L')' && !instr && !inch && nopen > 0;
 	}
 			
-	if (src[firstch] != L'{'
+	if (firstch < mf->buf->size
+	    && src[firstch] != L'{'
 	    && src[firstch] != L'}'
 	    && firstspc + off < ln
 	    && nopen > 0) {
