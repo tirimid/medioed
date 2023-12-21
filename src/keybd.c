@@ -75,7 +75,7 @@ keybd_awaitkey(void)
 	
 	curbind[curbindlen++] = k;
 
-	ssize_t low = 0, high = binds.size, mid;
+	ssize_t low = 0, high = binds.size - 1, mid;
 	while (low <= high) {
 		mid = (low + high) / 2;
 
