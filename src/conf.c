@@ -41,8 +41,8 @@ int const conf_bind_navgoto[] = {K_META('g'), K_META('g'), -1};
 int const conf_bind_delfwd_ch[] = {K_CTL('d'), -1};
 int const conf_bind_delback_ch[] = {K_BACKSPC, -1};
 int const conf_bind_delback_word[] = {K_META(K_BACKSPC), -1};
-int const conf_bind_chgmode_global[] = {K_CTL('c'), K_CTL('g'), 'g', -1};
-int const conf_bind_chgmode_local[] = {K_CTL('c'), K_CTL('g'), 'l', -1};
+int const conf_bind_chgmode_global[] = {K_CTL('c'), K_META('g'), 'g', -1};
+int const conf_bind_chgmode_local[] = {K_CTL('c'), K_META('g'), 'l', -1};
 int const conf_bind_create_scrap[] = {K_CTL('c'), 'n', -1};
 int const conf_bind_newline[] = {K_RET, -1};
 int const conf_bind_focus[] = {K_CTL('l'), -1};
@@ -52,6 +52,8 @@ int const conf_bind_undo[] = {K_CTL('x'), 'u', -1};
 int const conf_bind_copy[] = {K_CTL('c'), K_SPC, K_META('w'), -1};
 int const conf_bind_ncopy[] = {K_CTL('c'), K_SPC, K_META('n'), -1};
 int const conf_bind_findlit[] = {K_CTL('s'), 'l', -1};
+int const conf_bind_macbegin[] = {K_F(3), -1};
+int const conf_bind_macend[] = {K_F(4), -1};
 
 // language mode extensions.
 static char const *ext_c[] = {"c", "h", NULL};

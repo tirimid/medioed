@@ -58,6 +58,8 @@ static void bind_undo(void);
 static void bind_copy(void);
 static void bind_ncopy(void);
 static void bind_findlit(void);
+static void bind_macbegin(void);
+static void bind_macend(void);
 static void resetbinds(void);
 static void setglobalmode(void);
 static void sigwinch_handler(int arg);
@@ -150,13 +152,6 @@ editor_mainloop(void)
 		
 		mode_update();
 		
-#if 0
-		for (size_t i = 0; i < frames.size; ++i) {
-			if (frames.data[i].buf == frames.data[curframe].buf)
-				frame_draw(&frames.data[i], i == curframe);
-		}
-		draw_refresh();
-#endif
 		editor_redraw();
 		
 		wint_t k = keybd_awaitkey();
@@ -199,29 +194,32 @@ editor_redraw(void)
 	}
 	
 	// draw current bind status if necessary.
-	size_t cblen;
-	if (keybd_curbind(&cblen)) {
-		wchar_t binddpy[(KEYBD_MAXDPYLEN + 1) * KEYBD_MAXBINDLEN];
-		keybd_keydpy(binddpy, keybd_curbind(NULL), cblen);
+	size_t len;
+	if (!keybd_isexecmac() && keybd_curbind(NULL)
+	    || keybd_isrecmac() && keybd_curmac(NULL)) {
+		int const *src = keybd_isrecmac() ? keybd_curmac(&len) : keybd_curbind(&len);
+		
+		wchar_t dpy[(KEYBD_MAXDPYLEN + 1) * KEYBD_MAXMACLEN];
+		keybd_keydpy(dpy, src, len);
 		
 		struct winsize ws;
 		ioctl(0, TIOCGWINSZ, &ws);
 		
-		size_t bdstart = 0, bdlen = wcslen(binddpy);
-		while (bdlen > ws.ws_col) {
-			wchar_t const *next = wcschr(binddpy + bdstart, L' ') + 1;
+		size_t dstart = 0, dlen = wcslen(dpy);
+		while (dlen > ws.ws_col) {
+			wchar_t const *next = wcschr(dpy + dstart, L' ') + 1;
 			if (!next)
 				break;
 			
-			size_t diff = (uintptr_t)next - (uintptr_t)(binddpy + bdstart);
+			size_t diff = (uintptr_t)next - (uintptr_t)(dpy + dstart);
 			size_t ndiff = diff / sizeof(wchar_t);
 			
-			bdstart += ndiff;
-			bdlen -= ndiff;
+			dstart += ndiff;
+			dlen -= ndiff;
 		}
 		
-		draw_putwstr(ws.ws_row - 1, 0, binddpy + bdstart);
-		draw_putattr(ws.ws_row - 1, 0, CONF_A_GHIGH, bdlen);
+		draw_putwstr(ws.ws_row - 1, 0, dpy + dstart);
+		draw_putattr(ws.ws_row - 1, 0, CONF_A_GHIGH, dlen);
 	}
 	
 	draw_refresh();
@@ -916,6 +914,30 @@ askagain:;
 }
 
 static void
+bind_macbegin(void)
+{
+	keybd_recmac_begin();
+}
+
+static void
+bind_macend(void)
+{
+	if (keybd_isrecmac())
+		keybd_recmac_end();
+	else {
+		keybd_recmac_end();
+		
+		if (!keybd_curmac(NULL)) {
+			prompt_show(L"no macro specified to execute!");
+			editor_redraw();
+			return;
+		}
+		
+		keybd_execmac();
+	}
+}
+
+static void
 resetbinds(void)
 {
 	// quit and reinit to reset current keybind buffer and bind information.
@@ -954,6 +976,8 @@ resetbinds(void)
 	keybd_bind(conf_bind_copy, bind_copy);
 	keybd_bind(conf_bind_ncopy, bind_ncopy);
 	keybd_bind(conf_bind_findlit, bind_findlit);
+	keybd_bind(conf_bind_macbegin, bind_macbegin);
+	keybd_bind(conf_bind_macend, bind_macend);
 	
 	keybd_organize();
 }

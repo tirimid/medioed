@@ -80,6 +80,8 @@ extern int const conf_bind_undo[];
 extern int const conf_bind_copy[];
 extern int const conf_bind_ncopy[];
 extern int const conf_bind_findlit[];
+extern int const conf_bind_macbegin[];
+extern int const conf_bind_macend[];
 
 extern struct highlight const conf_htab[];
 extern size_t const conf_htab_size;

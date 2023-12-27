@@ -8,6 +8,7 @@
 
 #include "conf.h"
 #include "draw.h"
+#include "keybd.h"
 #include "util.h"
 
 #define BIND_CANCEL K_CTL('g')
@@ -25,7 +26,7 @@ prompt_show(wchar_t const *msg)
 	draw_refresh();
 	
 	for (;;) {
-		wint_t k = getwchar();
+		wint_t k = keybd_awaitkey_nb();
 		if (k == WEOF || k == L'q' || k == L'Q')
 			break;
 	}
@@ -56,7 +57,7 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, void *), void 
 	size_t csr = 0, dstart = 0;
 
 	wint_t k;
-	while ((k = getwchar()) != K_RET) {
+	while ((k = keybd_awaitkey_nb()) != K_RET) {
 		// gather response.
 		if (k == BIND_CANCEL || k == WEOF) {
 			free(resp);

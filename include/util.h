@@ -19,11 +19,13 @@
 #define ARRAYSIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #define K_CTL(k) (k - 'a' + 1)
+#define K_F(n) 27, 79, (79 + n)
 #define K_META(k) 27, k
 #define K_BACKSPC 127
+#define K_ESC 27
 #define K_RET 13
-#define K_TAB 9
 #define K_SPC 32
+#define K_TAB 9
 
 #define VEC_DEFPROTO_EX(t, acclevel) \
 	struct vec_##t { \
