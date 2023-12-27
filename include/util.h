@@ -136,5 +136,7 @@
 STK_DEFPROTO(unsigned)
 
 char const *fileext(char const *path);
+int mkdirrec(char const *dir);
+int mkfile(char const *path);
 
 #endif

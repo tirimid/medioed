@@ -113,6 +113,58 @@ found:
 	return k;
 }
 
+void
+keybd_keydpy(wchar_t *out, int const *kbuf, size_t nk)
+{
+	*out = 0;
+	
+	for (size_t i = 0; i < nk; ++i) {
+		wchar_t const *speckname;
+		switch (kbuf[i]) {
+		case K_BACKSPC:
+			speckname = L"BACKSPC";
+			break;
+		case K_RET:
+			speckname = L"RET";
+			break;
+		case K_TAB:
+			speckname = L"TAB";
+			break;
+		case K_SPC:
+			speckname = L"SPC";
+			break;
+		default:
+			speckname = NULL;
+			break;
+		}
+		
+		if (speckname)
+			wcscat(out, speckname);
+		else if (kbuf[i] <= 26) {
+			wchar_t new[] = {L'C', L'-', L'a' + kbuf[i] - 1, 0};
+			wcscat(out, new);
+		} else if (kbuf[i] == 27) {
+			wchar_t new[] = {L'M', L'-', kbuf[++i], 0};
+			wcscat(out, new);
+		} else {
+			wchar_t new[] = {kbuf[i], 0};
+			wcscat(out, new);
+		}
+		
+		if (i < nk - 1)
+			wcscat(out, L" ");
+	}
+}
+
+int const *
+keybd_curbind(size_t *out_len)
+{
+	if (out_len)
+		*out_len = curbindlen;
+	
+	return curbindlen ? curbind : NULL;
+}
+
 VEC_DEFIMPL_STATIC(bind)
 
 static int

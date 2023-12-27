@@ -21,6 +21,8 @@
 #include "keybd.h"
 #include "prompt.h"
 
+extern bool flag_c;
+
 static struct buf *addbuf(struct buf *b);
 static struct frame *addframe(struct frame *f);
 static void arrangeframes(void);
@@ -89,10 +91,17 @@ editor_init(int argc, char const *argv[])
 			draw_clear(L' ', CONF_A_GNORM);
 			
 			struct stat s;
-			if (stat(argv[i], &s) || !S_ISREG(s.st_mode)) {
+			if ((stat(argv[i], &s) || !S_ISREG(s.st_mode)) && !flag_c) {
 				// TODO: show which file failed to open.
 				prompt_show(L"failed to open file!");
 				continue;
+			} else if (stat(argv[i], &s) && flag_c) {
+				if (mkfile(argv[i])) {
+					// TODO: show which file failed to be
+					// created.
+					prompt_show(L"failed to create file!");
+					continue;
+				}
 			}
 			
 			size_t wnamen = strlen(argv[i]) + 1;
@@ -140,12 +149,15 @@ editor_mainloop(void)
 		}
 		
 		mode_update();
-
+		
+#if 0
 		for (size_t i = 0; i < frames.size; ++i) {
 			if (frames.data[i].buf == frames.data[curframe].buf)
 				frame_draw(&frames.data[i], i == curframe);
 		}
 		draw_refresh();
+#endif
+		editor_redraw();
 		
 		wint_t k = keybd_awaitkey();
 		if (k != KEYBD_IGNORE && (k == L'\n' || k == L'\t' || iswprint(k))) {
@@ -184,6 +196,32 @@ editor_redraw(void)
 	for (size_t i = 0; i < frames.size; ++i) {
 		frame_compbndry(&frames.data[i]);
 		frame_draw(&frames.data[i], i == curframe);
+	}
+	
+	// draw current bind status if necessary.
+	size_t cblen;
+	if (keybd_curbind(&cblen)) {
+		wchar_t binddpy[(KEYBD_MAXDPYLEN + 1) * KEYBD_MAXBINDLEN];
+		keybd_keydpy(binddpy, keybd_curbind(NULL), cblen);
+		
+		struct winsize ws;
+		ioctl(0, TIOCGWINSZ, &ws);
+		
+		size_t bdstart = 0, bdlen = wcslen(binddpy);
+		while (bdlen > ws.ws_col) {
+			wchar_t const *next = wcschr(binddpy + bdstart, L' ') + 1;
+			if (!next)
+				break;
+			
+			size_t diff = (uintptr_t)next - (uintptr_t)(binddpy + bdstart);
+			size_t ndiff = diff / sizeof(wchar_t);
+			
+			bdstart += ndiff;
+			bdlen -= ndiff;
+		}
+		
+		draw_putwstr(ws.ws_row - 1, 0, binddpy + bdstart);
+		draw_putattr(ws.ws_row - 1, 0, CONF_A_GHIGH, bdlen);
 	}
 	
 	draw_refresh();
@@ -412,6 +450,9 @@ bind_save_file(void)
 		
 		return;
 	}
+	
+	if (prevtype == BST_FRESH)
+		mkfile(f->buf->src);
 
 	if (buf_save(f->buf)) {
 		prompt_show(L"failed to write file!");

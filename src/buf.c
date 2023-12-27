@@ -105,7 +105,7 @@ buf_save(struct buf *b)
 	// no point saving an unchanged file into itself.
 	if (!(b->flags & BF_MODIFIED))
 		return 0;
-
+	
 	FILE *fp = fopen(b->src, "wb");
 	if (!fp)
 		return 1;

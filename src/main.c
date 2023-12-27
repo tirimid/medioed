@@ -14,14 +14,17 @@
 
 static void usage(char const *name);
 
-bool flag_d = false, flag_r = false;
+bool flag_c = false, flag_d = false, flag_r = false;
 
 int
 main(int argc, char const *argv[])
 {	
 	int ch;
-	while ((ch = getopt(argc, (char *const *)argv, "dhr")) != -1) {
+	while ((ch = getopt(argc, (char *const *)argv, "cdhr")) != -1) {
 		switch (ch) {
+		case 'c':
+			flag_c = true;
+			break;
 		case 'd':
 			flag_d = true;
 			break;
@@ -34,6 +37,11 @@ main(int argc, char const *argv[])
 		default:
 			return 1;
 		}
+	}
+	
+	if (flag_c && flag_r) {
+		fputs("cannot specify -c and -r at the same time!\n", stderr);
+		return 1;
 	}
 
 	FILE *logfp = fopen(flag_d ? LOGFILE : "/dev/null", "w");
@@ -98,6 +106,7 @@ usage(char const *name)
 	       "\t%s [options] file ...\n"
 	       "\t%s [options]\n"
 	       "options:\n"
+	       "\t-c  create opened file if it doesn't exist\n"
 	       "\t-d  try to write debug output to a logfile\n"
 	       "\t-h  display this menu\n"
 	       "\t-r  existing files will be opened read-only\n", name, name);
