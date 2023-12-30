@@ -25,12 +25,20 @@
 #define CONF_SCRAPNAME L"*scrap*"
 
 #define CONF_GREETTEXT \
-	L"welcome to medioed, the (medio)cre text (ed)itor\n" \
+	L"                    _ _                _\n" \
+	L" _ __ ___   ___  __| (_) ___   ___  __| |\n" \
+	L"| '_ ` _ \\ / _ \\/ _` | |/ _ \\ / _ \\/ _` |\n" \
+	L"| | | | | |  __/ (_| | | (_) |  __/ (_| |\n" \
+	L"|_| |_| |_|\\___|\\__,_|_|\\___/ \\___|\\__,_|\n" \
 	L"\n" \
-	L"copyleft (c) Fuck Copyright\n" \
+	L"Welcome to medioed, the minimalist (Medio)cre Text (Ed)itor inspired\n" \
+	L"functionally by GNU Emacs. You can find more information at\n" \
+	L"https://tirimid.net/software/medioed.html.\n" \
 	L"\n" \
-	L"this program is 100% free software, licensed under the GNU GPLv3\n" \
-	L"the source is available at https://gitlab.com/tirimid/medioed\n"
+	L"Copyleft (c) Fuck Copyright\n" \
+	L"\n" \
+	L"This program is 100% free software, licensed under the GNU GPLv3. The source is\n" \
+	L"available at https://gitlab.com/tirimid/medioed.\n"
 
 struct highlight {
 	char const *localmode;

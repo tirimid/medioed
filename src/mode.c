@@ -38,7 +38,9 @@ mode_set(char const *name, struct frame *f)
 			return;
 		}
 	}
-
+	
+	if (oldm)
+		oldm->quit();
 	curmode = -1;
 }
 

@@ -148,8 +148,8 @@ struct mode const conf_lmtab[] = {
 		.name = "html",
 		.init = mode_html_init,
 		.quit = mode_html_quit,
-		.update = mode_s_update,
-		.keypress = mode_s_keypress,
+		.update = mode_html_update,
+		.keypress = mode_html_keypress,
 	},
 };
 size_t const conf_lmtab_size = ARRAYSIZE(conf_lmtab);
