@@ -31,10 +31,8 @@ int mkdirrec(char const *dir)
 			continue;
 		}
 		
-		if (!len) {
-			free(wd);
-			return 1;
-		}
+		if (!len)
+			continue;
 		
 		wd[i] = 0;
 		struct stat s;
