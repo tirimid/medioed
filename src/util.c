@@ -73,11 +73,10 @@ mkfile(char const *path)
 	if (rc)
 		return 1;
 	
-	FILE *fp = fopen(path, "w");
-	if (!fp)
+	// generally will be caused if the user tried to use `-c` when opening a
+	// directory, like `$ medioed hello/`.
+	if (!stat(path, &s) || !S_ISREG(s.st_mode))
 		return 1;
-	
-	fclose(fp);
 	
 	return 0;
 }
