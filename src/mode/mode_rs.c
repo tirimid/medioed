@@ -76,7 +76,7 @@ bind_indent(void)
 	long ntab = nopenat(firstch, L"([{", L")]}");
 	
 	if (prevln != ln) {
-		size_t prevlastch = ln - 2 * (ln > 1);
+		size_t prevlastch = ln - 1;
 		while (prevlastch > prevln && iswspace(src[prevlastch]))
 			--prevlastch;
 		
