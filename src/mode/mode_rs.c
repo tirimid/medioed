@@ -146,9 +146,8 @@ nopenat(size_t pos, wchar_t const *open, wchar_t const *close)
 			
 			j += j < pos;
 			cmplen = j - i - 1;
-			cmp = realloc(cmp, sizeof(wchar_t) * (cmplen + 1));
+			cmp = realloc(cmp, sizeof(wchar_t) * cmplen);
 			cmp[0] = L'"';
-			cmp[cmplen] = 0;
 			
 			for (unsigned i = 1; i < cmplen; ++i)
 				cmp[i] = L'#';
