@@ -19,6 +19,7 @@
 #include "draw.h"
 #include "frame.h"
 #include "keybd.h"
+#include "minicalc.h"
 #include "prompt.h"
 
 extern bool flag_c;
@@ -60,6 +61,7 @@ static void bind_ncopy(void);
 static void bind_findlit(void);
 static void bind_macbegin(void);
 static void bind_macend(void);
+static void bind_minicalc(void);
 static void resetbinds(void);
 static void setglobalmode(void);
 static void sigwinch_handler(int arg);
@@ -938,6 +940,24 @@ bind_macend(void)
 }
 
 static void
+bind_minicalc(void)
+{
+	wchar_t *expr = prompt_ask(L"evaluate expression: ", NULL, NULL);
+	editor_redraw();
+	if (!expr)
+		return;
+	
+	wchar_t out[512];
+	int rc = minicalc_eval(out, 512, expr);
+	free(expr);
+	if (rc)
+		return;
+	
+	prompt_show(out);
+	editor_redraw();
+}
+
+static void
 resetbinds(void)
 {
 	// quit and reinit to reset current keybind buffer and bind information.
@@ -978,6 +998,7 @@ resetbinds(void)
 	keybd_bind(conf_bind_findlit, bind_findlit);
 	keybd_bind(conf_bind_macbegin, bind_macbegin);
 	keybd_bind(conf_bind_macend, bind_macend);
+	keybd_bind(conf_bind_minicalc, bind_minicalc);
 	
 	keybd_organize();
 }

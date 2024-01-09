@@ -31,9 +31,8 @@
 	L"| | | | | |  __/ (_| | | (_) |  __/ (_| |\n" \
 	L"|_| |_| |_|\\___|\\__,_|_|\\___/ \\___|\\__,_|\n" \
 	L"\n" \
-	L"Welcome to medioed, the minimalist (Medio)cre Text (Ed)itor inspired\n" \
-	L"functionally by GNU Emacs. You can find more information at\n" \
-	L"https://tirimid.net/software/medioed.html.\n" \
+	L"Welcome to medioed, the (Medio)cre Text (Ed)itor. You can find more information\n" \
+	L"regarading this program at https://tirimid.net/software/medioed.html.\n" \
 	L"\n" \
 	L"Copyleft (c) Fuck Copyright\n" \
 	L"\n" \
@@ -90,6 +89,7 @@ extern int const conf_bind_ncopy[];
 extern int const conf_bind_findlit[];
 extern int const conf_bind_macbegin[];
 extern int const conf_bind_macend[];
+extern int const conf_bind_minicalc[];
 
 extern struct highlight const conf_htab[];
 extern size_t const conf_htab_size;

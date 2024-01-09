@@ -132,6 +132,7 @@ bind_indent(void)
 		if (firstch < mf->buf->size
 		    && src[firstch] != L'{'
 		    && src[firstch] != L'}'
+		    && src[prevlastch] != L';'
 		    && off != 0
 		    && !iswspace(src[firstspc + off])
 		    && ntab == prevntab) {
