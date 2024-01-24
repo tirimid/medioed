@@ -32,7 +32,7 @@
 	L"|_| |_| |_|\\___|\\__,_|_|\\___/ \\___|\\__,_|\n" \
 	L"\n" \
 	L"Welcome to medioed, the (Medio)cre Text (Ed)itor. You can find more information\n" \
-	L"regarading this program at https://tirimid.net/software/medioed.html.\n" \
+	L"regarding this program at https://tirimid.net/software/medioed.html.\n" \
 	L"\n" \
 	L"Copyleft (c) Fuck Copyright\n" \
 	L"\n" \
