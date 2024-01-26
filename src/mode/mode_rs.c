@@ -90,7 +90,8 @@ bind_indent(void)
 		    && !wcschr(L")]}", src[firstch])
 		    && !wcschr(L"#", src[prevfirstch])
 		    && wcsncmp(L"//", &src[prevfirstch], 2)
-		    && wcsncmp(L"//", &src[firstch], 2)) {
+		    && wcsncmp(L"//", &src[firstch], 2)
+		    && (prevlastch == 0 || wcsncmp(L"*/", &src[prevlastch - 1], 2))) {
 			++ntab;
 		}
 	}
@@ -133,9 +134,10 @@ nopenat(size_t pos, wchar_t const *open, wchar_t const *close)
 	long nopen = 0;
 	
 	wchar_t const *src = mf->buf->conts;
+	bool inblkcmt = false, inlncmt = false;
 	bool inch = false, instr = false, inrstr = false;
 	bool inch_esc = false;
-	size_t inch_nch = 0;
+	size_t inch_nch = 0, inblkcmt_ncmt = 0;
 	wchar_t *cmp = malloc(1);
 	unsigned cmplen = 0;
 	
@@ -143,6 +145,8 @@ nopenat(size_t pos, wchar_t const *open, wchar_t const *close)
 		if (!inrstr
 		    && !instr
 		    && !inch
+		    && !inblkcmt
+		    && !inlncmt
 		    && i + 1 < pos
 		    && src[i] == L'r'
 		    && (src[i + 1] == L'#' || src[i + 1] == L'"')) {
@@ -162,9 +166,17 @@ nopenat(size_t pos, wchar_t const *open, wchar_t const *close)
 				cmp[i] = L'#';
 			
 			inrstr = true;
-		} else if (!inrstr && !inch && src[i] == L'"')
+		} else if (!inrstr
+		           && !inch
+		           && !inblkcmt
+		           && !inlncmt
+		           && src[i] == L'"') {
 			instr = !instr;
-		else if (!inrstr && !instr && src[i] == L'\'') {
+		} else if (!inrstr
+		           && !instr
+		           && !inblkcmt
+		           && !inlncmt
+		           && src[i] == L'\'') {
 			inch = !inch;
 			if (inch) {
 				inch_esc = i + 1 < mf->buf->size && src[i + 1] == L'\\';
@@ -180,10 +192,35 @@ nopenat(size_t pos, wchar_t const *open, wchar_t const *close)
 		} else if ((instr || inch) && src[i] == L'\\') {
 			++i;
 			continue;
+		} else if (!inrstr
+		           && !instr
+		           && !inch
+		           && !inblkcmt
+		           && i + 1 < pos
+		           && !wcsncmp(&src[i], L"//", 2)) {
+			++i;
+			inlncmt = true;
+		} else if (inlncmt && src[i] == L'\n')
+			inlncmt = false;
+		else if (!inrstr
+		         && !instr
+		         && !inch
+		         && !inlncmt
+		         && i + 1 < pos
+		         && !wcsncmp(&src[i], L"/*", 2)) {
+			++i;
+			inblkcmt = true;
+			++inblkcmt_ncmt;
+		} else if (inblkcmt
+		           && i + 1 < pos
+		           && !wcsncmp(&src[i], L"*/", 2)) {
+			++i;
+			if (--inblkcmt_ncmt == 0)
+				inblkcmt = false;
 		}
 		
-		nopen += !inrstr && !instr && !inch && wcschr(open, src[i]);
-		nopen -= !inrstr && !instr && !inch && wcschr(close, src[i]);
+		nopen += !inrstr && !instr && !inch && !inblkcmt && !inlncmt && wcschr(open, src[i]);
+		nopen -= !inrstr && !instr && !inch && !inblkcmt && !inlncmt && wcschr(close, src[i]);
 		inch_nch += inch;
 	}
 	

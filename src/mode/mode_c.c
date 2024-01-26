@@ -83,11 +83,12 @@ bind_indent(void)
 	while (lastsigch < mf->buf->size && src[lastsigch] != L'\n')
 		++lastsigch;
 	while (lastsigch > ln
+	       && lastsigch < mf->buf->size
 	       && !iswalnum(src[lastsigch])
 	       && !wcschr(L":;", src[lastsigch])) {
 		--lastsigch;
 	}
-
+	
 	unsigned ntab = comptabs(firstch, lastsigch), nspace = 0;
 	
 	if (prevln != ln) {
@@ -101,8 +102,7 @@ bind_indent(void)
 		
 		if (src[prevlastch] == L')' && src[prevfirstch] != L'#') {
 			if (nopenat(prevlastch + 1, L'(', L')') == 0
-			    && src[firstch] != L'{'
-			    && src[firstch] != L'}') {
+			    && !wcschr(L"{}", src[firstch])) {
 				++ntab;
 			}
 		} else if (src[prevlastch] == L'\\')
@@ -130,9 +130,8 @@ bind_indent(void)
 			++off;
 		
 		if (firstch < mf->buf->size
-		    && src[firstch] != L'{'
-		    && src[firstch] != L'}'
-		    && src[prevlastch] != L';'
+		    && !wcschr(L"{}", src[firstch])
+		    && !wcschr(L";/", src[prevlastch])
 		    && off != 0
 		    && !iswspace(src[firstspc + off])
 		    && ntab == prevntab) {
@@ -177,6 +176,7 @@ comptabs(size_t firstch, size_t lastsigch)
 	
 	unsigned ntab = 0;
 	
+	bool inblkcmt = false, inlncmt = false;
 	bool instr = false, inch = false;
 	struct stk_unsigned pstk_open = stk_unsigned_create();
 	struct stk_unsigned pstk_close = stk_unsigned_create();
@@ -187,26 +187,32 @@ comptabs(size_t firstch, size_t lastsigch)
 
 		switch (wch) {
 		case L'\\':
-			if ((instr || inch) && mf->buf->conts[++i] == L'\n')
+			if ((instr || inch)
+			    && mf->buf->conts[++i] == L'\n'
+			    && !inblkcmt
+			    && !inlncmt) {
 				instr = inch = false;
+			}
 			break;
 		case L'"':
-			if (!inch)
+			if (!inch && !inblkcmt && !inlncmt)
 				instr = !instr;
 			break;
 		case L'\'':
-			if (!instr)
+			if (!instr && !inblkcmt && !inlncmt)
 				inch = !inch;
 			break;
 		case L'\n':
-			instr = inch = false;
+			if (inblkcmt)
+				break;
+			inlncmt = instr = inch = false;
 			if (pstk_open.size > prevnpause) {
 				free(stk_unsigned_pop(&pstk_open));
 				free(stk_unsigned_pop(&pstk_close));
 			}
 			break;
 		case L'{':
-			if (instr || inch)
+			if (instr || inch || inblkcmt || inlncmt)
 				break;
 			if (pstk_open.size > 0
 			    && *stk_unsigned_peek(&pstk_open) == ntab) {
@@ -215,7 +221,7 @@ comptabs(size_t firstch, size_t lastsigch)
 				++ntab;
 			break;
 		case L'}':
-			if (instr || inch || ntab == 0)
+			if (instr || inch || inblkcmt || inlncmt || ntab == 0)
 				break;
 			if (pstk_close.size > 0
 			    && *stk_unsigned_peek(&pstk_close) == ntab) {
@@ -224,10 +230,35 @@ comptabs(size_t firstch, size_t lastsigch)
 				ntab -= ntab > 0;
 			break;
 		case L':':
-			if (instr || inch)
+			if (instr || inch || inblkcmt || inlncmt)
 				break;
 			stk_unsigned_push(&pstk_open, &ntab);
 			stk_unsigned_push(&pstk_close, &ntab);
+			break;
+		case L'/':
+			if (instr
+			    || inch
+			    || inblkcmt
+			    || inlncmt
+			    || i + 1 >= firstch
+			    || !wcschr(L"/*", src[i + 1])) {
+				break;
+			}
+			switch (src[++i]) {
+			case L'/':
+				inlncmt = true;
+				break;
+			case L'*':
+				inblkcmt = true;
+				break;
+			default:
+				break;
+			}
+			break;
+		case L'*':
+			if (!inblkcmt || i + 1 >= firstch || src[i + 1] != L'/')
+				break;
+			inblkcmt = false;
 			break;
 		default:
 			break;
@@ -237,12 +268,17 @@ comptabs(size_t firstch, size_t lastsigch)
 	stk_unsigned_destroy(&pstk_open);
 	stk_unsigned_destroy(&pstk_close);
 	
-	for (size_t i = firstch; ntab > 0 && i < mf->buf->size && src[i] == L'}'; ++i)
-		--ntab;
-	
-	ntab -= ntab > 0 && src[lastsigch] == L':';
-	if (firstch != mf->buf->size)
-		ntab *= src[firstch] != L'#';
+	if (!inblkcmt && !inlncmt) {
+		size_t i = firstch;
+		while (ntab > 0 && i < mf->buf->size && src[i] == L'}') {
+			--ntab;
+			++i;
+		}
+		
+		ntab -= ntab > 0 && src[lastsigch] == L':';
+		if (firstch != mf->buf->size)
+			ntab *= src[firstch] != L'#';
+	}
 	
 	return ntab;
 }
@@ -252,43 +288,78 @@ compsmartspaces(size_t firstspc, size_t off, size_t ln, size_t firstch)
 {
 	wchar_t const *src = mf->buf->conts;
 	
+	bool inblkcmt = false, inlncmt = false;
 	bool instr = false, inch = false;
-	while (firstspc + off < ln && src[firstspc + off] != L'(' || instr || inch) {
+	while (firstspc + off < ln
+	       && (src[firstspc + off] != L'(' || instr || inch || inblkcmt || inlncmt)) {
 		wchar_t wch = src[firstspc + off];
-				
-		if (wch == L'\\' && (instr || inch)) {
+		
+		if (wch == L'\\' && (instr || inch) && !inblkcmt && !inlncmt) {
 			if (src[firstspc + ++off] == L'\n')
 				instr = inch = false;
 			continue;
-		} else if (wch == L'"' && !inch)
+		} else if (wch == L'"' && !inch && !inblkcmt && !inlncmt)
 			instr = !instr;
-		else if (wch == L'\'' && !instr)
+		else if (wch == L'\'' && !instr && !inblkcmt && !inlncmt)
 			inch = !inch;
-		else if (wch == L'\n')
-			instr = inch = false;
-				
+		else if (wch == L'\n' && !inblkcmt)
+			inlncmt = instr = inch = false;
+		else if (!wcsncmp(&src[firstspc + off], L"//", 2)
+		         && !inch
+		         && !instr
+		         && !inblkcmt) {
+			++off;
+			inlncmt = true;
+		} else if (!wcsncmp(&src[firstspc + off], L"/*", 2)
+		           && !inch
+		           && !instr
+		           && !inlncmt) {
+			++off;
+			inblkcmt = true;
+		} else if (!wcsncmp(&src[firstspc + off], L"*/", 2)
+		           && inblkcmt) {
+			++off;
+			inblkcmt = false;
+		}
+		
 		++off;
 	}
-			
+	
 	unsigned nopen = 0;
 	for (size_t i = firstspc + off; i < ln; ++i) {
-		wchar_t wch = src[firstspc + off];
-				
-		if (wch == L'\\' && (instr || inch)) {
-			if (src[firstspc + ++off] == L'\n')
+		wchar_t wch = src[i];
+		
+		if (wch == L'\\' && (instr || inch) && !inblkcmt && !inlncmt) {
+			if (src[++i] == L'\n')
 				instr = inch = false;
 			continue;
-		} else if (wch == L'"' && !inch)
+		} else if (wch == L'"' && !inch && !inblkcmt && !inlncmt)
 			instr = !instr;
-		else if (wch == L'\'' && !instr)
+		else if (wch == L'\'' && !instr && !inblkcmt && !inlncmt)
 			inch = !inch;
-		else if (wch == L'\n')
-			instr = inch = false;
-				
-		nopen += src[i] == L'(' && !instr && !inch;
-		nopen -= src[i] == L')' && !instr && !inch && nopen > 0;
+		else if (wch == L'\n' && !inblkcmt)
+			inlncmt = instr = inch = false;
+		else if (!wcsncmp(&src[i], L"//", 2)
+		         && !inch
+		         && !instr
+		         && !inblkcmt) {
+			++i;
+			inlncmt = true;
+		} else if (!wcsncmp(&src[i], L"/*", 2)
+		           && !inch
+		           && !instr
+		           && !inlncmt) {
+			++i;
+			inblkcmt = true;
+		} else if (!wcsncmp(&src[i], L"*/", 2) && inblkcmt) {
+			++i;
+			inblkcmt = false;
+		}
+		
+		nopen += src[i] == L'(' && !instr && !inch && !inblkcmt && !inlncmt;
+		nopen -= src[i] == L')' && !instr && !inch && !inblkcmt && !inlncmt && nopen > 0;
 	}
-			
+	
 	if (firstch < mf->buf->size
 	    && src[firstch] != L'{'
 	    && src[firstch] != L'}'
@@ -304,23 +375,40 @@ static long
 nopenat(size_t pos, wchar_t open, wchar_t close)
 {
 	long nopen = 0;
+	bool inblkcmt = false, inlncmt = false;
 	bool instr = false, inch = false;
 	for (size_t i = 0; i < pos; ++i) {
 		wchar_t wch = mf->buf->conts[i];
-				
-		if (wch == L'\\' && (instr || inch)) {
+		
+		if (wch == L'\\' && (instr || inch) && !inblkcmt && !inlncmt) {
 			if (mf->buf->conts[++i] == L'\n')
 				instr = inch = false;
 			continue;
-		} else if (wch == L'"' && !inch)
+		} else if (wch == L'"' && !inch && !inblkcmt && !inlncmt)
 			instr = !instr;
-		else if (wch == L'\'' && !instr)
+		else if (wch == L'\'' && !instr && !inblkcmt && !inlncmt)
 			inch = !inch;
-		else if (wch == L'\n')
-			instr = inch = false;
+		else if (wch == L'\n' && !inblkcmt)
+			inlncmt = instr = inch = false;
+		else if (!wcsncmp(&mf->buf->conts[i], L"//", 2)
+		         && !inch
+		         && !instr
+		         && !inblkcmt) {
+			++i;
+			inlncmt = true;
+		} else if (!wcsncmp(&mf->buf->conts[i], L"/*", 2)
+		           && !inch
+		           && !instr
+		           && !inlncmt) {
+			++i;
+			inblkcmt = true;
+		} else if (!wcsncmp(&mf->buf->conts[i], L"*/", 2) && inblkcmt) {
+			++i;
+			inblkcmt = false;
+		}
 
-		nopen += !instr && !inch && wch == open;
-		nopen -= !instr && !inch && wch == close;
+		nopen += !instr && !inch && !inblkcmt && !inlncmt && wch == open;
+		nopen -= !instr && !inch && !inblkcmt && !inlncmt && wch == close;
 	}
 
 	return nopen;
