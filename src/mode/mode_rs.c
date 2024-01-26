@@ -88,6 +88,7 @@ bind_indent(void)
 		    && !iswspace(src[firstch])
 		    && !wcschr(L"([{};,", src[prevlastch])
 		    && !wcschr(L")]}", src[firstch])
+		    && !wcschr(L"#", src[prevfirstch])
 		    && wcsncmp(L"//", &src[prevfirstch], 2)
 		    && wcsncmp(L"//", &src[firstch], 2)) {
 			++ntab;
