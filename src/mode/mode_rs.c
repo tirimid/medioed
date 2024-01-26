@@ -13,7 +13,7 @@
 
 static void bind_indent(void);
 static void bind_newline(void);
-static long nopenat(size_t pos, wchar_t const *open, wchar_t const *close);
+static long nopenat(size_t pos, wchar_t const *open, wchar_t const *close, bool *out_incmt);
 
 static struct frame *mf;
 
@@ -73,9 +73,12 @@ bind_indent(void)
 		++firstch;
 	}
 	
-	long ntab = nopenat(firstch, L"([{", L")]}");
+	// since `nopenat()` already processes the source textually, the comment
+	// check from there is just reused to avoid excessive calculations.
+	bool incmt;
+	long ntab = nopenat(firstch, L"([{", L")]}", &incmt);
 	
-	if (prevln != ln) {
+	if (!incmt && prevln != ln) {
 		size_t prevlastch = ln - 1;
 		while (prevlastch > prevln && iswspace(src[prevlastch]))
 			--prevlastch;
@@ -96,10 +99,17 @@ bind_indent(void)
 		}
 	}
 	
-	for (size_t i = firstch; ntab > 0 && i < mf->buf->size && wcschr(L")]}", src[i]); ++i)
-		--ntab;
-	
-	ntab = MAX(0, ntab);
+	if (!incmt) {
+		size_t i = firstch;
+		while (ntab > 0
+		       && i < mf->buf->size
+		       && wcschr(L")]}", src[i])) {
+			--ntab;
+			++i;
+		}
+		
+		ntab = MAX(0, ntab);
+	}
 	
 	// do indentation.
 	buf_erase(mf->buf, ln, firstch);
@@ -129,7 +139,7 @@ bind_newline(void)
 }
 
 static long
-nopenat(size_t pos, wchar_t const *open, wchar_t const *close)
+nopenat(size_t pos, wchar_t const *open, wchar_t const *close, bool *out_incmt)
 {
 	long nopen = 0;
 	
@@ -226,5 +236,6 @@ nopenat(size_t pos, wchar_t const *open, wchar_t const *close)
 	
 	free(cmp);
 	
+	*out_incmt = inblkcmt || inlncmt;
 	return nopen;
 }
