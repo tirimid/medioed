@@ -127,6 +127,8 @@ nopenat(size_t pos, wchar_t const *open, wchar_t const *close)
 	
 	wchar_t const *src = mf->buf->conts;
 	bool inch = false, instr = false, inrstr = false;
+	bool inch_esc = false;
+	size_t inch_nch = 0;
 	wchar_t *cmp = malloc(1);
 	unsigned cmplen = 0;
 	
@@ -155,8 +157,14 @@ nopenat(size_t pos, wchar_t const *open, wchar_t const *close)
 			inrstr = true;
 		} else if (!inrstr && !inch && src[i] == L'"')
 			instr = !instr;
-		else if (!inrstr && !instr && src[i] == L'\'')
+		else if (!inrstr && !instr && src[i] == L'\'') {
 			inch = !inch;
+			if (inch) {
+				inch_esc = i + 1 < mf->buf->size && src[i + 1] == L'\\';
+				inch_nch = 0;
+			}
+		} else if (inch && !inch_esc && inch_nch > 1)
+			inch = false;
 		else if (inrstr
 		         && i + cmplen < pos
 		         && !wcsncmp(&src[i], cmp, cmplen)) {
@@ -169,6 +177,7 @@ nopenat(size_t pos, wchar_t const *open, wchar_t const *close)
 		
 		nopen += !inrstr && !instr && !inch && wcschr(open, src[i]);
 		nopen -= !inrstr && !instr && !inch && wcschr(close, src[i]);
+		inch_nch += inch;
 	}
 	
 	free(cmp);
