@@ -7,12 +7,14 @@
 
 #include "hl/hl_c.h"
 #include "hl/hl_html.h"
+#include "hl/hl_lua.h"
 #include "hl/hl_md.h"
 #include "hl/hl_rs.h"
 #include "hl/hl_s.h"
 #include "hl/hl_sh.h"
 #include "mode/mode_c.h"
 #include "mode/mode_html.h"
+#include "mode/mode_lua.h"
 #include "mode/mode_md.h"
 #include "mode/mode_rs.h"
 #include "mode/mode_s.h"
@@ -63,6 +65,7 @@ static char const *ext_sh[] = {"sh", NULL};
 static char const *ext_rs[] = {"rs", NULL};
 static char const *ext_s[] = {"s", "S", NULL};
 static char const *ext_html[] = {"html", NULL};
+static char const *ext_lua[] = {"lua", NULL};
 
 // highlight table.
 struct highlight const conf_htab[] = {
@@ -89,6 +92,10 @@ struct highlight const conf_htab[] = {
 	{
 		.localmode = "html",
 		.find = hl_html_find,
+	},
+	{
+		.localmode = "lua",
+		.find = hl_lua_find,
 	},
 };
 size_t const conf_htab_size = ARRAYSIZE(conf_htab);
@@ -152,6 +159,13 @@ struct mode const conf_lmtab[] = {
 		.update = mode_html_update,
 		.keypress = mode_html_keypress,
 	},
+	{
+		.name = "lua",
+		.init = mode_lua_init,
+		.quit = mode_lua_quit,
+		.update = mode_lua_update,
+		.keypress = mode_lua_keypress,
+	},
 };
 size_t const conf_lmtab_size = ARRAYSIZE(conf_lmtab);
 
@@ -180,6 +194,10 @@ struct modeext const conf_metab[] = {
 	{
 		.exts = ext_html,
 		.mode = "html",
+	},
+	{
+		.exts = ext_lua,
+		.mode = "lua",
 	},
 };
 size_t const conf_metab_size = ARRAYSIZE(conf_metab);
