@@ -56,7 +56,6 @@ int const conf_bind_ncopy[] = {K_CTL('c'), K_SPC, K_META('n'), -1};
 int const conf_bind_findlit[] = {K_CTL('s'), 'l', -1};
 int const conf_bind_macbegin[] = {K_F(3), -1};
 int const conf_bind_macend[] = {K_F(4), -1};
-int const conf_bind_minicalc[] = {K_CTL('q'), K_CTL('b'), 'c', -1};
 
 // language mode extensions.
 static char const *ext_c[] = {"c", "h", NULL};

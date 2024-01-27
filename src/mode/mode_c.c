@@ -10,6 +10,8 @@
 #include "mode/mutil.h"
 #include "util.h"
 
+#define CNS_CONTINUE 1
+
 struct rdstate {
 	bool inblkcmt, inlncmt;
 	bool inch, instr;
@@ -90,7 +92,6 @@ bind_indent(void)
 		++lastsigch;
 	while (lastsigch > ln
 	       && lastsigch < mf->buf->size
-	       && !iswalnum(src[lastsigch])
 	       && !wcschr(L":'\"", src[lastsigch])) {
 		--lastsigch;
 	}
@@ -192,11 +193,17 @@ comptabs(size_t firstch, size_t lastsigch)
 	for (size_t i = 0; i < firstch; ++i) {
 		wchar_t wch = src[i];
 		
-		if (!compnextstate(0, &i, &rds))
+		if (compnextstate(0, &i, &rds) == CNS_CONTINUE)
 			continue;
-		else if (rds.instr || rds.inch || rds.inblkcmt || rds.inlncmt)
+		
+		if (rds.instr || rds.inch || rds.inblkcmt || rds.inlncmt)
 			continue;
-		else if (wch == L'{') {
+		else if (wch == L'\n') {
+			if (pstk_open.size > prevnpause) {
+				free(stk_unsigned_pop(&pstk_open));
+				free(stk_unsigned_pop(&pstk_close));
+			}
+		} else if (wch == L'{') {
 			if (pstk_open.size > 0
 			    && *stk_unsigned_peek(&pstk_open) == ntab) {
 				free(stk_unsigned_pop(&pstk_open));
@@ -242,14 +249,16 @@ compsmartspaces(size_t firstspc, size_t off, size_t ln, size_t firstch)
 	
 	while (firstspc + off < ln
 	       && (src[firstspc + off] != L'(' || rds.instr || rds.inch || rds.inblkcmt || rds.inlncmt)) {
-		compnextstate(firstspc, &off, &rds);
+		if (compnextstate(firstspc, &off, &rds) == CNS_CONTINUE)
+			continue;
 		
 		++off;
 	}
 	
 	unsigned nopen = 0;
 	for (size_t i = firstspc + off; i < ln; ++i) {
-		compnextstate(0, &i, &rds);
+		if (compnextstate(0, &i, &rds) == CNS_CONTINUE)
+			continue;
 		
 		bool in = rds.instr || rds.inch || rds.inblkcmt || rds.inlncmt;
 		nopen += src[i] == L'(' && !in;
@@ -277,7 +286,8 @@ nopenat(size_t pos, wchar_t open, wchar_t close)
 	for (size_t i = 0; i < pos; ++i) {
 		wchar_t wch = mf->buf->conts[i];
 		
-		compnextstate(0, &i, &rds);
+		if (compnextstate(0, &i, &rds) == CNS_CONTINUE)
+			continue;
 		
 		bool in = rds.instr || rds.inch || rds.inblkcmt || rds.inlncmt;
 		nopen += !in && wch == open;
@@ -299,41 +309,35 @@ compnextstate(size_t pos, size_t *off, struct rdstate *rds)
 	    && !rds->inlncmt) {
 		if (src[pos + ++*off] == L'\n')
 			rds->instr = rds->inch = false;
-		return 0;
+		return CNS_CONTINUE;
 	} else if (wch == L'"'
 	           && !rds->inch
 	           && !rds->inblkcmt
 	           && !rds->inlncmt) {
 		rds->instr = !rds->instr;
-		return 0;
 	} else if (wch == L'\''
 	           && !rds->instr
 	           && !rds->inblkcmt
 	           && !rds->inlncmt) {
 		rds->inch = !rds->inch;
-		return 0;
-	} else if (wch == L'\n' && !rds->inblkcmt) {
+	} else if (wch == L'\n' && !rds->inblkcmt)
 		rds->inlncmt = rds->instr = rds->inch = false;
-		return 0;
-	} else if (!wcsncmp(&src[pos + *off], L"//", 2)
+	else if (!wcsncmp(&src[pos + *off], L"//", 2)
 	           && !rds->inch
 	           && !rds->instr
 	           && !rds->inblkcmt) {
 		++*off;
 		rds->inlncmt = true;
-		return 0;
 	} else if (!wcsncmp(&src[pos + *off], L"/*", 2)
 	           && !rds->inch
 	           && !rds->instr
 	           && !rds->inlncmt) {
 		++*off;
 		rds->inblkcmt = true;
-		return 0;
 	} else if (!wcsncmp(&src[pos + *off], L"*/", 2) && rds->inblkcmt) {
 		++*off;
 		rds->inblkcmt = false;
-		return 0;
 	}
 	
-	return 1;
+	return 0;
 }

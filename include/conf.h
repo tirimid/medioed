@@ -89,7 +89,6 @@ extern int const conf_bind_ncopy[];
 extern int const conf_bind_findlit[];
 extern int const conf_bind_macbegin[];
 extern int const conf_bind_macend[];
-extern int const conf_bind_minicalc[];
 
 extern struct highlight const conf_htab[];
 extern size_t const conf_htab_size;
