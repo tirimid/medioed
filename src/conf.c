@@ -23,39 +23,39 @@
 
 // binds.
 int const conf_bind_quit[] = {K_CTL('x'), K_CTL('c'), -1};
-int const conf_bind_chgfwd_frame[] = {K_CTL('x'), 'b', -1};
-int const conf_bind_chgback_frame[] = {K_CTL('c'), 'b', -1};
+int const conf_bind_chg_frame_fwd[] = {K_CTL('x'), 'b', -1};
+int const conf_bind_chg_frame_back[] = {K_CTL('c'), 'b', -1};
 int const conf_bind_focus_frame[] = {K_CTL('c'), 'f', -1};
 int const conf_bind_kill_frame[] = {K_CTL('x'), 'k', -1};
 int const conf_bind_open_file[] = {K_CTL('x'), K_CTL('f'), -1};
 int const conf_bind_save_file[] = {K_CTL('x'), K_CTL('s'), -1};
-int const conf_bind_navfwd_ch[] = {K_CTL('f'), -1};
-int const conf_bind_navfwd_word[] = {K_META('f'), -1};
-int const conf_bind_navfwd_page[] = {K_CTL('v'), -1};
-int const conf_bind_navback_ch[] = {K_CTL('b'), -1};
-int const conf_bind_navback_word[] = {K_META('b'), -1};
-int const conf_bind_navback_page[] = {K_META('v'), -1};
-int const conf_bind_navdown[] = {K_CTL('n'), -1};
-int const conf_bind_navup[] = {K_CTL('p'), -1};
-int const conf_bind_navln_start[] = {K_CTL('a'), -1};
-int const conf_bind_navln_end[] = {K_CTL('e'), -1};
-int const conf_bind_navgoto[] = {K_META('g'), K_META('g'), -1};
-int const conf_bind_delfwd_ch[] = {K_CTL('d'), -1};
-int const conf_bind_delback_ch[] = {K_BACKSPC, -1};
-int const conf_bind_delback_word[] = {K_META(K_BACKSPC), -1};
-int const conf_bind_chgmode_global[] = {K_CTL('c'), K_META('g'), 'g', -1};
-int const conf_bind_chgmode_local[] = {K_CTL('c'), K_META('g'), 'l', -1};
+int const conf_bind_nav_fwd_ch[] = {K_CTL('f'), -1};
+int const conf_bind_nav_fwd_word[] = {K_META('f'), -1};
+int const conf_bind_nav_fwd_page[] = {K_CTL('v'), -1};
+int const conf_bind_nav_back_ch[] = {K_CTL('b'), -1};
+int const conf_bind_nav_back_word[] = {K_META('b'), -1};
+int const conf_bind_nav_back_page[] = {K_META('v'), -1};
+int const conf_bind_nav_down[] = {K_CTL('n'), -1};
+int const conf_bind_nav_up[] = {K_CTL('p'), -1};
+int const conf_bind_nav_ln_start[] = {K_CTL('a'), -1};
+int const conf_bind_nav_ln_end[] = {K_CTL('e'), -1};
+int const conf_bind_nav_goto[] = {K_META('g'), K_META('g'), -1};
+int const conf_bind_del_fwd_ch[] = {K_CTL('d'), -1};
+int const conf_bind_del_back_ch[] = {K_BACKSPC, -1};
+int const conf_bind_del_back_word[] = {K_META(K_BACKSPC), -1};
+int const conf_bind_chg_mode_global[] = {K_CTL('c'), K_META('g'), 'g', -1};
+int const conf_bind_chg_mode_local[] = {K_CTL('c'), K_META('g'), 'l', -1};
 int const conf_bind_create_scrap[] = {K_CTL('c'), 'n', -1};
-int const conf_bind_newline[] = {K_RET, -1};
+int const conf_bind_new_line[] = {K_RET, -1};
 int const conf_bind_focus[] = {K_CTL('l'), -1};
 int const conf_bind_kill[] = {K_CTL('k'), -1};
 int const conf_bind_paste[] = {K_CTL('y'), -1};
 int const conf_bind_undo[] = {K_CTL('x'), 'u', -1};
 int const conf_bind_copy[] = {K_CTL('c'), K_SPC, K_META('w'), -1};
 int const conf_bind_ncopy[] = {K_CTL('c'), K_SPC, K_META('n'), -1};
-int const conf_bind_findlit[] = {K_CTL('s'), 'l', -1};
-int const conf_bind_macbegin[] = {K_F(3), -1};
-int const conf_bind_macend[] = {K_F(4), -1};
+int const conf_bind_find_lit[] = {K_CTL('s'), 'l', -1};
+int const conf_bind_mac_begin[] = {K_F(3), -1};
+int const conf_bind_mac_end[] = {K_F(4), -1};
 
 // language mode extensions.
 static char const *ext_c[] = {"c", "h", NULL};
@@ -69,50 +69,50 @@ static char const *ext_lua[] = {"lua", NULL};
 // highlight table.
 struct highlight const conf_htab[] = {
 	{
-		.localmode = "c",
+		.local_mode = "c",
 		.find = hl_c_find,
 	},
 	{
-		.localmode = "md",
+		.local_mode = "md",
 		.find = hl_md_find,
 	},
 	{
-		.localmode = "sh",
+		.local_mode = "sh",
 		.find = hl_sh_find,
 	},
 	{
-		.localmode = "rs",
+		.local_mode = "rs",
 		.find = hl_rs_find,
 	},
 	{
-		.localmode = "s",
+		.local_mode = "s",
 		.find = hl_s_find,
 	},
 	{
-		.localmode = "html",
+		.local_mode = "html",
 		.find = hl_html_find,
 	},
 	{
-		.localmode = "lua",
+		.local_mode = "lua",
 		.find = hl_lua_find,
 	},
 };
-size_t const conf_htab_size = ARRAYSIZE(conf_htab);
+size_t const conf_htab_size = ARRAY_SIZE(conf_htab);
 
 // margin table.
 struct margin const conf_mtab[] = {
 	{
 		.col = 80,
 		.wch = L'|',
-		.attr = A_WHITE | A_BGOF(CONF_A_NORM),
+		.attr = A_WHITE | A_BG_OF(CONF_A_NORM),
 	},
 	{
 		.col = 110,
 		.wch = L'|',
-		.attr = A_RED | A_BGOF(CONF_A_NORM),
+		.attr = A_RED | A_BG_OF(CONF_A_NORM),
 	},
 };
-size_t const conf_mtab_size = ARRAYSIZE(conf_mtab);
+size_t const conf_mtab_size = ARRAY_SIZE(conf_mtab);
 
 // language mode table.
 struct mode const conf_lmtab[] = {
@@ -166,10 +166,10 @@ struct mode const conf_lmtab[] = {
 		.keypress = mode_lua_keypress,
 	},
 };
-size_t const conf_lmtab_size = ARRAYSIZE(conf_lmtab);
+size_t const conf_lmtab_size = ARRAY_SIZE(conf_lmtab);
 
 // mode extension table.
-struct modeext const conf_metab[] = {
+struct mode_ext const conf_metab[] = {
 	{
 		.exts = ext_c,
 		.mode = "c",
@@ -199,4 +199,4 @@ struct modeext const conf_metab[] = {
 		.mode = "lua",
 	},
 };
-size_t const conf_metab_size = ARRAYSIZE(conf_metab);
+size_t const conf_metab_size = ARRAY_SIZE(conf_metab);

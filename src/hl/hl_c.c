@@ -7,17 +7,17 @@
 #include "conf.h"
 #include "draw.h"
 
-#define A_PREPROC (A_YELLOW | A_BGOF(CONF_A_NORM))
-#define A_KEYWORD (A_MAGENTA | A_BGOF(CONF_A_NORM) | A_BRIGHT)
-#define A_COMMENT (A_RED | A_BGOF(CONF_A_NORM))
+#define A_PREPROC (A_YELLOW | A_BG_OF(CONF_A_NORM))
+#define A_KEYWORD (A_MAGENTA | A_BG_OF(CONF_A_NORM) | A_BRIGHT)
+#define A_COMMENT (A_RED | A_BG_OF(CONF_A_NORM))
 #define A_STRING (A_WHITE | A_BRED)
-#define A_FUNC (A_WHITE | A_BGOF(CONF_A_NORM) | A_BRIGHT)
-#define A_MACRO (A_MAGENTA | A_BGOF(CONF_A_NORM))
-#define A_SPECIAL (A_WHITE | A_BGOF(CONF_A_NORM) | A_DIM)
+#define A_FUNC (A_WHITE | A_BG_OF(CONF_A_NORM) | A_BRIGHT)
+#define A_MACRO (A_MAGENTA | A_BG_OF(CONF_A_NORM))
+#define A_SPECIAL (A_WHITE | A_BG_OF(CONF_A_NORM) | A_DIM)
 
 #define SPECIAL "+-()[].<>{}!~*&/%=?:|;,"
 
-enum wordtype {
+enum word_type {
 	WT_MACRO,
 	WT_FUNC,
 	WT_KEYWORD,
@@ -207,7 +207,7 @@ static int
 hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
         size_t *out_ub, uint16_t *out_a)
 {
-	enum wordtype wt = WT_MACRO;
+	enum word_type wt = WT_MACRO;
 	
 	size_t j = *i;
 	while (j < len && (src[j] == L'_' || iswalnum(src[j]))) {
@@ -225,7 +225,7 @@ hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 			wt = WT_FUNC;
 	}
 
-	for (size_t kw = 0; kw < ARRAYSIZE(keywords); ++kw) {
+	for (size_t kw = 0; kw < ARRAY_SIZE(keywords); ++kw) {
 		if (wcslen(keywords[kw]) != j - *i)
 			continue;
 		

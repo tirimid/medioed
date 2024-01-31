@@ -7,25 +7,25 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-STK_DEFIMPL(unsigned)
+STK_DEF_IMPL(unsigned)
 
 char const *
-fileext(char const *path)
+file_ext(char const *path)
 {
 	char const *ext = strrchr(path, '.');
 	return ext && ext != path ? ext + 1 : "\0";
 }
 
-int mkdirrec(char const *dir)
+int mk_dir_rec(char const *dir)
 {
 	char *wd = strdup(dir);
-	size_t wdlen = strlen(wd);
-	if (!wdlen) {
+	size_t wd_len = strlen(wd);
+	if (!wd_len) {
 		free(wd);
 		return 1;
 	}
 	
-	for (size_t i = 0, len = 0; i < wdlen; ++i) {
+	for (size_t i = 0, len = 0; i < wd_len; ++i) {
 		if (wd[i] != '/') {
 			++len;
 			continue;
@@ -58,7 +58,7 @@ int mkdirrec(char const *dir)
 }
 
 int
-mkfile(char const *path)
+mk_file(char const *path)
 {
 	struct stat s;
 	if (!stat(path, &s))
@@ -68,7 +68,7 @@ mkfile(char const *path)
 	if (strrchr(dir, '/'))
 		*(strrchr(dir, '/') + 1) = 0;
 	
-	int rc = mkdirrec(dir);
+	int rc = mk_dir_rec(dir);
 	free(dir);
 	if (rc)
 		return 1;

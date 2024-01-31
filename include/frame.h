@@ -15,20 +15,20 @@ struct frame {
 	unsigned pr, pc;
 	unsigned sr, sc;
 	struct buf *buf;
-	char *localmode;
-	size_t bufstart, csr;
-	unsigned linumw;
-	unsigned csr_wantcol;
+	char *local_mode;
+	size_t buf_start, csr;
+	unsigned linum_width;
+	unsigned csr_want_col;
 };
 
-VEC_DEFPROTO(frame)
+VEC_DEF_PROTO(frame)
 
 struct frame frame_create(wchar_t const *name, struct buf *buf);
 void frame_destroy(struct frame *f);
 void frame_draw(struct frame const *f, bool active);
 void frame_pos(struct frame const *f, size_t pos, unsigned *out_r, unsigned *out_c);
-void frame_mvcsr(struct frame *f, unsigned r, unsigned c);
-void frame_relmvcsr(struct frame *f, int dr, int dc, bool lwrap);
-void frame_compbndry(struct frame *f);
+void frame_mv_csr(struct frame *f, unsigned r, unsigned c);
+void frame_mv_csr_rel(struct frame *f, int dr, int dc, bool wrap);
+void frame_comp_boundary(struct frame *f);
 
 #endif

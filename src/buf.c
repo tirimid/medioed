@@ -12,14 +12,14 @@
 
 // adding entries past `MAXHISTSIZE` will cause the earliest existing entries to
 // be deleted in order to make space.
-#define MAXHISTSIZE 512
+#define MAX_HIST_SIZE 512
 
-VEC_DEFIMPL(bufop)
-VEC_DEFIMPL(pbuf)
+VEC_DEF_IMPL(buf_op)
+VEC_DEF_IMPL(p_buf)
 
 extern bool flag_r;
 
-static void pushhist(struct buf *b, enum bufoptype type, wchar_t const *data, size_t lb, size_t ub);
+static void push_hist(struct buf *b, enum buf_op_type type, wchar_t const *data, size_t lb, size_t ub);
 
 struct buf
 buf_create(bool writable)
@@ -29,39 +29,39 @@ buf_create(bool writable)
 		.size = 0,
 		.cap = 1,
 		.src = NULL,
-		.srctype = BST_FRESH,
+		.src_type = BST_FRESH,
 		.flags = writable * BF_WRITABLE,
-		.hist = vec_bufop_create(),
+		.hist = vec_buf_op_create(),
 	};
 }
 
 struct buf
-buf_fromfile(char const *path)
+buf_from_file(char const *path)
 {
 	FILE *fp = fopen(path, "rb");
 	if (!fp) {
-		size_t mlen = sizeof(wchar_t) * (strlen(path) + 20);
-		wchar_t *msg = malloc(mlen);
-		swprintf(msg, mlen, L"cannot read file: %s!", path);
+		size_t msg_len = sizeof(wchar_t) * (strlen(path) + 20);
+		wchar_t *msg = malloc(msg_len);
+		swprintf(msg, msg_len, L"cannot read file: %s!", path);
 		prompt_show(msg);
 		free(msg);
 		return buf_create(false);
 	}
 
 	struct buf b = buf_create(true);
-	b.flags = BF_WRITABLE | BF_NOHIST;
-	b.srctype = BST_FILE;
+	b.flags = BF_WRITABLE | BF_NO_HIST;
+	b.src_type = BST_FILE;
 	b.src = strdup(path);
 	
 	errno = 0;
 	wint_t wch;
 	while ((wch = fgetwc(fp)) != WEOF)
-		buf_writewch(&b, b.size, wch);
+		buf_write_wch(&b, b.size, wch);
 	
 	if (errno == EILSEQ) {
-		size_t mlen = sizeof(wchar_t) * (strlen(path) + 31);
-		wchar_t *msg = malloc(mlen);
-		swprintf(msg, mlen, L"file contains invalid UTF-8: %s!", path);
+		size_t msg_len = sizeof(wchar_t) * (strlen(path) + 31);
+		wchar_t *msg = malloc(msg_len);
+		swprintf(msg, msg_len, L"file contains invalid UTF-8: %s!", path);
 		prompt_show(msg);
 		free(msg);
 	}
@@ -70,9 +70,9 @@ buf_fromfile(char const *path)
 	
 	int ea = euidaccess(path, W_OK);
 	if (ea != 0 || flag_r) {
-		size_t mlen = sizeof(wchar_t) * (strlen(path) + 24);
-		wchar_t *msg = malloc(mlen);
-		swprintf(msg, mlen, L"opening file readonly: %s", path);
+		size_t msg_len = sizeof(wchar_t) * (strlen(path) + 24);
+		wchar_t *msg = malloc(msg_len);
+		swprintf(msg, msg_len, L"opening file readonly: %s", path);
 		prompt_show(msg);
 		free(msg);
 	}
@@ -83,12 +83,12 @@ buf_fromfile(char const *path)
 }
 
 struct buf
-buf_fromwstr(wchar_t const *wstr, bool writable)
+buf_from_wstr(wchar_t const *wstr, bool writable)
 {
 	struct buf b = buf_create(true);
 
-	b.flags = BF_WRITABLE | BF_NOHIST;
-	buf_writewstr(&b, 0, wstr);
+	b.flags = BF_WRITABLE | BF_NO_HIST;
+	buf_write_wstr(&b, 0, wstr);
 	b.flags = writable * BF_WRITABLE;
 
 	return b;
@@ -99,7 +99,7 @@ buf_save(struct buf *b)
 {
 	// it doesnt make sense to save to anything other than a file and since
 	// no file is specified as the buffer source, nothing is done.
-	if (b->srctype != BST_FILE)
+	if (b->src_type != BST_FILE)
 		return 1;
 
 	// no point saving an unchanged file into itself.
@@ -130,7 +130,7 @@ buf_undo(struct buf *b)
 		return 1;
 
 	while (b->hist.size > 0 && b->hist.data[b->hist.size - 1].type == BOT_BRK)
-		vec_bufop_rm(&b->hist, b->hist.size - 1);
+		vec_buf_op_rm(&b->hist, b->hist.size - 1);
 
 	// this is not a failure, so a 0 is returned.
 	// having nothing happen upon undoing a non-action is the expected
@@ -138,23 +138,23 @@ buf_undo(struct buf *b)
 	if (b->hist.size == 0)
 		return 0;
 
-	struct bufop const *bo = &b->hist.data[b->hist.size - 1];
+	struct buf_op const *bo = &b->hist.data[b->hist.size - 1];
 	switch (bo->type) {
 	case BOT_WRITE:
-		b->flags |= BF_NOHIST;
+		b->flags |= BF_NO_HIST;
 		buf_erase(b, bo->lb, bo->ub);
-		b->flags &= ~BF_NOHIST;
+		b->flags &= ~BF_NO_HIST;
 		break;
 	case BOT_ERASE:
-		b->flags |= BF_NOHIST;
-		buf_writewstr(b, bo->lb, bo->data);
-		b->flags &= ~BF_NOHIST;
+		b->flags |= BF_NO_HIST;
+		buf_write_wstr(b, bo->lb, bo->data);
+		b->flags &= ~BF_NO_HIST;
 		free(bo->data);
 		break;
 	}
 
-	vec_bufop_rm(&b->hist, b->hist.size - 1);
-	buf_pushhistbrk(b);
+	vec_buf_op_rm(&b->hist, b->hist.size - 1);
+	buf_push_hist_brk(b);
 	return 0;
 }
 
@@ -170,11 +170,11 @@ buf_destroy(struct buf *b)
 		if (b->hist.data[i].data)
 			free(b->hist.data[i].data);
 	}
-	vec_bufop_destroy(&b->hist);
+	vec_buf_op_destroy(&b->hist);
 }
 
 void
-buf_writewch(struct buf *b, size_t ind, wchar_t wch)
+buf_write_wch(struct buf *b, size_t ind, wchar_t wch)
 {
 	if (!(b->flags & BF_WRITABLE))
 		return;
@@ -188,11 +188,11 @@ buf_writewch(struct buf *b, size_t ind, wchar_t wch)
 	b->conts[ind] = wch;
 	++b->size;
 	b->flags |= BF_MODIFIED;
-	pushhist(b, BOT_WRITE, NULL, ind, ind + 1);
+	push_hist(b, BOT_WRITE, NULL, ind, ind + 1);
 }
 
 void
-buf_writewstr(struct buf *b, size_t ind, wchar_t const *wstr)
+buf_write_wstr(struct buf *b, size_t ind, wchar_t const *wstr)
 {
 	if (!(b->flags & BF_WRITABLE))
 		return;
@@ -214,7 +214,7 @@ buf_writewstr(struct buf *b, size_t ind, wchar_t const *wstr)
 	memcpy(b->conts + ind, wstr, sizeof(wchar_t) * len);
 	b->size += len;
 	b->flags |= BF_MODIFIED;
-	pushhist(b, BOT_WRITE, NULL, ind, ind + len);
+	push_hist(b, BOT_WRITE, NULL, ind, ind + len);
 }
 
 void
@@ -223,17 +223,17 @@ buf_erase(struct buf *b, size_t lb, size_t ub)
 	if (!(b->flags & BF_WRITABLE))
 		return;
 
-	pushhist(b, BOT_ERASE, b->conts + lb, lb, ub);
+	push_hist(b, BOT_ERASE, b->conts + lb, lb, ub);
 	memmove(b->conts + lb, b->conts + ub, sizeof(wchar_t) * (b->size - ub));
 	b->size -= ub - lb;
 	b->flags |= BF_MODIFIED;
 }
 
 void
-buf_pushhistbrk(struct buf *b)
+buf_push_hist_brk(struct buf *b)
 {
 	if (b->hist.size > 0)
-		pushhist(b, BOT_BRK, NULL, 0, 1);
+		push_hist(b, BOT_BRK, NULL, 0, 1);
 }
 
 void
@@ -251,35 +251,35 @@ buf_pos(struct buf const *b, size_t pos, unsigned *out_r, unsigned *out_c)
 }
 
 static void
-pushhist(struct buf *b, enum bufoptype type, wchar_t const *data, size_t lb,
-         size_t ub)
+push_hist(struct buf *b, enum buf_op_type type, wchar_t const *data, size_t lb,
+          size_t ub)
 {
-	if (b->flags & BF_NOHIST)
+	if (b->flags & BF_NO_HIST)
 		return;
 
 	if (lb >= ub)
 		return;
 	
-	while (b->hist.size >= MAXHISTSIZE) {
+	while (b->hist.size >= MAX_HIST_SIZE) {
 		if (b->hist.data[0].data)
 			free(b->hist.data[0].data);
-		vec_bufop_rm(&b->hist, 0);
+		vec_buf_op_rm(&b->hist, 0);
 	}
 
-	struct bufop *prev = b->hist.size > 0 ? &b->hist.data[b->hist.size - 1] : NULL;
+	struct buf_op *prev = b->hist.size > 0 ? &b->hist.data[b->hist.size - 1] : NULL;
 
 	switch (type) {
 	case BOT_WRITE:
 		if (prev && prev->type == BOT_WRITE && lb == prev->ub)
 			prev->ub = ub;
 		else {
-			struct bufop new = {
+			struct buf_op new = {
 				.type = BOT_WRITE,
 				.data = NULL,
 				.lb = lb,
 				.ub = ub,
 			};
-			vec_bufop_add(&b->hist, &new);
+			vec_buf_op_add(&b->hist, &new);
 		}
 		break;
 	case BOT_ERASE:
@@ -293,7 +293,7 @@ pushhist(struct buf *b, enum bufoptype type, wchar_t const *data, size_t lb,
 			prev->data[prev->ub - lb] = 0;
 			prev->lb = lb;
 		} else {
-			struct bufop new = {
+			struct buf_op new = {
 				.type = BOT_ERASE,
 				.data = malloc(sizeof(wchar_t) * (ub - lb + 1)),
 				.lb = lb,
@@ -301,17 +301,17 @@ pushhist(struct buf *b, enum bufoptype type, wchar_t const *data, size_t lb,
 			};
 			memcpy(new.data, data, sizeof(wchar_t) * (ub - lb));
 			new.data[ub - lb] = 0;
-			vec_bufop_add(&b->hist, &new);
+			vec_buf_op_add(&b->hist, &new);
 		}
 		break;
 	case BOT_BRK: {
-		struct bufop new = {
+		struct buf_op new = {
 			.type = BOT_BRK,
 			.data = NULL,
 			.lb = 0,
 			.ub = 0,
 		};
-		vec_bufop_add(&b->hist, &new);
+		vec_buf_op_add(&b->hist, &new);
 		break;
 	}
 	}

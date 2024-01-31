@@ -15,6 +15,6 @@ struct mode {
 struct mode const *mode_get(void);
 void mode_set(char const *name, struct frame *f);
 void mode_update(void);
-void mode_keyupdate(wint_t k);
+void mode_key_update(wint_t k);
 
 #endif

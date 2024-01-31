@@ -7,17 +7,17 @@
 #include "draw.h"
 #include "util.h"
 
-#define A_SPECIAL (A_WHITE | A_BGOF(CONF_A_NORM) | A_DIM)
-#define A_COMMENT (A_RED | A_BGOF(CONF_A_NORM))
+#define A_SPECIAL (A_WHITE | A_BG_OF(CONF_A_NORM) | A_DIM)
+#define A_COMMENT (A_RED | A_BG_OF(CONF_A_NORM))
 #define A_STRING (A_WHITE | A_BRED)
-#define A_CONST (A_MAGENTA | A_BGOF(CONF_A_NORM))
-#define A_TYPE (A_MAGENTA | A_BGOF(CONF_A_NORM))
-#define A_FUNC (A_WHITE | A_BGOF(CONF_A_NORM) | A_BRIGHT)
-#define A_KEYWORD (A_MAGENTA | A_BGOF(CONF_A_NORM) | A_BRIGHT)
+#define A_CONST (A_MAGENTA | A_BG_OF(CONF_A_NORM))
+#define A_TYPE (A_MAGENTA | A_BG_OF(CONF_A_NORM))
+#define A_FUNC (A_WHITE | A_BG_OF(CONF_A_NORM) | A_BRIGHT)
+#define A_KEYWORD (A_MAGENTA | A_BG_OF(CONF_A_NORM) | A_BRIGHT)
 
 #define SPECIAL "!=%&*+,->./:;<@^|?#$(){}[]"
 
-enum wordtype {
+enum word_type {
 	WT_CONST,
 	WT_TYPE,
 	WT_FUNC,
@@ -28,8 +28,8 @@ enum wordtype {
 static int hl_string(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
 static int hl_rstring(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
 static int hl_quote(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_lcomment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_bcomment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
+static int hl_ln_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
+static int hl_blk_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
 static int hl_special(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
 static int hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
 
@@ -97,7 +97,7 @@ hl_rs_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 				return 0;
 		} else if (i + 1 < len
 		           && src[i] == L'r'
-		           && (src[i + 1] == L'"' || src[i + 1] == L'#')) {
+		           && wcschr(L"\"#", src[i + 1])) {
 			if (!hl_rstring(src, len, &i, out_lb, out_ub, out_a))
 				return 0;
 		} else if (src[i] == L'\'') {
@@ -105,14 +105,14 @@ hl_rs_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 				return 0;
 		} else if (i + 1 < len
 		           && src[i] == L'/'
-		           && (src[i + 1] == L'/' || src[i + 1] == L'*')) {
+		           && wcschr(L"/*", src[i + 1])) {
 			switch (src[i + 1]) {
 			case L'/':
-				if (!hl_lcomment(src, len, &i, out_lb, out_ub, out_a))
+				if (!hl_ln_comment(src, len, &i, out_lb, out_ub, out_a))
 					return 0;
 				break;
 			case L'*':
-				if (!hl_bcomment(src, len, &i, out_lb, out_ub, out_a))
+				if (!hl_blk_comment(src, len, &i, out_lb, out_ub, out_a))
 					return 0;
 				break;
 			default:
@@ -208,8 +208,8 @@ hl_quote(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 }
 
 static int
-hl_lcomment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-            size_t *out_ub, uint16_t *out_a)
+hl_ln_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
+              size_t *out_ub, uint16_t *out_a)
 {
 	size_t j = *i + 2;
 	while (j < len && src[j] != L'\n')
@@ -223,8 +223,8 @@ hl_lcomment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 }
 
 static int
-hl_bcomment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-            size_t *out_ub, uint16_t *out_a)
+hl_blk_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
+               size_t *out_ub, uint16_t *out_a)
 {
 	unsigned nopen = 1;
 	size_t j = *i + 2;
@@ -270,7 +270,7 @@ static int
 hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
         size_t *out_ub, uint16_t *out_a)
 {
-	enum wordtype wt = WT_BASIC;
+	enum word_type wt = WT_BASIC;
 
 	size_t j = *i;
 	unsigned nunder = 0, nlower = 0, nupper = 0;
@@ -321,7 +321,7 @@ hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 			wt = WT_FUNC;
 	}
 
-	for (size_t kw = 0; kw < ARRAYSIZE(keywords); ++kw) {
+	for (size_t kw = 0; kw < ARRAY_SIZE(keywords); ++kw) {
 		if (wcslen(keywords[kw]) != j - *i)
 			continue;
 		

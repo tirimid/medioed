@@ -8,30 +8,30 @@
 #include "conf.h"
 #include "keybd.h"
 
-static void bind_popen_pn(void);
-static void bind_popen_bk(void);
-static void bind_popen_bc(void);
-static void bind_popen_ag(void);
-static void bind_pclose_pn(void);
-static void bind_pclose_bk(void);
-static void bind_pclose_bc(void);
-static void bind_pclose_ag(void);
+static void bind_pair_open_pn(void);
+static void bind_pair_open_bk(void);
+static void bind_pair_open_bc(void);
+static void bind_pair_open_ag(void);
+static void bind_pair_close_pn(void);
+static void bind_pair_close_bk(void);
+static void bind_pair_close_bc(void);
+static void bind_pair_close_ag(void);
 static void bind_pair_sq(void);
 static void bind_pair_dq(void);
-static void bind_delback_ch(void);
+static void bind_del_back_ch(void);
 
 static struct frame *mf;
 static bool opt_base = false, opt_pairing = false;
-static unsigned long pairflags = 0;
+static unsigned long pair_flags = 0;
 
-static int mu_bind_popen_pn[] = {'(', -1};
-static int mu_bind_popen_bk[] = {'[', -1};
-static int mu_bind_popen_bc[] = {'{', -1};
-static int mu_bind_popen_ag[] = {'<', -1};
-static int mu_bind_pclose_pn[] = {')', -1};
-static int mu_bind_pclose_bk[] = {']', -1};
-static int mu_bind_pclose_bc[] = {'}', -1};
-static int mu_bind_pclose_ag[] = {'>', -1};
+static int mu_bind_pair_open_pn[] = {'(', -1};
+static int mu_bind_pair_open_bk[] = {'[', -1};
+static int mu_bind_pair_open_bc[] = {'{', -1};
+static int mu_bind_pair_open_ag[] = {'<', -1};
+static int mu_bind_pair_close_pn[] = {')', -1};
+static int mu_bind_pair_close_bk[] = {']', -1};
+static int mu_bind_pair_close_bc[] = {'}', -1};
+static int mu_bind_pair_close_ag[] = {'>', -1};
 static int mu_bind_pair_sq[] = {'\'', -1};
 static int mu_bind_pair_dq[] = {'"', -1};
 
@@ -44,43 +44,43 @@ mu_init(struct frame *f)
 }
 
 void
-mu_setbase(void)
+mu_set_base(void)
 {
 	if (opt_base)
 		return;
 	
 	opt_base = true;
 	
-	keybd_bind(conf_bind_delback_ch, bind_delback_ch);
+	keybd_bind(conf_bind_del_back_ch, bind_del_back_ch);
 }
 
 void
-mu_setpairing(unsigned long flags)
+mu_set_pairing(unsigned long flags)
 {
 	if (opt_pairing)
 		return;
 	
 	opt_pairing = true;
-	pairflags = flags;
+	pair_flags = flags;
 	
 	if (flags & PF_PAREN) {
-		keybd_bind(mu_bind_popen_pn, bind_popen_pn);
-		keybd_bind(mu_bind_pclose_pn, bind_pclose_pn);
+		keybd_bind(mu_bind_pair_open_pn, bind_pair_open_pn);
+		keybd_bind(mu_bind_pair_close_pn, bind_pair_close_pn);
 	}
 	
 	if (flags & PF_BRACKET) {
-		keybd_bind(mu_bind_popen_bk, bind_popen_bk);
-		keybd_bind(mu_bind_pclose_bk, bind_pclose_bk);
+		keybd_bind(mu_bind_pair_open_bk, bind_pair_open_bk);
+		keybd_bind(mu_bind_pair_close_bk, bind_pair_close_bk);
 	}
 	
 	if (flags & PF_BRACE) {
-		keybd_bind(mu_bind_popen_bc, bind_popen_bc);
-		keybd_bind(mu_bind_pclose_bc, bind_pclose_bc);
+		keybd_bind(mu_bind_pair_open_bc, bind_pair_open_bc);
+		keybd_bind(mu_bind_pair_close_bc, bind_pair_close_bc);
 	}
 	
 	if (flags & PF_ANGLE) {
-		keybd_bind(mu_bind_popen_ag, bind_popen_ag);
-		keybd_bind(mu_bind_pclose_ag, bind_pclose_ag);
+		keybd_bind(mu_bind_pair_open_ag, bind_pair_open_ag);
+		keybd_bind(mu_bind_pair_close_ag, bind_pair_close_ag);
 	}
 	
 	if (flags & PF_SQUOTE)
@@ -93,101 +93,101 @@ mu_setpairing(unsigned long flags)
 }
 
 static void
-bind_popen_pn(void)
+bind_pair_open_pn(void)
 {
-	buf_writewstr(mf->buf, mf->csr, L"()");
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+	buf_write_wstr(mf->buf, mf->csr, L"()");
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
-bind_popen_bk(void)
+bind_pair_open_bk(void)
 {
-	buf_writewstr(mf->buf, mf->csr, L"[]");
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+	buf_write_wstr(mf->buf, mf->csr, L"[]");
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
-bind_popen_bc(void)
+bind_pair_open_bc(void)
 {
-	buf_writewstr(mf->buf, mf->csr, L"{}");
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+	buf_write_wstr(mf->buf, mf->csr, L"{}");
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
-bind_popen_ag(void)
+bind_pair_open_ag(void)
 {
-	buf_writewstr(mf->buf, mf->csr, L"<>");
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+	buf_write_wstr(mf->buf, mf->csr, L"<>");
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
-bind_pclose_pn(void)
+bind_pair_close_pn(void)
 {
 	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L')')
-		buf_writewch(mf->buf, mf->csr, L')');
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+		buf_write_wch(mf->buf, mf->csr, L')');
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
-bind_pclose_bk(void)
+bind_pair_close_bk(void)
 {
 	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L']')
-		buf_writewch(mf->buf, mf->csr, L']');
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+		buf_write_wch(mf->buf, mf->csr, L']');
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
-bind_pclose_bc(void)
+bind_pair_close_bc(void)
 {
 	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L'}')
-		buf_writewch(mf->buf, mf->csr, L'}');
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+		buf_write_wch(mf->buf, mf->csr, L'}');
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
-bind_pclose_ag(void)
+bind_pair_close_ag(void)
 {
 	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L'>')
-		buf_writewch(mf->buf, mf->csr, L'>');
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+		buf_write_wch(mf->buf, mf->csr, L'>');
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
 bind_pair_sq(void)
 {
-	buf_writewstr(mf->buf, mf->csr, L"''");
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+	buf_write_wstr(mf->buf, mf->csr, L"''");
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
 bind_pair_dq(void)
 {
-	buf_writewstr(mf->buf, mf->csr, L"\"\"");
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+	buf_write_wstr(mf->buf, mf->csr, L"\"\"");
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
 
 static void
-bind_delback_ch(void)
+bind_del_back_ch(void)
 {
 	if (mf->csr > 0 && mf->buf->flags & BF_WRITABLE) {
-		frame_relmvcsr(mf, 0, -1, true);
+		frame_mv_csr_rel(mf, 0, -1, true);
 		
 		size_t nch = 1;
 		
 		if (opt_pairing
 		    && mf->buf->size > 1
 		    && mf->csr < mf->buf->size - 1) {
-			if (!wcsncmp(mf->buf->conts + mf->csr, L"()", 2) && (pairflags & PF_PAREN)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"[]", 2) && (pairflags & PF_BRACKET)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"{}", 2) && (pairflags & PF_BRACE)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"<>", 2) && (pairflags & PF_ANGLE)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"\"\"", 2) && (pairflags & PF_DQUOTE)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"''", 2) && (pairflags && PF_SQUOTE)) {
+			if (!wcsncmp(mf->buf->conts + mf->csr, L"()", 2) && (pair_flags & PF_PAREN)
+			    || !wcsncmp(mf->buf->conts + mf->csr, L"[]", 2) && (pair_flags & PF_BRACKET)
+			    || !wcsncmp(mf->buf->conts + mf->csr, L"{}", 2) && (pair_flags & PF_BRACE)
+			    || !wcsncmp(mf->buf->conts + mf->csr, L"<>", 2) && (pair_flags & PF_ANGLE)
+			    || !wcsncmp(mf->buf->conts + mf->csr, L"\"\"", 2) && (pair_flags & PF_DQUOTE)
+			    || !wcsncmp(mf->buf->conts + mf->csr, L"''", 2) && (pair_flags && PF_SQUOTE)) {
 				nch = 2;
 			}
 		}
-			
+		
 		buf_erase(mf->buf, mf->csr, mf->csr + nch);
-		frame_compbndry(mf);
+		frame_comp_boundary(mf);
 	}
 }

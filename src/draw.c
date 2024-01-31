@@ -12,12 +12,12 @@
 
 struct cell {
 	wchar_t wch;
-	uint16_t a;
+	uint16_t attr;
 };
 
 static void sigwinch_handler(int arg);
 
-static uint8_t const attrtab[] = {
+static uint8_t const attr_tab[] = {
 	// text attributes.
 	0,
 	1,
@@ -85,26 +85,27 @@ draw_clear(wchar_t wch, uint16_t a)
 }
 
 void
-draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch, uint16_t a)
+draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch,
+          uint16_t a)
 {
 	for (size_t i = pr; i < pr + sr; ++i) {
 		for (size_t j = pc; j < pc + sc; ++j) {
 			cells[i][j] = (struct cell){
 				.wch = wch,
-				.a = a,
+				.attr = a,
 			};
 		}
 	}
 }
 
 void
-draw_putwch(unsigned r, unsigned c, wchar_t wch)
+draw_put_wch(unsigned r, unsigned c, wchar_t wch)
 {
 	cells[r][c].wch = wch;
 }
 
 void
-draw_putwstr(unsigned r, unsigned c, wchar_t const *wstr)
+draw_put_wstr(unsigned r, unsigned c, wchar_t const *wstr)
 {
 	for (wchar_t const *wc = wstr; *wc; ++wc) {
 		if (*wc != L'\n')
@@ -121,13 +122,13 @@ draw_putwstr(unsigned r, unsigned c, wchar_t const *wstr)
 }
 
 void
-draw_putattr(unsigned r, unsigned c, uint16_t a, unsigned n)
+draw_put_attr(unsigned r, unsigned c, uint16_t a, unsigned n)
 {
 	if (r >= ws.ws_row || c >= ws.ws_col)
 		return;
 	
 	for (unsigned i = 0; i < n; ++i) {
-		cells[r][c].a = a;
+		cells[r][c].attr = a;
 
 		if (++c >= ws.ws_col) {
 			c = 0;
@@ -142,28 +143,30 @@ draw_putattr(unsigned r, unsigned c, uint16_t a, unsigned n)
 void
 draw_refresh(void)
 {
-	uint8_t prevattr = 0xff, prevfg = 0xff, prevbg = 0xff;
+	uint8_t prev_attr = 0xff, prev_fg = 0xff, prev_bg = 0xff;
 
 	fwprintf(stdout, L"\033[H");
 	
 	for (size_t i = 0; i < ws.ws_row; ++i) {
 		for (size_t j = 0; j < ws.ws_col; ++j) {
-			uint8_t curattr = A_TAOF(cells[i][j].a);
-			uint8_t curfg = A_FGOF(cells[i][j].a) >> 3;
-			uint8_t curbg = A_BGOF(cells[i][j].a) >> 8;
+			uint8_t cur_attr = A_NC_ATTR_OF(cells[i][j].attr);
+			uint8_t cur_fg = A_FG_OF(cells[i][j].attr) >> 3;
+			uint8_t cur_bg = A_BG_OF(cells[i][j].attr) >> 8;
 			
-			if (curattr != prevattr
-			    || curfg != prevfg
-			    || curbg != prevbg) {
-				wprintf(L"\033[0m\033[%u;%u;%um", attrtab[curattr],
-				        attrtab[curfg + 6], attrtab[curbg + 14]);
+			if (cur_attr != prev_attr
+			    || cur_fg != prev_fg
+			    || cur_bg != prev_bg) {
+				wprintf(L"\033[0m\033[%u;%u;%um",
+				        attr_tab[cur_attr],
+				        attr_tab[cur_fg + 6],
+				        attr_tab[cur_bg + 14]);
 			}
 			
 			fputwc(cells[i][j].wch, stdout);
 
-			prevattr = curattr;
-			prevfg = curfg;
-			prevbg = curbg;
+			prev_attr = cur_attr;
+			prev_fg = cur_fg;
+			prev_bg = cur_bg;
 		}
 	}
 }
@@ -171,17 +174,17 @@ draw_refresh(void)
 static void
 sigwinch_handler(int arg)
 {
-	struct winsize oldws = ws;
+	struct winsize old_ws = ws;
 	ioctl(0, TIOCGWINSZ, &ws);
 
-	if (ws.ws_row > oldws.ws_row) {
+	if (ws.ws_row > old_ws.ws_row) {
 		cells = realloc(cells, sizeof(struct cell *) * ws.ws_row);
-		for (size_t i = oldws.ws_row; i < ws.ws_row; ++i)
+		for (size_t i = old_ws.ws_row; i < ws.ws_row; ++i)
 			cells[i] = malloc(sizeof(struct cell) * ws.ws_col);
 	}
 
-	if (ws.ws_col > oldws.ws_col) {
-		for (size_t i = 0; i < oldws.ws_row; ++i)
+	if (ws.ws_col > old_ws.ws_col) {
+		for (size_t i = 0; i < old_ws.ws_row; ++i)
 			cells[i] = realloc(cells[i], sizeof(struct cell) * ws.ws_col);
 	}
 }

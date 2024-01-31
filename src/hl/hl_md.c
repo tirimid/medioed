@@ -5,19 +5,19 @@
 #include "conf.h"
 #include "draw.h"
 
-#define A_CODEBLOCK (A_YELLOW | A_BGOF(CONF_A_NORM))
-#define A_HEADING (A_MAGENTA | A_BGOF(CONF_A_NORM) | A_BRIGHT)
-#define A_BLOCK (A_WHITE | A_BGOF(CONF_A_NORM) | A_DIM)
-#define A_ULIST (A_MAGENTA | A_BGOF(CONF_A_NORM))
-#define A_OLIST (A_MAGENTA | A_BGOF(CONF_A_NORM))
+#define A_CODE_BLOCK (A_YELLOW | A_BG_OF(CONF_A_NORM))
+#define A_HEADING (A_MAGENTA | A_BG_OF(CONF_A_NORM) | A_BRIGHT)
+#define A_BLOCK (A_WHITE | A_BG_OF(CONF_A_NORM) | A_DIM)
+#define A_ULIST (A_MAGENTA | A_BG_OF(CONF_A_NORM))
+#define A_OLIST (A_MAGENTA | A_BG_OF(CONF_A_NORM))
 
-static int hl_codeblock(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
+static int hl_code_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
 static int hl_heading(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
 static int hl_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
 static int hl_ulist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
 static int hl_olist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static size_t firstlnch(wchar_t const *src, size_t len, size_t pos);
-static size_t paraend(wchar_t const *src, size_t len, size_t pos);
+static size_t first_ln_ch(wchar_t const *src, size_t len, size_t pos);
+static size_t para_end(wchar_t const *src, size_t len, size_t pos);
 
 int
 hl_md_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
@@ -31,7 +31,7 @@ hl_md_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 			if (!hl_block(src, len, &i, out_lb, out_ub, out_a))
 				return 0;
 		} else if (i + 2 < len && !wcsncmp(&src[i], L"```", 3)) {
-			if (!hl_codeblock(src, len, &i, out_lb, out_ub, out_a))
+			if (!hl_code_block(src, len, &i, out_lb, out_ub, out_a))
 				return 0;
 		} else if (src[i] == L'*' || src[i] == L'-') {
 			if (!hl_ulist(src, len, &i, out_lb, out_ub, out_a))
@@ -49,10 +49,10 @@ hl_md_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 }
 
 static int
-hl_codeblock(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-             size_t *out_ub, uint16_t *out_a)
+hl_code_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
+              size_t *out_ub, uint16_t *out_a)
 {
-	if (firstlnch(src, len, *i) != *i)
+	if (first_ln_ch(src, len, *i) != *i)
 		return 1;
 	
 	for (size_t j = *i + 3; j + 2 < len; ++j) {
@@ -60,7 +60,7 @@ hl_codeblock(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 			++j;
 			continue;
 		} else if (!wcsncmp(&src[j], L"```", 3)) {
-			if (firstlnch(src, len, j) != j)
+			if (first_ln_ch(src, len, j) != j)
 				continue;
 			
 			for (size_t k = j + 3; k < len && src[k] != L'\n'; ++k) {
@@ -70,7 +70,7 @@ hl_codeblock(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 			
 			*out_lb = *i;
 			*out_ub = j + 3;
-			*out_a = A_CODEBLOCK;
+			*out_a = A_CODE_BLOCK;
 			
 			return 0;
 		}
@@ -84,7 +84,7 @@ static int
 hl_heading(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
            size_t *out_ub, uint16_t *out_a)
 {
-	if (firstlnch(src, len, *i) != *i)
+	if (first_ln_ch(src, len, *i) != *i)
 		return 1;
 
 	size_t j = *i + 1;
@@ -107,7 +107,7 @@ static int
 hl_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
          size_t *out_ub, uint16_t *out_a)
 {
-	if (firstlnch(src, len, *i) != *i)
+	if (first_ln_ch(src, len, *i) != *i)
 		return 1;
 	
 	size_t j = *i + 1;
@@ -117,7 +117,7 @@ hl_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 		return 1;
 	
 	*out_lb = *i;
-	*out_ub = paraend(src, len, j);
+	*out_ub = para_end(src, len, j);
 	*out_a = A_BLOCK;
 	
 	return 0;
@@ -127,7 +127,7 @@ static int
 hl_ulist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
          size_t *out_ub, uint16_t *out_a)
 {
-	if (firstlnch(src, len, *i) != *i)
+	if (first_ln_ch(src, len, *i) != *i)
 		return 1;
 	
 	size_t j = *i + 1;
@@ -137,7 +137,7 @@ hl_ulist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 		return 1;
 	
 	*out_lb = *i;
-	*out_ub = paraend(src, len, j);
+	*out_ub = para_end(src, len, j);
 	*out_a = A_ULIST;
 	
 	return 0;
@@ -147,7 +147,7 @@ static int
 hl_olist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
          size_t *out_ub, uint16_t *out_a)
 {
-	if (firstlnch(src, len, *i) != *i)
+	if (first_ln_ch(src, len, *i) != *i)
 		return 1;
 
 	size_t j = *i + 1;
@@ -161,14 +161,14 @@ hl_olist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 	}
 
 	*out_lb = *i;
-	*out_ub = paraend(src, len, j + 1);
+	*out_ub = para_end(src, len, j + 1);
 	*out_a = A_OLIST;
 	
 	return 0;
 }
 
 static size_t
-firstlnch(wchar_t const *src, size_t len, size_t pos)
+first_ln_ch(wchar_t const *src, size_t len, size_t pos)
 {
 	size_t ln = pos;
 	while (ln > 0 && src[ln] != L'\n')
@@ -182,7 +182,7 @@ firstlnch(wchar_t const *src, size_t len, size_t pos)
 }
 
 static size_t
-paraend(wchar_t const *src, size_t len, size_t pos)
+para_end(wchar_t const *src, size_t len, size_t pos)
 {
 	size_t i = pos;
 	

@@ -8,55 +8,55 @@
 
 #include "util.h"
 
-typedef struct buf *pbuf;
-typedef struct bufop bufop;
+typedef struct buf *p_buf;
+typedef struct buf_op buf_op;
 
-enum bufsrctype {
+enum buf_src_type {
 	BST_FRESH = 0,
 	BST_FILE,
 };
 
-enum bufflag {
+enum buf_flag {
 	BF_WRITABLE = 0x1,
 	BF_MODIFIED = 0x2,
-	BF_NOHIST = 0x4,
+	BF_NO_HIST = 0x4,
 };
 
-enum bufoptype {
+enum buf_op_type {
 	BOT_WRITE = 0,
 	BOT_ERASE,
 	BOT_BRK,
 };
 
-struct bufop {
+struct buf_op {
 	wchar_t *data;
 	size_t lb, ub;
 	unsigned char type;
 };
 
-VEC_DEFPROTO(bufop)
+VEC_DEF_PROTO(buf_op)
 
 struct buf {
 	wchar_t *conts;
 	size_t size, cap;
 	void *src;
-	unsigned char srctype;
+	unsigned char src_type;
 	uint8_t flags;
-	struct vec_bufop hist;
+	struct vec_buf_op hist;
 };
 
-VEC_DEFPROTO(pbuf)
+VEC_DEF_PROTO(p_buf)
 
 struct buf buf_create(bool writable);
-struct buf buf_fromfile(char const *path);
-struct buf buf_fromwstr(wchar_t const *wstr, bool writable);
+struct buf buf_from_file(char const *path);
+struct buf buf_from_wstr(wchar_t const *wstr, bool writable);
 int buf_save(struct buf *b);
 int buf_undo(struct buf *b);
 void buf_destroy(struct buf *b);
-void buf_writewch(struct buf *b, size_t ind, wchar_t wch);
-void buf_writewstr(struct buf *b, size_t ind, wchar_t const *wstr);
+void buf_write_wch(struct buf *b, size_t ind, wchar_t wch);
+void buf_write_wstr(struct buf *b, size_t ind, wchar_t const *wstr);
 void buf_erase(struct buf *b, size_t lb, size_t ub);
-void buf_pushhistbrk(struct buf *b);
+void buf_push_hist_brk(struct buf *b);
 void buf_pos(struct buf const *b, size_t pos, unsigned *out_r, unsigned *out_c);
 
 #endif

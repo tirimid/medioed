@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include <wchar.h>
 
-#define A_TAOF(a) (a & 0x7)
-#define A_FGOF(a) (a & 0x78)
-#define A_BGOF(a) (a & 0xf80)
+#define A_NC_ATTR_OF(a) (a & 0x7)
+#define A_FG_OF(a) (a & 0x78)
+#define A_BG_OF(a) (a & 0xf80)
 
 enum attr {
 	A_BRIGHT = 1,
@@ -40,9 +40,9 @@ void draw_init(void);
 void draw_quit(void);
 void draw_clear(wchar_t wch, uint16_t a);
 void draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch, uint16_t a);
-void draw_putwch(unsigned r, unsigned c, wchar_t wch);
-void draw_putwstr(unsigned r, unsigned c, wchar_t const *wstr);
-void draw_putattr(unsigned r, unsigned c, uint16_t a, unsigned n);
+void draw_put_wch(unsigned r, unsigned c, wchar_t wch);
+void draw_put_wstr(unsigned r, unsigned c, wchar_t const *wstr);
+void draw_put_attr(unsigned r, unsigned c, uint16_t a, unsigned n);
 void draw_refresh(void);
 
 #endif

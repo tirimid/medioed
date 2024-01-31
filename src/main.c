@@ -9,7 +9,7 @@
 #include "editor.h"
 #include "util.h"
 
-#define LOGFILE "medioed.log"
+#define LOG_FILE "medioed.log"
 #define LOCALE "C.UTF-8"
 
 static void usage(char const *name);
@@ -44,23 +44,23 @@ main(int argc, char const *argv[])
 		return 1;
 	}
 
-	FILE *logfp = fopen(flag_d ? LOGFILE : "/dev/null", "w");
-	if (!logfp) {
-		fputs("cannot open logfile: " LOGFILE "!\n", stderr);
+	FILE *log_fp = fopen(flag_d ? LOG_FILE : "/dev/null", "w");
+	if (!log_fp) {
+		fputs("cannot open logfile: " LOG_FILE "!\n", stderr);
 		return 1;
 	}
-	stderr = logfp;
+	stderr = log_fp;
 	
 	if (!setlocale(LC_ALL, LOCALE)) {
 		fputs("failed on setlocale() to " LOCALE "!\n", stderr);
-		fclose(logfp);
+		fclose(log_fp);
 		return 1;
 	}
 	
 	struct termios old;
 	if (tcgetattr(STDIN_FILENO, &old)) {
 		fputs("failed on tcgetattr() for stdin!\n", stderr);
-		fclose(logfp);
+		fclose(log_fp);
 		return 1;
 	}
 
@@ -70,7 +70,7 @@ main(int argc, char const *argv[])
 	new.c_oflag &= ~OPOST;
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &new)) {
 		fputs("failed on tcsetattr() making stdin raw!\n", stderr);
-		fclose(logfp);
+		fclose(log_fp);
 		return 1;
 	}
 
@@ -80,21 +80,21 @@ main(int argc, char const *argv[])
 	
 	if (editor_init(argc, argv)) {
 		fputs("failed on editor_init()!\n", stderr);
-		fclose(logfp);
+		fclose(log_fp);
 		return 1;
 	}
-	editor_mainloop();
+	editor_main_loop();
 	editor_quit();
 	
 	draw_quit();
 
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &old)) {
 		fputs("failed on tcsetattr() restoring old stdin!\n", stderr);
-		fclose(logfp);
+		fclose(log_fp);
 		return 1;
 	}
 
-	fclose(logfp);
+	fclose(log_fp);
 	
 	return 0;
 }

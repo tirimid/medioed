@@ -8,10 +8,10 @@
 #include "util.h"
 
 static void bind_indent(void);
-static void bind_newline(void);
+static void bind_new_line(void);
 
 static struct frame *mf;
-static uint8_t oldbufflags;
+static uint8_t old_buf_flags;
 
 static int s_bind_indent[] = {K_TAB, -1};
 
@@ -21,14 +21,14 @@ mode_s_init(struct frame *f)
 	mf = f;
 	mu_init(f);
 	
-	mu_setbase();
+	mu_set_base();
 	
-	keybd_bind(conf_bind_newline, bind_newline);
+	keybd_bind(conf_bind_new_line, bind_new_line);
 	keybd_bind(s_bind_indent, bind_indent);
 	
 	keybd_organize();
 	
-	oldbufflags = mf->buf->flags;
+	old_buf_flags = mf->buf->flags;
 	mf->buf->flags &= ~BF_WRITABLE;
 	prompt_show(L"assembly mode is not implemented yet. buffer will be read-only");
 	editor_redraw();
@@ -37,7 +37,7 @@ mode_s_init(struct frame *f)
 void
 mode_s_quit(void)
 {
-	mf->buf->flags = oldbufflags;
+	mf->buf->flags = old_buf_flags;
 }
 
 void
@@ -61,14 +61,13 @@ bind_indent(void)
 }
 
 static void
-bind_newline(void)
+bind_new_line(void)
 {
 	bind_indent();
 
-	buf_pushhistbrk(mf->buf);
-	buf_writewch(mf->buf, mf->csr, L'\n');
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+	buf_push_hist_brk(mf->buf);
+	buf_write_wch(mf->buf, mf->csr, L'\n');
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 	
 	bind_indent();
 }
-

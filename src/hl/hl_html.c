@@ -6,9 +6,9 @@
 #include "conf.h"
 #include "draw.h"
 
-#define A_TAG (A_MAGENTA | A_BGOF(CONF_A_NORM) | A_BRIGHT)
-#define A_ENT (A_MAGENTA | A_BGOF(CONF_A_NORM))
-#define A_COMMENT (A_RED | A_BGOF(CONF_A_NORM))
+#define A_TAG (A_MAGENTA | A_BG_OF(CONF_A_NORM) | A_BRIGHT)
+#define A_ENT (A_MAGENTA | A_BG_OF(CONF_A_NORM))
+#define A_COMMENT (A_RED | A_BG_OF(CONF_A_NORM))
 
 static int hl_tag(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
 static int hl_ent(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);

@@ -8,10 +8,10 @@
 #include "draw.h"
 #include "mode.h"
 
-#define CONF_TABSIZE 8
+#define CONF_TAB_SIZE 8
 #define CONF_GUTTER_LEFT 1
 #define CONF_GUTTER_RIGHT 1
-#define CONF_BUFMODMARK L"~~ (*)"
+#define CONF_BUF_MOD_MARK L"~~ (*)"
 #define CONF_MNUM 4
 #define CONF_MDENOM 7
 
@@ -21,10 +21,10 @@
 #define CONF_A_LINUM (A_WHITE | A_BBLACK | A_DIM)
 #define CONF_A_CURSOR (A_BLACK | A_BWHITE)
 
-#define CONF_GREETNAME L"*greeter*"
-#define CONF_SCRAPNAME L"*scrap*"
+#define CONF_GREET_NAME L"*greeter*"
+#define CONF_SCRAP_NAME L"*scrap*"
 
-#define CONF_GREETTEXT \
+#define CONF_GREET_TEXT \
 	L"                    _ _                _\n" \
 	L" _ __ ___   ___  __| (_) ___   ___  __| |\n" \
 	L"| '_ ` _ \\ / _ \\/ _` | |/ _ \\ / _ \\/ _` |\n" \
@@ -40,7 +40,7 @@
 	L"available at https://gitlab.com/tirimid/medioed.\n"
 
 struct highlight {
-	char const *localmode;
+	char const *local_mode;
 	int (*find)(wchar_t const *, size_t, size_t, size_t *, size_t *, uint16_t *);
 };
 
@@ -50,45 +50,45 @@ struct margin {
 	uint16_t attr;
 };
 
-struct modeext {
+struct mode_ext {
 	char const **exts;
 	char const *mode;
 };
 
 extern int const conf_bind_quit[];
-extern int const conf_bind_chgfwd_frame[];
-extern int const conf_bind_chgback_frame[];
+extern int const conf_bind_chg_frame_fwd[];
+extern int const conf_bind_chg_frame_back[];
 extern int const conf_bind_focus_frame[];
 extern int const conf_bind_kill_frame[];
 extern int const conf_bind_open_file[];
 extern int const conf_bind_save_file[];
-extern int const conf_bind_navfwd_ch[];
-extern int const conf_bind_navfwd_word[];
-extern int const conf_bind_navfwd_page[];
-extern int const conf_bind_navback_ch[];
-extern int const conf_bind_navback_word[];
-extern int const conf_bind_navback_page[];
-extern int const conf_bind_navdown[];
-extern int const conf_bind_navup[];
-extern int const conf_bind_navln_start[];
-extern int const conf_bind_navln_end[];
-extern int const conf_bind_navgoto[];
-extern int const conf_bind_delfwd_ch[];
-extern int const conf_bind_delback_ch[];
-extern int const conf_bind_delback_word[];
-extern int const conf_bind_chgmode_global[];
-extern int const conf_bind_chgmode_local[];
+extern int const conf_bind_nav_fwd_ch[];
+extern int const conf_bind_nav_fwd_word[];
+extern int const conf_bind_nav_fwd_page[];
+extern int const conf_bind_nav_back_ch[];
+extern int const conf_bind_nav_back_word[];
+extern int const conf_bind_nav_back_page[];
+extern int const conf_bind_nav_down[];
+extern int const conf_bind_nav_up[];
+extern int const conf_bind_nav_ln_start[];
+extern int const conf_bind_nav_ln_end[];
+extern int const conf_bind_nav_goto[];
+extern int const conf_bind_del_fwd_ch[];
+extern int const conf_bind_del_back_ch[];
+extern int const conf_bind_del_back_word[];
+extern int const conf_bind_chg_mode_global[];
+extern int const conf_bind_chg_mode_local[];
 extern int const conf_bind_create_scrap[];
-extern int const conf_bind_newline[];
+extern int const conf_bind_new_line[];
 extern int const conf_bind_focus[];
 extern int const conf_bind_kill[];
 extern int const conf_bind_paste[];
 extern int const conf_bind_undo[];
 extern int const conf_bind_copy[];
 extern int const conf_bind_ncopy[];
-extern int const conf_bind_findlit[];
-extern int const conf_bind_macbegin[];
-extern int const conf_bind_macend[];
+extern int const conf_bind_find_lit[];
+extern int const conf_bind_mac_begin[];
+extern int const conf_bind_mac_end[];
 
 extern struct highlight const conf_htab[];
 extern size_t const conf_htab_size;
@@ -96,7 +96,7 @@ extern struct margin const conf_mtab[];
 extern size_t const conf_mtab_size;
 extern struct mode const conf_lmtab[];
 extern size_t const conf_lmtab_size;
-extern struct modeext const conf_metab[];
+extern struct mode_ext const conf_metab[];
 extern size_t const conf_metab_size;
 
 #endif

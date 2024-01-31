@@ -12,23 +12,23 @@
 
 #define CNS_CONTINUE 1
 
-struct rdstate {
-	bool inblkcmt, inlncmt;
-	bool inch, instr;
+struct rd_state {
+	bool in_blk_cmt, in_ln_cmt;
+	bool in_ch, in_str;
 };
 
 static void bind_indent(void);
-static void bind_newline(void);
-static unsigned comptabs(size_t firstch, size_t lastsigch);
-static unsigned compsmartspaces(size_t firstspc, size_t off, size_t ln, size_t firstch);
-static long nopenat(size_t pos, wchar_t open, wchar_t close);
-static int compnextstate(size_t pos, size_t *off, struct rdstate *rds);
+static void bind_new_line(void);
+static unsigned comp_tabs(size_t first_ch, size_t last_sig_ch);
+static unsigned comp_smart_spaces(size_t first_spc, size_t off, size_t ln, size_t first_ch);
+static long nopen_at(size_t pos, wchar_t open, wchar_t close);
+static int comp_next_state(size_t pos, size_t *off, struct rd_state *rds);
 
 static struct frame *mf;
 
 static int c_bind_indent[] = {K_TAB, -1};
 
-static wchar_t const *indentkw[] = {
+static wchar_t const *indent_kw[] = {
 	L"do",
 	L"else",
 };
@@ -39,11 +39,11 @@ mode_c_init(struct frame *f)
 	mf = f;
 	mu_init(f);
 
-	mu_setbase();
-	mu_setpairing(PF_PAREN | PF_BRACKET | PF_BRACE | PF_SQUOTE | PF_DQUOTE);
+	mu_set_base();
+	mu_set_pairing(PF_PAREN | PF_BRACKET | PF_BRACE | PF_SQUOTE | PF_DQUOTE);
 
 	keybd_bind(c_bind_indent, bind_indent);
-	keybd_bind(conf_bind_newline, bind_newline);
+	keybd_bind(conf_bind_new_line, bind_new_line);
 	
 	keybd_organize();
 }
@@ -76,198 +76,198 @@ bind_indent(void)
 	while (ln > 0 && src[ln - 1] != L'\n')
 		--ln;
 
-	size_t prevln = ln - (ln > 0);
-	while (prevln > 0 && src[prevln - 1] != L'\n')
-		--prevln;
+	size_t prev_ln = ln - (ln > 0);
+	while (prev_ln > 0 && src[prev_ln - 1] != L'\n')
+		--prev_ln;
 
-	size_t firstch = ln;
-	while (firstch < mf->buf->size
-	       && src[firstch] != L'\n'
-	       && iswspace(src[firstch])) {
-		++firstch;
+	size_t first_ch = ln;
+	while (first_ch < mf->buf->size
+	       && src[first_ch] != L'\n'
+	       && iswspace(src[first_ch])) {
+		++first_ch;
 	}
 	
-	size_t lastsigch = ln;
-	while (lastsigch < mf->buf->size && src[lastsigch] != L'\n')
-		++lastsigch;
-	while (lastsigch > ln
-	       && lastsigch < mf->buf->size
-	       && !wcschr(L":'\"", src[lastsigch])) {
-		--lastsigch;
+	size_t last_sig_ch = ln;
+	while (last_sig_ch < mf->buf->size && src[last_sig_ch] != L'\n')
+		++last_sig_ch;
+	while (last_sig_ch > ln
+	       && last_sig_ch < mf->buf->size
+	       && !wcschr(L"+-()[].<>{}!~*&/%=?:|,", src[last_sig_ch])) {
+		--last_sig_ch;
 	}
 	
-	unsigned ntab = comptabs(firstch, lastsigch), nspace = 0;
+	unsigned ntab = comp_tabs(first_ch, last_sig_ch), nspace = 0;
 	
-	if (prevln != ln) {
-		size_t prevlastch = ln - 2 * (ln > 1);
-		while (prevlastch > prevln && iswspace(src[prevlastch]))
-			--prevlastch;
+	if (prev_ln != ln) {
+		size_t prev_last_ch = ln - 2 * (ln > 1);
+		while (prev_last_ch > prev_ln && iswspace(src[prev_last_ch]))
+			--prev_last_ch;
 
-		size_t prevfirstch = prevln;
-		while (prevfirstch < ln - 1 && iswspace(src[prevfirstch]))
-			++prevfirstch;
+		size_t prev_first_ch = prev_ln;
+		while (prev_first_ch < ln - 1 && iswspace(src[prev_first_ch]))
+			++prev_first_ch;
 		
-		if (src[prevlastch] == L')' && src[prevfirstch] != L'#') {
-			if (nopenat(prevlastch + 1, L'(', L')') == 0
-			    && !wcschr(L"{}", src[firstch])) {
+		if (src[prev_last_ch] == L')' && src[prev_first_ch] != L'#') {
+			if (nopen_at(prev_last_ch + 1, L'(', L')') == 0
+			    && !wcschr(L"{}", src[first_ch])) {
 				++ntab;
 			}
-		} else if (src[prevlastch] == L'\\')
+		} else if (src[prev_last_ch] == L'\\')
 			++ntab;
 
-		for (size_t i = 0; i < ARRAYSIZE(indentkw); ++i) {
-			size_t len = wcslen(indentkw[i]);
+		for (size_t i = 0; i < ARRAY_SIZE(indent_kw); ++i) {
+			size_t len = wcslen(indent_kw[i]);
 			
-			if (len <= prevlastch
-			    && !iswalnum(src[prevlastch - len])
-			    && !wcsncmp(indentkw[i], &src[prevlastch - len + 1], len)) {
+			if (len <= prev_last_ch
+			    && !iswalnum(src[prev_last_ch - len])
+			    && !wcsncmp(indent_kw[i], &src[prev_last_ch - len + 1], len)) {
 				++ntab;
 				break;
 			}
 		}
 		
-		unsigned prevntab = 0, off = 0;
-		size_t firstspc = prevln;
+		unsigned prev_ntab = 0, off = 0;
+		size_t first_spc = prev_ln;
 		
-		while (src[firstspc] == L'\t') {
-			++firstspc;
-			++prevntab;
+		while (src[first_spc] == L'\t') {
+			++first_spc;
+			++prev_ntab;
 		}
-		while (src[firstspc + off] == L' ')
+		while (src[first_spc + off] == L' ')
 			++off;
 		
-		if (firstch < mf->buf->size
-		    && !wcschr(L"{}", src[firstch])
-		    && !wcschr(L";/", src[prevlastch])
+		if (first_ch < mf->buf->size
+		    && !wcschr(L"{}", src[first_ch])
+		    && !wcschr(L";/", src[prev_last_ch])
 		    && off != 0
-		    && !iswspace(src[firstspc + off])
-		    && ntab == prevntab) {
+		    && !iswspace(src[first_spc + off])
+		    && ntab == prev_ntab) {
 			nspace = off;
-		} else if (off == 0 && ntab == prevntab)
-			nspace = compsmartspaces(firstspc, off, ln, firstch);
+		} else if (off == 0 && ntab == prev_ntab)
+			nspace = comp_smart_spaces(first_spc, off, ln, first_ch);
 	}
 	
 	// do indentation.
-	buf_erase(mf->buf, ln, firstch);
+	buf_erase(mf->buf, ln, first_ch);
 	for (unsigned i = 0; i < ntab; ++i)
-		buf_writewch(mf->buf, ln + i, L'\t');
+		buf_write_wch(mf->buf, ln + i, L'\t');
 	for (unsigned i = 0; i < nspace; ++i)
-		buf_writewch(mf->buf, ln + ntab + i, L' ');
+		buf_write_wch(mf->buf, ln + ntab + i, L' ');
 
 	// fix cursor.
-	if (mf->csr <= firstch)
+	if (mf->csr <= first_ch)
 		mf->csr = ln;
 	else {
-		mf->csr -= firstch - ln;
-		mf->csr_wantcol -= firstch - ln;
+		mf->csr -= first_ch - ln;
+		mf->csr_want_col -= first_ch - ln;
 	}
-	frame_relmvcsr(mf, 0, ntab + nspace, false);
+	frame_mv_csr_rel(mf, 0, ntab + nspace, false);
 }
 
 static void
-bind_newline(void)
+bind_new_line(void)
 {
 	bind_indent();
 
-	buf_pushhistbrk(mf->buf);
-	buf_writewch(mf->buf, mf->csr, L'\n');
-	frame_relmvcsr(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+	buf_push_hist_brk(mf->buf);
+	buf_write_wch(mf->buf, mf->csr, L'\n');
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 	
 	bind_indent();
 }
 
 static unsigned
-comptabs(size_t firstch, size_t lastsigch)
+comp_tabs(size_t first_ch, size_t last_sig_ch)
 {
 	wchar_t const *src = mf->buf->conts;
 	
 	unsigned ntab = 0;
 	
-	struct rdstate rds;
+	struct rd_state rds;
 	memset(&rds, 0, sizeof(rds));
 	
-	struct stk_unsigned pstk_open = stk_unsigned_create();
-	struct stk_unsigned pstk_close = stk_unsigned_create();
-	size_t prevnpause = 0;
+	struct stk_unsigned pause_stk_open = stk_unsigned_create();
+	struct stk_unsigned pause_stk_close = stk_unsigned_create();
+	size_t prev_npause = 0;
 	
-	for (size_t i = 0; i < firstch; ++i) {
+	for (size_t i = 0; i < first_ch; ++i) {
 		wchar_t wch = src[i];
 		
-		if (compnextstate(0, &i, &rds) == CNS_CONTINUE)
+		if (comp_next_state(0, &i, &rds) == CNS_CONTINUE)
 			continue;
 		
-		if (rds.instr || rds.inch || rds.inblkcmt || rds.inlncmt)
+		if (rds.in_str || rds.in_ch || rds.in_blk_cmt || rds.in_ln_cmt)
 			continue;
 		else if (wch == L'\n') {
-			if (pstk_open.size > prevnpause) {
-				free(stk_unsigned_pop(&pstk_open));
-				free(stk_unsigned_pop(&pstk_close));
+			if (pause_stk_open.size > prev_npause) {
+				free(stk_unsigned_pop(&pause_stk_open));
+				free(stk_unsigned_pop(&pause_stk_close));
 			}
 		} else if (wch == L'{') {
-			if (pstk_open.size > 0
-			    && *stk_unsigned_peek(&pstk_open) == ntab) {
-				free(stk_unsigned_pop(&pstk_open));
+			if (pause_stk_open.size > 0
+			    && *stk_unsigned_peek(&pause_stk_open) == ntab) {
+				free(stk_unsigned_pop(&pause_stk_open));
 			} else
 				++ntab;
 		} else if (wch == L'}' && ntab > 0) {
-			if (pstk_close.size > 0
-			    && *stk_unsigned_peek(&pstk_close) == ntab) {
-				free(stk_unsigned_pop(&pstk_close));
+			if (pause_stk_close.size > 0
+			    && *stk_unsigned_peek(&pause_stk_close) == ntab) {
+				free(stk_unsigned_pop(&pause_stk_close));
 			} else
 				ntab -= ntab > 0;
 		} else if (wch == L':') {
-			stk_unsigned_push(&pstk_open, &ntab);
-			stk_unsigned_push(&pstk_close, &ntab);
+			stk_unsigned_push(&pause_stk_open, &ntab);
+			stk_unsigned_push(&pause_stk_close, &ntab);
 		}
 	}
 
-	stk_unsigned_destroy(&pstk_open);
-	stk_unsigned_destroy(&pstk_close);
+	stk_unsigned_destroy(&pause_stk_open);
+	stk_unsigned_destroy(&pause_stk_close);
 	
-	if (!rds.inblkcmt && !rds.inlncmt) {
-		size_t i = firstch;
+	if (!rds.in_blk_cmt && !rds.in_ln_cmt) {
+		size_t i = first_ch;
 		while (ntab > 0 && i < mf->buf->size && src[i] == L'}') {
 			--ntab;
 			++i;
 		}
 		
-		ntab -= ntab > 0 && src[lastsigch] == L':';
-		if (firstch != mf->buf->size)
-			ntab *= src[firstch] != L'#';
+		ntab -= ntab > 0 && src[last_sig_ch] == L':';
+		if (first_ch != mf->buf->size)
+			ntab *= src[first_ch] != L'#';
 	}
 	
 	return ntab;
 }
 
 static unsigned
-compsmartspaces(size_t firstspc, size_t off, size_t ln, size_t firstch)
+comp_smart_spaces(size_t first_spc, size_t off, size_t ln, size_t first_ch)
 {
 	wchar_t const *src = mf->buf->conts;
 	
-	struct rdstate rds;
+	struct rd_state rds;
 	memset(&rds, 0, sizeof(rds));
 	
-	while (firstspc + off < ln
-	       && (src[firstspc + off] != L'(' || rds.instr || rds.inch || rds.inblkcmt || rds.inlncmt)) {
-		if (compnextstate(firstspc, &off, &rds) == CNS_CONTINUE)
+	while (first_spc + off < ln
+	       && (src[first_spc + off] != L'(' || rds.in_str || rds.in_ch || rds.in_blk_cmt || rds.in_ln_cmt)) {
+		if (comp_next_state(first_spc, &off, &rds) == CNS_CONTINUE)
 			continue;
 		
 		++off;
 	}
 	
 	unsigned nopen = 0;
-	for (size_t i = firstspc + off; i < ln; ++i) {
-		if (compnextstate(0, &i, &rds) == CNS_CONTINUE)
+	for (size_t i = first_spc + off; i < ln; ++i) {
+		if (comp_next_state(0, &i, &rds) == CNS_CONTINUE)
 			continue;
 		
-		bool in = rds.instr || rds.inch || rds.inblkcmt || rds.inlncmt;
+		bool in = rds.in_str || rds.in_ch || rds.in_blk_cmt || rds.in_ln_cmt;
 		nopen += src[i] == L'(' && !in;
 		nopen -= src[i] == L')' && !in && nopen > 0;
 	}
 	
-	if (firstch < mf->buf->size
-	    && !wcschr(L"{}", src[firstch])
-	    && firstspc + off < ln
+	if (first_ch < mf->buf->size
+	    && !wcschr(L"{}", src[first_ch])
+	    && first_spc + off < ln
 	    && nopen > 0) {
 		return off + 1;
 	}
@@ -276,20 +276,20 @@ compsmartspaces(size_t firstspc, size_t off, size_t ln, size_t firstch)
 }
 
 static long
-nopenat(size_t pos, wchar_t open, wchar_t close)
+nopen_at(size_t pos, wchar_t open, wchar_t close)
 {
 	long nopen = 0;
 	
-	struct rdstate rds;
+	struct rd_state rds;
 	memset(&rds, 0, sizeof(rds));
 	
 	for (size_t i = 0; i < pos; ++i) {
 		wchar_t wch = mf->buf->conts[i];
 		
-		if (compnextstate(0, &i, &rds) == CNS_CONTINUE)
+		if (comp_next_state(0, &i, &rds) == CNS_CONTINUE)
 			continue;
 		
-		bool in = rds.instr || rds.inch || rds.inblkcmt || rds.inlncmt;
+		bool in = rds.in_str || rds.in_ch || rds.in_blk_cmt || rds.in_ln_cmt;
 		nopen += !in && wch == open;
 		nopen -= !in && wch == close;
 	}
@@ -298,45 +298,45 @@ nopenat(size_t pos, wchar_t open, wchar_t close)
 }
 
 static int
-compnextstate(size_t pos, size_t *off, struct rdstate *rds)
+comp_next_state(size_t pos, size_t *off, struct rd_state *rds)
 {
 	wchar_t const *src = mf->buf->conts;
 	size_t wch = src[pos + *off];
 	
 	if (wch == L'\\'
-	    && (rds->instr || rds->inch)
-	    && !rds->inblkcmt
-	    && !rds->inlncmt) {
+	    && (rds->in_str || rds->in_ch)
+	    && !rds->in_blk_cmt
+	    && !rds->in_ln_cmt) {
 		if (src[pos + ++*off] == L'\n')
-			rds->instr = rds->inch = false;
+			rds->in_str = rds->in_ch = false;
 		return CNS_CONTINUE;
 	} else if (wch == L'"'
-	           && !rds->inch
-	           && !rds->inblkcmt
-	           && !rds->inlncmt) {
-		rds->instr = !rds->instr;
+	           && !rds->in_ch
+	           && !rds->in_blk_cmt
+	           && !rds->in_ln_cmt) {
+		rds->in_str = !rds->in_str;
 	} else if (wch == L'\''
-	           && !rds->instr
-	           && !rds->inblkcmt
-	           && !rds->inlncmt) {
-		rds->inch = !rds->inch;
-	} else if (wch == L'\n' && !rds->inblkcmt)
-		rds->inlncmt = rds->instr = rds->inch = false;
+	           && !rds->in_str
+	           && !rds->in_blk_cmt
+	           && !rds->in_ln_cmt) {
+		rds->in_ch = !rds->in_ch;
+	} else if (wch == L'\n' && !rds->in_blk_cmt)
+		rds->in_ln_cmt = rds->in_str = rds->in_ch = false;
 	else if (!wcsncmp(&src[pos + *off], L"//", 2)
-	           && !rds->inch
-	           && !rds->instr
-	           && !rds->inblkcmt) {
+	           && !rds->in_ch
+	           && !rds->in_str
+	           && !rds->in_blk_cmt) {
 		++*off;
-		rds->inlncmt = true;
+		rds->in_ln_cmt = true;
 	} else if (!wcsncmp(&src[pos + *off], L"/*", 2)
-	           && !rds->inch
-	           && !rds->instr
-	           && !rds->inlncmt) {
+	           && !rds->in_ch
+	           && !rds->in_str
+	           && !rds->in_ln_cmt) {
 		++*off;
-		rds->inblkcmt = true;
-	} else if (!wcsncmp(&src[pos + *off], L"*/", 2) && rds->inblkcmt) {
+		rds->in_blk_cmt = true;
+	} else if (!wcsncmp(&src[pos + *off], L"*/", 2) && rds->in_blk_cmt) {
 		++*off;
-		rds->inblkcmt = false;
+		rds->in_blk_cmt = false;
 	}
 	
 	return 0;
