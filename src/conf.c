@@ -104,13 +104,13 @@ struct margin const conf_mtab[] = {
 	{
 		.col = 80,
 		.wch = L'|',
-		.fg = 235,
+		.fg = 241,
 		.bg = CONF_A_NORM_BG,
 	},
 	{
 		.col = 110,
 		.wch = L'|',
-		.fg = 52,
+		.fg = 248,
 		.bg = CONF_A_NORM_BG,
 	},
 };
