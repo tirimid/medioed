@@ -44,7 +44,7 @@ draw_quit(void)
 		free(cells[i]);
 	free(cells);
 	
-	fputws(L"\033[?25h", stdout);
+	fputws(L"\033[?25h\033[0m", stdout);
 }
 
 void
