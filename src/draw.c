@@ -12,41 +12,10 @@
 
 struct cell {
 	wchar_t wch;
-	uint16_t attr;
+	uint8_t fg, bg;
 };
 
 static void sigwinch_handler(int arg);
-
-static uint8_t const attr_tab[] = {
-	// text attributes.
-	0,
-	1,
-	2,
-	4,
-	5,
-	7,
-	8,
-
-	// foreground color.
-	30,
-	31,
-	32,
-	33,
-	34,
-	35,
-	36,
-	37,
-
-	// background color.
-	40,
-	41,
-	42,
-	43,
-	44,
-	45,
-	46,
-	47,
-};
 
 static struct cell **cells;
 static struct winsize ws;
@@ -79,20 +48,21 @@ draw_quit(void)
 }
 
 void
-draw_clear(wchar_t wch, uint16_t a)
+draw_clear(wchar_t wch, uint8_t fg, uint8_t bg)
 {
-	draw_fill(0, 0, ws.ws_row, ws.ws_col, wch, a);
+	draw_fill(0, 0, ws.ws_row, ws.ws_col, wch, fg, bg);
 }
 
 void
 draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch,
-          uint16_t a)
+          uint8_t fg, uint8_t bg)
 {
 	for (size_t i = pr; i < pr + sr; ++i) {
 		for (size_t j = pc; j < pc + sc; ++j) {
 			cells[i][j] = (struct cell){
 				.wch = wch,
-				.attr = a,
+				.fg = fg,
+				.bg = bg,
 			};
 		}
 	}
@@ -122,13 +92,14 @@ draw_put_wstr(unsigned r, unsigned c, wchar_t const *wstr)
 }
 
 void
-draw_put_attr(unsigned r, unsigned c, uint16_t a, unsigned n)
+draw_put_attr(unsigned r, unsigned c, uint8_t fg, uint8_t bg, unsigned n)
 {
 	if (r >= ws.ws_row || c >= ws.ws_col)
 		return;
 	
 	for (unsigned i = 0; i < n; ++i) {
-		cells[r][c].attr = a;
+		cells[r][c].fg = fg;
+		cells[r][c].bg = bg;
 
 		if (++c >= ws.ws_col) {
 			c = 0;
@@ -143,28 +114,20 @@ draw_put_attr(unsigned r, unsigned c, uint16_t a, unsigned n)
 void
 draw_refresh(void)
 {
-	uint8_t prev_attr = 0xff, prev_fg = 0xff, prev_bg = 0xff;
+	uint8_t prev_fg = 0xff, prev_bg = 0xff;
 
-	fwprintf(stdout, L"\033[H");
+	fwprintf(stdout, L"\033[H\033[0m");
 	
 	for (size_t i = 0; i < ws.ws_row; ++i) {
 		for (size_t j = 0; j < ws.ws_col; ++j) {
-			uint8_t cur_attr = A_NC_ATTR_OF(cells[i][j].attr);
-			uint8_t cur_fg = A_FG_OF(cells[i][j].attr) >> 3;
-			uint8_t cur_bg = A_BG_OF(cells[i][j].attr) >> 8;
+			uint8_t cur_fg = cells[i][j].fg;
+			uint8_t cur_bg = cells[i][j].bg;
 			
-			if (cur_attr != prev_attr
-			    || cur_fg != prev_fg
-			    || cur_bg != prev_bg) {
-				wprintf(L"\033[0m\033[%u;%u;%um",
-				        attr_tab[cur_attr],
-				        attr_tab[cur_fg + 6],
-				        attr_tab[cur_bg + 14]);
-			}
+			if (cur_fg != prev_fg || cur_bg != prev_bg)
+				wprintf(L"\033[38;5;%um\033[48;5;%um", cur_fg, cur_bg);
 			
 			fputwc(cells[i][j].wch, stdout);
-
-			prev_attr = cur_attr;
+			
 			prev_fg = cur_fg;
 			prev_bg = cur_bg;
 		}

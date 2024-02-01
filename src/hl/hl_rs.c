@@ -3,17 +3,24 @@
 #include <string.h>
 #include <wctype.h>
 
-#include "conf.h"
 #include "draw.h"
+#include "hl/hldef.h"
 #include "util.h"
 
-#define A_SPECIAL (A_WHITE | A_BG_OF(CONF_A_NORM) | A_DIM)
-#define A_COMMENT (A_RED | A_BG_OF(CONF_A_NORM))
-#define A_STRING (A_WHITE | A_BRED)
-#define A_CONST (A_MAGENTA | A_BG_OF(CONF_A_NORM))
-#define A_TYPE (A_MAGENTA | A_BG_OF(CONF_A_NORM))
-#define A_FUNC (A_WHITE | A_BG_OF(CONF_A_NORM) | A_BRIGHT)
-#define A_KEYWORD (A_MAGENTA | A_BG_OF(CONF_A_NORM) | A_BRIGHT)
+#define A_SPECIAL_FG HLD_A_SPECIAL_FG
+#define A_SPECIAL_BG HLD_A_SPECIAL_BG
+#define A_COMMENT_FG HLD_A_COMMENT_FG
+#define A_COMMENT_BG HLD_A_COMMENT_BG
+#define A_STRING_FG HLD_A_STRING_FG
+#define A_STRING_BG HLD_A_STRING_BG
+#define A_CONST_FG HLD_A_ACCENT_2_FG
+#define A_CONST_BG HLD_A_ACCENT_2_BG
+#define A_TYPE_FG HLD_A_ACCENT_2_FG
+#define A_TYPE_BG HLD_A_ACCENT_2_BG
+#define A_FUNC_FG HLD_A_ACCENT_4_FG
+#define A_FUNC_BG HLD_A_ACCENT_4_BG
+#define A_KEYWORD_FG HLD_A_ACCENT_1_FG
+#define A_KEYWORD_BG HLD_A_ACCENT_1_BG
 
 #define SPECIAL "!=%&*+,->./:;<@^|?#$(){}[]"
 
@@ -25,13 +32,13 @@ enum word_type {
 	WT_BASIC,
 };
 
-static int hl_string(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_rstring(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_quote(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_ln_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_blk_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_special(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
+static int hl_string(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_rstring(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_quote(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_ln_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_blk_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_special(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 
 static wchar_t const *keywords[] = {
 	L"as",
@@ -89,40 +96,40 @@ static wchar_t const *keywords[] = {
 
 int
 hl_rs_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
-           size_t *out_ub, uint16_t *out_a)
+           size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	for (size_t i = off; i < len; ++i) {
 		if (src[i] == L'"') {
-			if (!hl_string(src, len, &i, out_lb, out_ub, out_a))
+			if (!hl_string(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (i + 1 < len
 		           && src[i] == L'r'
 		           && wcschr(L"\"#", src[i + 1])) {
-			if (!hl_rstring(src, len, &i, out_lb, out_ub, out_a))
+			if (!hl_rstring(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (src[i] == L'\'') {
-			if (!hl_quote(src, len, &i, out_lb, out_ub, out_a))
+			if (!hl_quote(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (i + 1 < len
 		           && src[i] == L'/'
 		           && wcschr(L"/*", src[i + 1])) {
 			switch (src[i + 1]) {
 			case L'/':
-				if (!hl_ln_comment(src, len, &i, out_lb, out_ub, out_a))
+				if (!hl_ln_comment(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 					return 0;
 				break;
 			case L'*':
-				if (!hl_blk_comment(src, len, &i, out_lb, out_ub, out_a))
+				if (!hl_blk_comment(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 					return 0;
 				break;
 			default:
 				break;
 			}
 		} else if (strchr(SPECIAL, src[i])) {
-			if (!hl_special(src, len, &i, out_lb, out_ub, out_a))
+			if (!hl_special(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (iswalpha(src[i]) || src[i] == L'_') {
-			if (!hl_word(src, len, &i, out_lb, out_ub, out_a))
+			if (!hl_word(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		}
 	}
@@ -132,7 +139,7 @@ hl_rs_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 
 static int
 hl_string(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-          size_t *out_ub, uint16_t *out_a)
+          size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i;
 	while (j < len) {
@@ -146,14 +153,15 @@ hl_string(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 	
 	*out_lb = *i;
 	*out_ub = j + (j < len);
-	*out_a = A_STRING;
+	*out_fg = A_STRING_FG;
+	*out_bg = A_STRING_BG;
 	
 	return 0;
 }
 
 static int
 hl_rstring(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-           size_t *out_ub, uint16_t *out_a)
+           size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 1;
 	while (j < len && src[j] == L'#')
@@ -173,7 +181,8 @@ hl_rstring(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 		if (!wcsncmp(&src[j], search, 1 + nhash)) {
 			*out_lb = *i;
 			*out_ub = j + nhash + 1;
-			*out_a = A_STRING;
+			*out_fg = A_STRING_FG;
+			*out_bg = A_STRING_BG;
 			
 			free(search);
 			return 0;
@@ -187,7 +196,7 @@ hl_rstring(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 
 static int
 hl_quote(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-         size_t *out_ub, uint16_t *out_a)
+         size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 1;
 	if (j < len && src[j] == L'\\')
@@ -198,10 +207,12 @@ hl_quote(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 	*out_lb = *i;
 	if (j < len && src[j] == L'\'') {
 		*out_ub = j + 1;
-		*out_a = A_STRING;
+		*out_fg = A_STRING_FG;
+		*out_bg = A_STRING_BG;
 	} else {
 		*out_ub = *i + 1;
-		*out_a = A_SPECIAL;
+		*out_fg = A_SPECIAL_FG;
+		*out_bg = A_SPECIAL_BG;
 	}
 
 	return 0;
@@ -209,7 +220,7 @@ hl_quote(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 
 static int
 hl_ln_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-              size_t *out_ub, uint16_t *out_a)
+              size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 2;
 	while (j < len && src[j] != L'\n')
@@ -217,14 +228,15 @@ hl_ln_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 
 	*out_lb = *i;
 	*out_ub = j;
-	*out_a = A_COMMENT;
+	*out_fg = A_COMMENT_FG;
+	*out_bg = A_COMMENT_BG;
 	
 	return 0;
 }
 
 static int
 hl_blk_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-               size_t *out_ub, uint16_t *out_a)
+               size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	unsigned nopen = 1;
 	size_t j = *i + 2;
@@ -240,7 +252,8 @@ hl_blk_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 		if (nopen == 0) {
 			*out_lb = *i;
 			*out_ub = j + 1;
-			*out_a = A_COMMENT;
+			*out_fg = A_COMMENT_FG;
+			*out_bg = A_COMMENT_BG;
 			
 			return 0;
 		}
@@ -253,7 +266,7 @@ hl_blk_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 
 static int
 hl_special(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-           size_t *out_ub, uint16_t *out_a)
+           size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 1;
 	while (j < len && strchr(SPECIAL, src[j]))
@@ -261,14 +274,15 @@ hl_special(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 
 	*out_lb = *i;
 	*out_ub = j;
-	*out_a = A_SPECIAL;
+	*out_fg = A_SPECIAL_FG;
+	*out_bg = A_SPECIAL_BG;
 	
 	return 0;
 }
 
 static int
 hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-        size_t *out_ub, uint16_t *out_a)
+        size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	enum word_type wt = WT_BASIC;
 
@@ -336,16 +350,20 @@ hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 
 	switch (wt) {
 	case WT_CONST:
-		*out_a = A_CONST;
+		*out_fg = A_CONST_FG;
+		*out_bg = A_CONST_BG;
 		break;
 	case WT_TYPE:
-		*out_a = A_TYPE;
+		*out_fg = A_TYPE_FG;
+		*out_bg = A_TYPE_BG;
 		break;
 	case WT_FUNC:
-		*out_a = A_FUNC;
+		*out_fg = A_FUNC_FG;
+		*out_bg = A_FUNC_BG;
 		break;
 	case WT_KEYWORD:
-		*out_a = A_KEYWORD;
+		*out_fg = A_KEYWORD_FG;
+		*out_bg = A_KEYWORD_BG;
 		break;
 	case WT_BASIC:
 		*i = j - 1;

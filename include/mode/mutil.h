@@ -1,5 +1,5 @@
-#ifndef MUTIL_H__
-#define MUTIL_H__
+#ifndef MODE_MUTIL_H__
+#define MODE_MUTIL_H__
 
 #include "frame.h"
 

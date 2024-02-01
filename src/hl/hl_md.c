@@ -2,42 +2,47 @@
 
 #include <wctype.h>
 
-#include "conf.h"
 #include "draw.h"
+#include "hl/hldef.h"
 
-#define A_CODE_BLOCK (A_YELLOW | A_BG_OF(CONF_A_NORM))
-#define A_HEADING (A_MAGENTA | A_BG_OF(CONF_A_NORM) | A_BRIGHT)
-#define A_BLOCK (A_WHITE | A_BG_OF(CONF_A_NORM) | A_DIM)
-#define A_ULIST (A_MAGENTA | A_BG_OF(CONF_A_NORM))
-#define A_OLIST (A_MAGENTA | A_BG_OF(CONF_A_NORM))
+#define A_CODE_BLOCK_FG HLD_A_ACCENT_3_FG
+#define A_CODE_BLOCK_BG HLD_A_ACCENT_3_BG
+#define A_HEADING_FG HLD_A_ACCENT_2_FG
+#define A_HEADING_BG HLD_A_ACCENT_2_BG
+#define A_BLOCK_FG HLD_A_ACCENT_4_FG
+#define A_BLOCK_BG HLD_A_ACCENT_4_BG
+#define A_ULIST_FG HLD_A_ACCENT_1_FG
+#define A_ULIST_BG HLD_A_ACCENT_1_BG
+#define A_OLIST_FG HLD_A_ACCENT_1_FG
+#define A_OLIST_BG HLD_A_ACCENT_1_BG
 
-static int hl_code_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_heading(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_ulist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
-static int hl_olist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint16_t *out_a);
+static int hl_code_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_heading(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_ulist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_olist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 static size_t first_ln_ch(wchar_t const *src, size_t len, size_t pos);
 static size_t para_end(wchar_t const *src, size_t len, size_t pos);
 
 int
 hl_md_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
-           size_t *out_ub, uint16_t *out_a)
+           size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	for (size_t i = off; i < len; ++i) {
 		if (src[i] == L'#') {
-			if (!hl_heading(src, len, &i, out_lb, out_ub, out_a))
+			if (!hl_heading(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (src[i] == L'>') {
-			if (!hl_block(src, len, &i, out_lb, out_ub, out_a))
+			if (!hl_block(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (i + 2 < len && !wcsncmp(&src[i], L"```", 3)) {
-			if (!hl_code_block(src, len, &i, out_lb, out_ub, out_a))
+			if (!hl_code_block(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (src[i] == L'*' || src[i] == L'-') {
-			if (!hl_ulist(src, len, &i, out_lb, out_ub, out_a))
+			if (!hl_ulist(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (iswdigit(src[i])) {
-			if (!hl_olist(src, len, &i, out_lb, out_ub, out_a))
+			if (!hl_olist(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (src[i] == L'\\') {
 			++i;
@@ -50,7 +55,7 @@ hl_md_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 
 static int
 hl_code_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-              size_t *out_ub, uint16_t *out_a)
+              size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	if (first_ln_ch(src, len, *i) != *i)
 		return 1;
@@ -70,7 +75,8 @@ hl_code_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 			
 			*out_lb = *i;
 			*out_ub = j + 3;
-			*out_a = A_CODE_BLOCK;
+			*out_fg = A_CODE_BLOCK_FG;
+			*out_bg = A_CODE_BLOCK_BG;
 			
 			return 0;
 		}
@@ -82,7 +88,7 @@ hl_code_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 
 static int
 hl_heading(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-           size_t *out_ub, uint16_t *out_a)
+           size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	if (first_ln_ch(src, len, *i) != *i)
 		return 1;
@@ -98,14 +104,15 @@ hl_heading(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 
 	*out_lb = *i;
 	*out_ub = j;
-	*out_a = A_HEADING;
+	*out_fg = A_HEADING_FG;
+	*out_bg = A_HEADING_BG;
 	
 	return 0;
 }
 
 static int
 hl_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-         size_t *out_ub, uint16_t *out_a)
+         size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	if (first_ln_ch(src, len, *i) != *i)
 		return 1;
@@ -118,14 +125,15 @@ hl_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 	
 	*out_lb = *i;
 	*out_ub = para_end(src, len, j);
-	*out_a = A_BLOCK;
+	*out_fg = A_BLOCK_FG;
+	*out_bg = A_BLOCK_BG;
 	
 	return 0;
 }
 
 static int
 hl_ulist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-         size_t *out_ub, uint16_t *out_a)
+         size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	if (first_ln_ch(src, len, *i) != *i)
 		return 1;
@@ -138,14 +146,15 @@ hl_ulist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 	
 	*out_lb = *i;
 	*out_ub = para_end(src, len, j);
-	*out_a = A_ULIST;
+	*out_fg = A_ULIST_FG;
+	*out_bg = A_ULIST_BG;
 	
 	return 0;
 }
 
 static int
 hl_olist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-         size_t *out_ub, uint16_t *out_a)
+         size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	if (first_ln_ch(src, len, *i) != *i)
 		return 1;
@@ -162,7 +171,8 @@ hl_olist(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 
 	*out_lb = *i;
 	*out_ub = para_end(src, len, j + 1);
-	*out_a = A_OLIST;
+	*out_fg = A_OLIST_FG;
+	*out_bg = A_OLIST_BG;
 	
 	return 0;
 }

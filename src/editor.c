@@ -90,7 +90,7 @@ editor_init(int argc, char const *argv[])
 		add_frame(&gf);
 	} else {
 		for (int i = first_arg; i < argc; ++i) {
-			draw_clear(L' ', CONF_A_GNORM);
+			draw_clear(L' ', CONF_A_GNORM_FG, CONF_A_GNORM_BG);
 			
 			struct stat s;
 			if ((stat(argv[i], &s) || !S_ISREG(s.st_mode)) && !flag_c) {
@@ -219,7 +219,7 @@ editor_redraw(void)
 		}
 		
 		draw_put_wstr(ws.ws_row - 1, 0, dpy + draw_start);
-		draw_put_attr(ws.ws_row - 1, 0, CONF_A_GHIGH, draw_len);
+		draw_put_attr(ws.ws_row - 1, 0, CONF_A_GHIGH_FG, CONF_A_GHIGH_BG, draw_len);
 	}
 	
 	draw_refresh();

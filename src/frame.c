@@ -91,10 +91,11 @@ frame_draw(struct frame const *f, bool active)
 		draw_put_wstr(f->pr, f->pc + f->sc - mod_mk_len, mod_mk);
 	}
 
-	draw_put_attr(f->pr, f->pc, active ? CONF_A_GHIGH : CONF_A_GNORM, f->sc);
+	draw_put_attr(f->pr, f->pc, active ? CONF_A_GHIGH_FG : CONF_A_GNORM_FG,
+	              active ? CONF_A_GHIGH_BG : CONF_A_GNORM_BG, f->sc);
 
 	// fill frame.
-	draw_fill(f->pr + 1, f->pc, f->sr - 1, f->sc, L' ', CONF_A_NORM);
+	draw_fill(f->pr + 1, f->pc, f->sr - 1, f->sc, L' ', CONF_A_NORM_FG, CONF_A_NORM_BG);
 
 	// write margins.
 	unsigned befr, befc;
@@ -106,7 +107,7 @@ frame_draw(struct frame const *f, bool active)
 		
 		for (unsigned j = 1, end = MIN(befr + 1, f->sr); j < end; ++j) {
 			draw_put_wch(f->pr + j, f->pc + draw_col, conf_mtab[i].wch);
-			draw_put_attr(f->pr + j, f->pc + draw_col, conf_mtab[i].attr, 1);
+			draw_put_attr(f->pr + j, f->pc + draw_col, conf_mtab[i].fg, conf_mtab[i].bg, 1);
 		}
 	}
 
@@ -118,11 +119,14 @@ frame_draw(struct frame const *f, bool active)
 			wchar_t draw_text[16];
 			swprintf(draw_text, 16, L"%u", bsr + linum_ind);
 			draw_put_wstr(f->pr + i, f->pc + CONF_GUTTER_LEFT + f->linum_width - wcslen(draw_text), draw_text);
-			draw_put_attr(f->pr + i, f->pc, CONF_A_LINUM, GUTTER + f->linum_width);
 		}
 
 		draw_line(f, &i, &draw_csr);
 	}
+	
+	// draw gutter.
+	for (unsigned i = 1; i < f->sr; ++i)
+		draw_put_attr(f->pr + i, f->pc, CONF_A_LINUM_FG, CONF_A_LINUM_BG, GUTTER + f->linum_width);
 
 	// execute highlight.
 	for (size_t i = 0; i < conf_htab_size; ++i) {
@@ -136,7 +140,7 @@ done_highlight:;
 	// draw cursor.
 	unsigned csrr, csrc;
 	frame_pos(f, f->csr, &csrr, &csrc);
-	draw_put_attr(f->pr + csrr, f->pc + csrc, CONF_A_CURSOR, 1);
+	draw_put_attr(f->pr + csrr, f->pc + csrc, CONF_A_CURSOR_FG, CONF_A_CURSOR_BG, 1);
 }
 
 void
@@ -279,14 +283,14 @@ draw_line(struct frame const *f, unsigned *line, size_t *draw_csr)
 			
 			for (unsigned i = 0; i < nch && c + i < right_edge; ++i)
 				draw_put_wch(f->pr + *line, f->pc + left_edge + c + i, L' ');
-			draw_put_attr(f->pr + *line, f->pc + left_edge + c, CONF_A_NORM, nch);
+			draw_put_attr(f->pr + *line, f->pc + left_edge + c, CONF_A_NORM_FG, CONF_A_NORM_BG, nch);
 			c += CONF_TAB_SIZE - c % CONF_TAB_SIZE;
 			
 			break;
 		}
 		default:
 			draw_put_wch(f->pr + *line, f->pc + left_edge + c, wch);
-			draw_put_attr(f->pr + *line, f->pc + left_edge + c, CONF_A_NORM, 1);
+			draw_put_attr(f->pr + *line, f->pc + left_edge + c, CONF_A_NORM_FG, CONF_A_NORM_BG, 1);
 			++c;
 			break;
 		}
@@ -307,8 +311,8 @@ exec_highlight(struct frame const *f, struct highlight const *hl)
 	
 	size_t off = f->buf_start;
 	size_t lb, ub;
-	uint16_t a;
-	while (!hl->find(f->buf->conts, f->buf->size, off, &lb, &ub, &a)) {
+	uint8_t fg, bg;
+	while (!hl->find(f->buf->conts, f->buf->size, off, &lb, &ub, &fg, &bg)) {
 		unsigned hlr, hlc;
 		frame_pos(f, lb, &hlr, &hlc);
 		if (hlr >= f->sr)
@@ -338,7 +342,7 @@ exec_highlight(struct frame const *f, struct highlight const *hl)
 				break;
 			}
 
-			draw_put_attr(f->pr + r, f->pc + left_edge + c, a, w);
+			draw_put_attr(f->pr + r, f->pc + left_edge + c, fg, bg, w);
 			
 			c += w;
 		}

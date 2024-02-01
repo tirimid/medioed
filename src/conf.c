@@ -104,12 +104,14 @@ struct margin const conf_mtab[] = {
 	{
 		.col = 80,
 		.wch = L'|',
-		.attr = A_WHITE | A_BG_OF(CONF_A_NORM),
+		.fg = 235,
+		.bg = CONF_A_NORM_BG,
 	},
 	{
 		.col = 110,
 		.wch = L'|',
-		.attr = A_RED | A_BG_OF(CONF_A_NORM),
+		.fg = 52,
+		.bg = CONF_A_NORM_BG,
 	},
 };
 size_t const conf_mtab_size = ARRAY_SIZE(conf_mtab);

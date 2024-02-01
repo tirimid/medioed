@@ -15,11 +15,16 @@
 #define CONF_MNUM 4
 #define CONF_MDENOM 7
 
-#define CONF_A_GNORM (A_WHITE | A_BBLACK)
-#define CONF_A_GHIGH (A_BLACK | A_BWHITE)
-#define CONF_A_NORM (A_WHITE | A_BBLACK)
-#define CONF_A_LINUM (A_WHITE | A_BBLACK | A_DIM)
-#define CONF_A_CURSOR (A_BLACK | A_BWHITE)
+#define CONF_A_GNORM_FG 11
+#define CONF_A_GNORM_BG 0
+#define CONF_A_GHIGH_FG 0
+#define CONF_A_GHIGH_BG 11
+#define CONF_A_NORM_FG 251
+#define CONF_A_NORM_BG 232
+#define CONF_A_LINUM_FG 3
+#define CONF_A_LINUM_BG 0
+#define CONF_A_CURSOR_FG 0
+#define CONF_A_CURSOR_BG 15
 
 #define CONF_GREET_NAME L"*greeter*"
 #define CONF_SCRAP_NAME L"*scrap*"
@@ -41,13 +46,13 @@
 
 struct highlight {
 	char const *local_mode;
-	int (*find)(wchar_t const *, size_t, size_t, size_t *, size_t *, uint16_t *);
+	int (*find)(wchar_t const *, size_t, size_t, size_t *, size_t *, uint8_t *, uint8_t *);
 };
 
 struct margin {
 	unsigned col;
 	wchar_t wch;
-	uint16_t attr;
+	uint8_t fg, bg;
 };
 
 struct mode_ext {

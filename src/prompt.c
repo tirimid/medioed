@@ -50,7 +50,7 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, void *),
 
 	// a faux cursor is drawn before entering the keyboard loop, so that it
 	// doesn't look like it spontaneously appears upon a keypress.
-	draw_put_attr(render_row, render_col, CONF_A_GHIGH, 1);
+	draw_put_attr(render_row, render_col, CONF_A_GHIGH_FG, CONF_A_GHIGH_BG, 1);
 	draw_refresh();
 
 	wchar_t *resp = malloc(sizeof(wchar_t));
@@ -88,10 +88,10 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, void *),
 		else if (csr - draw_start >= ws.ws_col - render_col - 1)
 			draw_start = csr - ws.ws_col + render_col + 1;
 
-		draw_fill(ws.ws_row - 1, render_col, 1, ws.ws_col - render_col, L' ', CONF_A_GNORM);
+		draw_fill(ws.ws_row - 1, render_col, 1, ws.ws_col - render_col, L' ', CONF_A_GNORM_FG, CONF_A_GNORM_BG);
 		for (size_t i = 0; i < resp_len - draw_start && i < ws.ws_col - render_col; ++i)
 			draw_put_wch(render_row, render_col + i, resp[draw_start + i]);
-		draw_put_attr(render_row, render_col + csr - draw_start, CONF_A_GHIGH, 1);
+		draw_put_attr(render_row, render_col + csr - draw_start, CONF_A_GHIGH_FG, CONF_A_GHIGH_BG, 1);
 
 		draw_refresh();
 	}
@@ -150,6 +150,6 @@ draw_box(wchar_t const *text)
 	}
 
 	size_t box_top = ws.ws_row - text_rows;
-	draw_fill(box_top, 0, text_rows, ws.ws_col, L' ', CONF_A_GNORM);
+	draw_fill(box_top, 0, text_rows, ws.ws_col, L' ', CONF_A_GNORM_FG, CONF_A_GNORM_BG);
 	draw_put_wstr(box_top, 0, text);
 }
