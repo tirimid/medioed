@@ -8,13 +8,14 @@
 #include "draw.h"
 #include "mode.h"
 
+// text layout options.
 #define CONF_TAB_SIZE 8
 #define CONF_GUTTER_LEFT 1
 #define CONF_GUTTER_RIGHT 1
-#define CONF_BUF_MOD_MARK L"~~ (*)"
 #define CONF_MNUM 4
 #define CONF_MDENOM 7
 
+// master color options.
 #define CONF_A_GNORM_FG 183
 #define CONF_A_GNORM_BG 232
 #define CONF_A_GHIGH_FG CONF_A_GNORM_BG
@@ -25,6 +26,25 @@
 #define CONF_A_LINUM_BG 232
 #define CONF_A_CURSOR_FG 0
 #define CONF_A_CURSOR_BG 15
+
+// theme color options.
+#define CONF_A_ACCENT_1_FG 183
+#define CONF_A_ACCENT_1_BG CONF_A_NORM_BG
+#define CONF_A_ACCENT_2_FG 176
+#define CONF_A_ACCENT_2_BG CONF_A_NORM_BG
+#define CONF_A_ACCENT_3_FG 229
+#define CONF_A_ACCENT_3_BG CONF_A_NORM_BG
+#define CONF_A_ACCENT_4_FG 212
+#define CONF_A_ACCENT_4_BG CONF_A_NORM_BG
+#define CONF_A_STRING_FG 182
+#define CONF_A_STRING_BG 52
+#define CONF_A_SPECIAL_FG 247
+#define CONF_A_SPECIAL_BG CONF_A_NORM_BG
+#define CONF_A_COMMENT_FG 245
+#define CONF_A_COMMENT_BG 235
+
+#define CONF_MARK_MOD L"[~*]"
+#define CONF_MARK_MONO L"[M!]"
 
 #define CONF_GREET_NAME L"*greeter*"
 #define CONF_SCRAP_NAME L"*scrap*"
@@ -94,6 +114,7 @@ extern int const conf_bind_ncopy[];
 extern int const conf_bind_find_lit[];
 extern int const conf_bind_mac_begin[];
 extern int const conf_bind_mac_end[];
+extern int const conf_bind_toggle_mono[];
 
 extern struct highlight const conf_htab[];
 extern size_t const conf_htab_size;

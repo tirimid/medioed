@@ -3,15 +3,15 @@
 #include <string.h>
 #include <wctype.h>
 
+#include "conf.h"
 #include "draw.h"
-#include "hl/hldef.h"
 
-#define A_TAG_FG HLD_A_ACCENT_1_FG
-#define A_TAG_BG HLD_A_ACCENT_1_BG
-#define A_ENT_FG HLD_A_ACCENT_2_FG
-#define A_ENT_BG HLD_A_ACCENT_2_BG
-#define A_COMMENT_FG HLD_A_COMMENT_FG
-#define A_COMMENT_BG HLD_A_COMMENT_BG
+#define A_TAG_FG CONF_A_ACCENT_1_FG
+#define A_TAG_BG CONF_A_ACCENT_1_BG
+#define A_ENT_FG CONF_A_ACCENT_2_FG
+#define A_ENT_BG CONF_A_ACCENT_2_BG
+#define A_COMMENT_FG CONF_A_COMMENT_FG
+#define A_COMMENT_BG CONF_A_COMMENT_BG
 
 static int hl_tag(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 static int hl_ent(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);

@@ -3,24 +3,24 @@
 #include <string.h>
 #include <wctype.h>
 
+#include "conf.h"
 #include "draw.h"
-#include "hl/hldef.h"
 #include "util.h"
 
-#define A_SPECIAL_FG HLD_A_SPECIAL_FG
-#define A_SPECIAL_BG HLD_A_SPECIAL_BG
-#define A_COMMENT_FG HLD_A_COMMENT_FG
-#define A_COMMENT_BG HLD_A_COMMENT_BG
-#define A_STRING_FG HLD_A_STRING_FG
-#define A_STRING_BG HLD_A_STRING_BG
-#define A_CONST_FG HLD_A_ACCENT_2_FG
-#define A_CONST_BG HLD_A_ACCENT_2_BG
-#define A_TYPE_FG HLD_A_ACCENT_2_FG
-#define A_TYPE_BG HLD_A_ACCENT_2_BG
-#define A_FUNC_FG HLD_A_ACCENT_4_FG
-#define A_FUNC_BG HLD_A_ACCENT_4_BG
-#define A_KEYWORD_FG HLD_A_ACCENT_1_FG
-#define A_KEYWORD_BG HLD_A_ACCENT_1_BG
+#define A_SPECIAL_FG CONF_A_SPECIAL_FG
+#define A_SPECIAL_BG CONF_A_SPECIAL_BG
+#define A_COMMENT_FG CONF_A_COMMENT_FG
+#define A_COMMENT_BG CONF_A_COMMENT_BG
+#define A_STRING_FG CONF_A_STRING_FG
+#define A_STRING_BG CONF_A_STRING_BG
+#define A_CONST_FG CONF_A_ACCENT_2_FG
+#define A_CONST_BG CONF_A_ACCENT_2_BG
+#define A_TYPE_FG CONF_A_ACCENT_2_FG
+#define A_TYPE_BG CONF_A_ACCENT_2_BG
+#define A_FUNC_FG CONF_A_ACCENT_4_FG
+#define A_FUNC_BG CONF_A_ACCENT_4_BG
+#define A_KEYWORD_FG CONF_A_ACCENT_1_FG
+#define A_KEYWORD_BG CONF_A_ACCENT_1_BG
 
 #define SPECIAL "!=%&*+,->./:;<@^|?#$(){}[]"
 

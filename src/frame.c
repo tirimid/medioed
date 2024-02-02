@@ -69,7 +69,7 @@ frame_destroy(struct frame *f)
 }
 
 void
-frame_draw(struct frame const *f, bool active)
+frame_draw(struct frame const *f, unsigned long flags)
 {
 	unsigned bsr, bsc, ber, bec;
 	buf_pos(f->buf, f->buf_start, &bsr, &bsc);
@@ -77,22 +77,25 @@ frame_draw(struct frame const *f, bool active)
 
 	unsigned left_edge = GUTTER + f->linum_width;
 
-	// write frame name and buffer modification marker.
+	// write frame title and frame marks.
 	size_t name_len = wcslen(f->name);
 	for (unsigned i = 0; i < f->sc; ++i)
 		draw_put_wch(f->pr, f->pc + i, i < name_len ? f->name[i] : L' ');
-
-	if (f->buf->flags & BF_MODIFIED) {
-		wchar_t mod_mk[] = CONF_BUF_MOD_MARK L"\0";
-		size_t mod_mk_len = wcslen(mod_mk);
-		if (f->sc >= 0 && f->sc < mod_mk_len + 1)
-			mod_mk[f->sc] = 0;
-
-		draw_put_wstr(f->pr, f->pc + f->sc - mod_mk_len, mod_mk);
-	}
-
-	draw_put_attr(f->pr, f->pc, active ? CONF_A_GHIGH_FG : CONF_A_GNORM_FG,
-	              active ? CONF_A_GHIGH_BG : CONF_A_GNORM_BG, f->sc);
+	
+	wchar_t draw_marks[64] = {0};
+	
+	if (f->buf->flags & BF_MODIFIED)
+		wcscat(draw_marks, CONF_MARK_MOD);
+	if (flags & FDF_MONO)
+		wcscat(draw_marks, CONF_MARK_MONO);
+	
+	size_t draw_mark_len = wcslen(draw_marks);
+	if (f->sc >= 0 && f->sc < draw_mark_len + 1)
+		draw_marks[f->sc] = 0;
+	
+	draw_put_wstr(f->pr, f->pc + f->sc - draw_mark_len, draw_marks);
+	draw_put_attr(f->pr, f->pc, flags & FDF_ACTIVE ? CONF_A_GHIGH_FG : CONF_A_GNORM_FG,
+	              flags & FDF_ACTIVE ? CONF_A_GHIGH_BG : CONF_A_GNORM_BG, f->sc);
 
 	// fill frame.
 	draw_fill(f->pr + 1, f->pc, f->sr - 1, f->sc, L' ', CONF_A_NORM_FG, CONF_A_NORM_BG);

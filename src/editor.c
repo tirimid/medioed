@@ -60,6 +60,7 @@ static void bind_ncopy(void);
 static void bind_find_lit(void);
 static void bind_mac_begin(void);
 static void bind_mac_end(void);
+static void bind_toggle_mono(void);
 static void reset_binds(void);
 static void set_global_mode(void);
 static void sigwinch_handler(int arg);
@@ -70,6 +71,7 @@ static size_t cur_frame;
 static struct vec_frame frames;
 static struct vec_p_buf p_bufs;
 static wchar_t *clipbuf = NULL;
+static bool mono = false;
 
 int
 editor_init(int argc, char const *argv[])
@@ -188,9 +190,14 @@ editor_quit(void)
 void
 editor_redraw(void)
 {
-	for (size_t i = 0; i < frames.size; ++i) {
-		frame_comp_boundary(&frames.data[i]);
-		frame_draw(&frames.data[i], i == cur_frame);
+	if (mono) {
+		frame_comp_boundary(&frames.data[cur_frame]);
+		frame_draw(&frames.data[cur_frame], FDF_ACTIVE | FDF_MONO);
+	} else {
+		for (size_t i = 0; i < frames.size; ++i) {
+			frame_comp_boundary(&frames.data[i]);
+			frame_draw(&frames.data[i], FDF_ACTIVE * (i == cur_frame));
+		}
 	}
 	
 	// draw current bind status if necessary.
@@ -258,8 +265,17 @@ arrange_frames(void)
 	struct winsize ws;
 	ioctl(0, TIOCGWINSZ, &ws);
 
-	struct frame *f = &frames.data[0];
-
+	struct frame *f;
+	
+	if (mono) {
+		f = &frames.data[cur_frame];
+		f->pr = f->pc = 0;
+		f->sr = ws.ws_row;
+		f->sc = ws.ws_col;
+		return;
+	}
+	
+	f = &frames.data[0];
 	f->pr = f->pc = 0;
 	f->sr = ws.ws_row;
 	f->sc = frames.size == 1 ? ws.ws_col : CONF_MNUM * ws.ws_col / CONF_MDENOM;
@@ -304,6 +320,8 @@ bind_chg_frame_fwd(void)
 	cur_frame = (cur_frame + 1) % frames.size;
 	reset_binds();
 	set_global_mode();
+	if (mono)
+		arrange_frames();
 	editor_redraw();
 }
 
@@ -313,6 +331,8 @@ bind_chg_frame_back(void)
 	cur_frame = (cur_frame == 0 ? frames.size : cur_frame) - 1;
 	reset_binds();
 	set_global_mode();
+	if (mono)
+		arrange_frames();
 	editor_redraw();
 }
 
@@ -938,6 +958,14 @@ bind_mac_end(void)
 }
 
 static void
+bind_toggle_mono(void)
+{
+	mono = !mono;
+	arrange_frames();
+	editor_redraw();
+}
+
+static void
 reset_binds(void)
 {
 	// quit and reinit to reset current keybind buffer and bind information.
@@ -978,6 +1006,7 @@ reset_binds(void)
 	keybd_bind(conf_bind_find_lit, bind_find_lit);
 	keybd_bind(conf_bind_mac_begin, bind_mac_begin);
 	keybd_bind(conf_bind_mac_end, bind_mac_end);
+	keybd_bind(conf_bind_toggle_mono, bind_toggle_mono);
 	
 	keybd_organize();
 }
@@ -1006,11 +1035,6 @@ static void
 sigwinch_handler(int arg)
 {
 	old_sigwinch_handler(arg);
-	
 	arrange_frames();
-	
-	for (size_t i = 0; i < frames.size; ++i)
-		frame_comp_boundary(&frames.data[i]);
-	
 	editor_redraw();
 }

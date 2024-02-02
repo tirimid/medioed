@@ -2,19 +2,19 @@
 
 #include <wctype.h>
 
+#include "conf.h"
 #include "draw.h"
-#include "hl/hldef.h"
 
-#define A_CODE_BLOCK_FG HLD_A_ACCENT_3_FG
-#define A_CODE_BLOCK_BG HLD_A_ACCENT_3_BG
-#define A_HEADING_FG HLD_A_ACCENT_2_FG
-#define A_HEADING_BG HLD_A_ACCENT_2_BG
-#define A_BLOCK_FG HLD_A_ACCENT_4_FG
-#define A_BLOCK_BG HLD_A_ACCENT_4_BG
-#define A_ULIST_FG HLD_A_ACCENT_1_FG
-#define A_ULIST_BG HLD_A_ACCENT_1_BG
-#define A_OLIST_FG HLD_A_ACCENT_1_FG
-#define A_OLIST_BG HLD_A_ACCENT_1_BG
+#define A_CODE_BLOCK_FG CONF_A_ACCENT_3_FG
+#define A_CODE_BLOCK_BG CONF_A_ACCENT_3_BG
+#define A_HEADING_FG CONF_A_ACCENT_2_FG
+#define A_HEADING_BG CONF_A_ACCENT_2_BG
+#define A_BLOCK_FG CONF_A_ACCENT_4_FG
+#define A_BLOCK_BG CONF_A_ACCENT_4_BG
+#define A_ULIST_FG CONF_A_ACCENT_1_FG
+#define A_ULIST_BG CONF_A_ACCENT_1_BG
+#define A_OLIST_FG CONF_A_ACCENT_1_FG
+#define A_OLIST_BG CONF_A_ACCENT_1_BG
 
 static int hl_code_block(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 static int hl_heading(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
