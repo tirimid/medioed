@@ -36,8 +36,10 @@ int mk_dir_rec(char const *dir)
 		
 		wd[i] = 0;
 		struct stat s;
-		if (!stat(wd, &s) && S_ISDIR(s.st_mode))
+		if (!stat(wd, &s) && S_ISDIR(s.st_mode)) {
+			wd[i] = '/';
 			continue;
+		}
 		
 		mode_t pm = umask(0);
 		int rc = mkdir(wd, 0755);
