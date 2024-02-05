@@ -72,7 +72,6 @@ bind_indent(void)
 	
 	wchar_t const *src = mf->buf->conts;
 	
-	// figure out indentation parameters.
 	size_t ln = mf->csr;
 	while (ln > 0 && src[ln - 1] != L'\n')
 		--ln;
@@ -124,19 +123,7 @@ bind_indent(void)
 	
 	ntab = MAX(0, ntab);
 	
-	// do indentation.
-	buf_erase(mf->buf, ln, first_ch);
-	for (unsigned i = 0; i < ntab; ++i)
-		buf_write_wch(mf->buf, ln + i, L'\t');
-	
-	// fix cursor.
-	if (mf->csr <= first_ch)
-		mf->csr = ln;
-	else {
-		mf->csr -= first_ch - ln;
-		mf->csr_want_col -= first_ch - ln;
-	}
-	frame_mv_csr_rel(mf, 0, ntab, false);
+	mu_finish_indent(ln, first_ch, ntab, 0);
 }
 
 static void

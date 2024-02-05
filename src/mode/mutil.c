@@ -92,6 +92,24 @@ mu_set_pairing(unsigned long flags)
 	keybd_organize();
 }
 
+void
+mu_finish_indent(size_t ln, size_t first_ch, unsigned ntab, unsigned nspace)
+{
+	buf_erase(mf->buf, ln, first_ch);
+	for (unsigned i = 0; i < ntab; ++i)
+		buf_write_wch(mf->buf, ln + i, L'\t');
+	for (unsigned i = 0; i < nspace; ++i)
+		buf_write_wch(mf->buf, ln + ntab + i, L' ');
+	
+	if (mf->csr <= first_ch)
+		mf->csr = ln;
+	else {
+		mf->csr -= first_ch - ln;
+		mf->csr_want_col -= first_ch - ln;
+	}
+	frame_mv_csr_rel(mf, 0, ntab + nspace, false);
+}
+
 static void
 bind_pair_open_pn(void)
 {

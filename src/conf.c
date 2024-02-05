@@ -204,7 +204,7 @@ struct mode_ext const conf_metab[] = {
 		.mode = "rs",
 	},
 	{
-		.exts = ext_rs,
+		.exts = ext_s,
 		.mode = "s",
 	},
 	{

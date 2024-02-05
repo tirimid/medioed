@@ -1,6 +1,8 @@
 #ifndef MODE_MUTIL_H__
 #define MODE_MUTIL_H__
 
+#include <stddef.h>
+
 #include "frame.h"
 
 enum pair_flags {
@@ -15,5 +17,6 @@ enum pair_flags {
 void mu_init(struct frame *f);
 void mu_set_base(void);
 void mu_set_pairing(unsigned long flags);
+void mu_finish_indent(size_t ln, size_t first_ch, unsigned ntab, unsigned nspace);
 
 #endif

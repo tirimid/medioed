@@ -71,7 +71,6 @@ bind_indent(void)
 	
 	wchar_t const *src = mf->buf->conts;
 
-	// figure out identation parameters.
 	size_t ln = mf->csr;
 	while (ln > 0 && src[ln - 1] != L'\n')
 		--ln;
@@ -92,7 +91,8 @@ bind_indent(void)
 		++last_sig_ch;
 	while (last_sig_ch > ln
 	       && last_sig_ch < mf->buf->size
-	       && !wcschr(L"+-()[].<>{}!~*&/%=?:|,", src[last_sig_ch])) {
+	       && !wcschr(L"+-()[].<>!~*&/%=?:|,", src[last_sig_ch])
+	       && !iswalnum(src[last_sig_ch])) {
 		--last_sig_ch;
 	}
 	
@@ -147,21 +147,7 @@ bind_indent(void)
 			nspace = comp_smart_spaces(first_spc, off, ln, first_ch);
 	}
 	
-	// do indentation.
-	buf_erase(mf->buf, ln, first_ch);
-	for (unsigned i = 0; i < ntab; ++i)
-		buf_write_wch(mf->buf, ln + i, L'\t');
-	for (unsigned i = 0; i < nspace; ++i)
-		buf_write_wch(mf->buf, ln + ntab + i, L' ');
-
-	// fix cursor.
-	if (mf->csr <= first_ch)
-		mf->csr = ln;
-	else {
-		mf->csr -= first_ch - ln;
-		mf->csr_want_col -= first_ch - ln;
-	}
-	frame_mv_csr_rel(mf, 0, ntab + nspace, false);
+	mu_finish_indent(ln, first_ch, ntab, nspace);
 }
 
 static void
