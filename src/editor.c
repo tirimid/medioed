@@ -773,7 +773,8 @@ bind_paste(void)
 	}
 	
 	buf_write_wstr(f->buf, f->csr, clipbuf);
-	f->csr += wcslen(clipbuf);
+	f->csr += wcslen(clipbuf) + 1;
+	frame_mv_csr_rel(f, 0, -1, true);
 	frame_comp_boundary(f);
 }
 

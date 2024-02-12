@@ -22,7 +22,7 @@
 #define A_KEYWORD_FG CONF_A_ACCENT_1_FG
 #define A_KEYWORD_BG CONF_A_ACCENT_1_BG
 
-#define SPECIAL "!=%&*+,->./:;<@^|?#$(){}[]"
+#define SPECIAL L"!=%&*+,->./:;<@^|?#$(){}[]"
 
 enum word_type {
 	WT_CONST,
@@ -125,7 +125,7 @@ hl_rs_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 			default:
 				break;
 			}
-		} else if (strchr(SPECIAL, src[i])) {
+		} else if (wcschr(SPECIAL, src[i])) {
 			if (!hl_special(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (iswalpha(src[i]) || src[i] == L'_') {
@@ -269,7 +269,7 @@ hl_special(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
            size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 1;
-	while (j < len && strchr(SPECIAL, src[j]))
+	while (j < len && wcschr(SPECIAL, src[j]))
 		++j;
 
 	*out_lb = *i;
