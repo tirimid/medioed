@@ -1,5 +1,5 @@
-#ifndef HL_HTML_H__
-#define HL_HTML_H__
+#ifndef HL_HTML_H
+#define HL_HTML_H
 
 #include <stddef.h>
 #include <stdint.h>

@@ -1,5 +1,5 @@
-#ifndef UTIL_H__
-#define UTIL_H__
+#ifndef UTIL_H
+#define UTIL_H
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -8,7 +8,7 @@
 
 #include <unistd.h>
 
-#define NOTHING__
+#define NOTHING
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -126,12 +126,12 @@
 		return !s->size ? NULL : &s->data[s->size - 1]; \
 	}
 
-#define VEC_DEF_PROTO(t) VEC_DEF_PROTO_EX(t, NOTHING__)
-#define VEC_DEF_IMPL(t) VEC_DEF_IMPL_EX(t, NOTHING__)
+#define VEC_DEF_PROTO(t) VEC_DEF_PROTO_EX(t, NOTHING)
+#define VEC_DEF_IMPL(t) VEC_DEF_IMPL_EX(t, NOTHING)
 #define VEC_DEF_PROTO_STATIC(t) VEC_DEF_PROTO_EX(t, static)
 #define VEC_DEF_IMPL_STATIC(t) VEC_DEF_IMPL_EX(t, static)
-#define STK_DEF_PROTO(t) STK_DEF_PROTO_EX(t, NOTHING__)
-#define STK_DEF_IMPL(t) STK_DEF_IMPL_EX(t, NOTHING__)
+#define STK_DEF_PROTO(t) STK_DEF_PROTO_EX(t, NOTHING)
+#define STK_DEF_IMPL(t) STK_DEF_IMPL_EX(t, NOTHING)
 #define STK_DEF_PROTO_STATIC(t) STK_DEF_PROTO_EX(t, static)
 #define STK_DEF_IMPL_STATIC(t) STK_DEF_IMPL_EX(t, static)
 

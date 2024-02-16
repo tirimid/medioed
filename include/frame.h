@@ -1,5 +1,5 @@
-#ifndef FRAME_H__
-#define FRAME_H__
+#ifndef FRAME_H
+#define FRAME_H
 
 #include <stdbool.h>
 #include <stddef.h>

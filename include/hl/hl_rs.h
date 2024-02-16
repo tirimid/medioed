@@ -1,5 +1,5 @@
-#ifndef HL_HL_RS_H__
-#define HL_HL_RS_H__
+#ifndef HL_HL_RS_H
+#define HL_HL_RS_H
 
 #include <stddef.h>
 #include <stdint.h>

@@ -1,5 +1,5 @@
-#ifndef MODE_MODE_HTML_H__
-#define MODE_MODE_HTML_H__
+#ifndef MODE_MODE_HTML_H
+#define MODE_MODE_HTML_H
 
 #include <wchar.h>
 

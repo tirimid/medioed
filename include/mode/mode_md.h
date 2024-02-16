@@ -1,5 +1,5 @@
-#ifndef MODE_MODE_MD_H__
-#define MODE_MODE_MD_H__
+#ifndef MODE_MODE_MD_H
+#define MODE_MODE_MD_H
 
 #include <wchar.h>
 

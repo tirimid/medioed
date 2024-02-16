@@ -1,5 +1,5 @@
-#ifndef MODE_MODE_LUA_H__
-#define MODE_MODE_LUA_H__
+#ifndef MODE_MODE_LUA_H
+#define MODE_MODE_LUA_H
 
 #include <wchar.h>
 

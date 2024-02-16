@@ -1,5 +1,5 @@
-#ifndef DRAW_H__
-#define DRAW_H__
+#ifndef DRAW_H
+#define DRAW_H
 
 #include <stddef.h>
 #include <stdint.h>

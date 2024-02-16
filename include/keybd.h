@@ -1,5 +1,5 @@
-#ifndef KEYBD_H__
-#define KEYBD_H__
+#ifndef KEYBD_H
+#define KEYBD_H
 
 #include <stdbool.h>
 #include <stddef.h>

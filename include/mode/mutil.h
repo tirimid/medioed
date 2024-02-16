@@ -1,5 +1,5 @@
-#ifndef MODE_MUTIL_H__
-#define MODE_MUTIL_H__
+#ifndef MODE_MUTIL_H
+#define MODE_MUTIL_H
 
 #include <stddef.h>
 

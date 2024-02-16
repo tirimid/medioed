@@ -1,5 +1,5 @@
-#ifndef PROMPT_H__
-#define PROMPT_H__
+#ifndef PROMPT_H
+#define PROMPT_H
 
 #include <stdbool.h>
 #include <stddef.h>

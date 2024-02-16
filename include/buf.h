@@ -1,5 +1,5 @@
-#ifndef BUF_H__
-#define BUF_H__
+#ifndef BUF_H
+#define BUF_H
 
 #include <stdbool.h>
 #include <stddef.h>
