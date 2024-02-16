@@ -204,7 +204,7 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 		}
 		
 		*csr = *rlen = new_path_len;
-		*resp = realloc(*resp, sizeof(wchar_t) * new_path_len);
+		*resp = realloc(*resp, sizeof(wchar_t) * (new_path_len + 1));
 		
 		fts_close(fts_p);
 		return;
