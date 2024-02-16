@@ -3,9 +3,11 @@
 #include <string.h>
 #include <wctype.h>
 
+#include "conf.h"
+
 // implemented only for x86_64 since that's the only assembly I write.
 // instruction mnemonics are not highlighted since there are way too many of
-// them.
+// them to do a basic keyword highlighting system.
 
 #define A_PREPROC_FG CONF_A_ACCENT_3_FG
 #define A_PREPROC_BG CONF_A_ACCENT_3_BG
@@ -175,27 +177,80 @@ static int
 hl_preproc(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
            size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
-	return 1;
+	size_t j = *i + 1;
+	while (j < len && (iswalnum(src[j]) || src[j] == L'_'))
+		++j;
+	
+	*out_lb = *i;
+	*out_ub = j;
+	*out_fg = A_PREPROC_FG;
+	*out_bg = A_PREPROC_BG;
+	
+	return 0;
 }
 
 static int
 hl_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
            size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
-	return 1;
+	size_t j = *i + 2;
+	if (src[*i + 1] == L'/') {
+		while (j < len && src[j] != L'\n')
+			++j;
+	} else {
+		while (j < len && wcsncmp(src + j, L"*/", 2))
+			++j;
+	}
+
+	*out_lb = *i;
+	*out_ub = j + 2 * (src[j] == '*');
+	*out_fg = A_COMMENT_FG;
+	*out_bg = A_COMMENT_BG;
+	
+	return 0;
 }
 
 static int
 hl_string(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
           size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
-	return 1;
+	size_t j = *i;
+	while (j < len) {
+		++j;
+		if (src[j] == L'\\') {
+			++j;
+			continue;
+		} else if (src[j] == L'"' || src[j] == L'\n')
+			break;
+	}
+	
+	*out_lb = *i;
+	*out_ub = j + (j < len);
+	*out_fg = A_STRING_FG;
+	*out_bg = A_STRING_BG;
+	
+	return 0;
 }
 
 static int
 hl_char(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
         size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
+	size_t j = *i + 1;
+	if (j < len && src[j] == L'\\')
+		j += 2;
+	else
+		++j;
+
+	if (j < len && src[j] == L'\'') {
+		*out_lb = *i;
+		*out_ub = j + 1;
+		*out_fg = A_STRING_FG;
+		*out_bg = A_STRING_BG;
+		
+		return 0;
+	}
+	
 	return 1;
 }
 
@@ -203,12 +258,57 @@ static int
 hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
         size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
-	return 1;
+	enum word_type wt = WT_MACRO;
+	
+	size_t j = *i;
+	while (j < len && (src[j] == L'_' || iswalnum(src[j]))) {
+		if (iswlower(src[j]))
+			wt = WT_BASIC;
+		++j;
+	}
+	
+	for (size_t reg = 0; reg < ARRAY_SIZE(regs); ++reg) {
+		if (wcslen(regs[reg]) != j - *i)
+			continue;
+		
+		if (!wcsncmp(regs[reg], src + *i, j - *i)) {
+			wt = WT_REG;
+			break;
+		}
+	}
+
+	*out_lb = *i;
+	*out_ub = j;
+
+	switch (wt) {
+	case WT_MACRO:
+		*out_fg = A_MACRO_FG;
+		*out_bg = A_MACRO_BG;
+		break;
+	case WT_REG:
+		*out_fg = A_REG_FG;
+		*out_bg = A_REG_BG;
+		break;
+	case WT_BASIC:
+		*i = j - 1;
+		return 1;
+	}
+	
+	return 0;
 }
 
 static int
 hl_special(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
            size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
-	return 1;
+	size_t j = *i + 1;
+	while (j < len && wcschr(SPECIAL, src[j]))
+		++j;
+
+	*out_lb = *i;
+	*out_ub = j;
+	*out_fg = A_SPECIAL_FG;
+	*out_bg = A_SPECIAL_BG;
+	
+	return 0;
 }
