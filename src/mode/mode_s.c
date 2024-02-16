@@ -22,6 +22,7 @@ mode_s_init(struct frame *f)
 	mu_init(f);
 	
 	mu_set_base();
+	mu_set_pairing(PF_BRACKET | PF_SQUOTE | PF_DQUOTE);
 	
 	keybd_bind(conf_bind_new_line, bind_new_line);
 	keybd_bind(s_bind_indent, bind_indent);
