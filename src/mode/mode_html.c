@@ -176,7 +176,7 @@ bind_mk_tag(void)
 		return;
 	
 ask_again:;
-	wchar_t *tag = prompt_ask(L"make tag: ", NULL, NULL);
+	wchar_t *tag = prompt_ask(L"make tag: ", NULL);
 	editor_redraw();
 	if (!tag)
 		return;

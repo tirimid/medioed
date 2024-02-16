@@ -255,7 +255,17 @@ add_buf(struct buf *b)
 static struct frame *
 add_frame(struct frame *f)
 {
+	for (size_t i = 0; i < frames.size; ++i) {
+		if (frames.data[i].buf == f->buf) {
+			prompt_show(L"cannot assign multiple frames to one buffer!");
+			editor_redraw();
+			frame_destroy(f);
+			return &frames.data[i];
+		}
+	}
+	
 	vec_frame_add(&frames, f);
+	
 	return &frames.data[frames.size - 1];
 }
 
@@ -393,7 +403,7 @@ bind_kill_frame(void)
 static void
 bind_open_file(void)
 {
-	wchar_t *wpath = prompt_ask(L"open file: ", prompt_comp_path, NULL);
+	wchar_t *wpath = prompt_ask(L"open file: ", prompt_comp_path);
 	editor_redraw();
 	if (!wpath)
 		return;
@@ -435,7 +445,7 @@ bind_save_file(void)
 	if (f->buf->src_type == BST_FRESH) {
 		f->buf->src_type = BST_FILE;
 		
-		w_path = prompt_ask(L"save to file: ", prompt_comp_path, NULL);
+		w_path = prompt_ask(L"save to file: ", prompt_comp_path);
 		editor_redraw();
 
 		if (w_path) {
@@ -584,7 +594,7 @@ static void
 bind_nav_goto(void)
 {
 ask_again:;
-	wchar_t *ws_linum = prompt_ask(L"goto line: ", NULL, NULL);
+	wchar_t *ws_linum = prompt_ask(L"goto line: ", NULL);
 	editor_redraw();
 	if (!ws_linum)
 		return;
@@ -659,7 +669,7 @@ bind_del_back_word(void)
 static void
 bind_chg_mode_global(void)
 {
-	wchar_t *w_new_gm = prompt_ask(L"new globalmode: ", NULL, NULL);
+	wchar_t *w_new_gm = prompt_ask(L"new globalmode: ", NULL);
 	editor_redraw();
 	if (!w_new_gm)
 		return;
@@ -678,7 +688,7 @@ bind_chg_mode_global(void)
 static void
 bind_chg_mode_local(void)
 {
-	wchar_t *w_new_lm = prompt_ask(L"new frame localmode: ", NULL, NULL);
+	wchar_t *w_new_lm = prompt_ask(L"new frame localmode: ", NULL);
 	editor_redraw();
 	if (!w_new_lm)
 		return;
@@ -841,7 +851,7 @@ static void
 bind_ncopy(void)
 {
 ask_again:;
-	wchar_t *ws_ln_cnt = prompt_ask(L"copy lines: ", NULL, NULL);
+	wchar_t *ws_ln_cnt = prompt_ask(L"copy lines: ", NULL);
 	editor_redraw();
 	if (!ws_ln_cnt)
 		return;
@@ -902,7 +912,7 @@ static void
 bind_find_lit(void)
 {
 ask_again:;
-	wchar_t *needle = prompt_ask(L"find literally: ", NULL, NULL);
+	wchar_t *needle = prompt_ask(L"find literally: ", NULL);
 	editor_redraw();
 	if (!needle)
 		return;

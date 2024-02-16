@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
+#include <fts.h>
 #include <sys/ioctl.h>
 
 #include "conf.h"
@@ -33,8 +35,7 @@ prompt_show(wchar_t const *msg)
 }
 
 wchar_t *
-prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, void *),
-           void *cdata)
+prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, size_t *))
 {
 	draw_box(msg);
 
@@ -75,7 +76,7 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, void *),
 			}
 		} else if (k == BIND_COMPLETE) {
 			if (comp)
-				comp(&resp, &resp_len, cdata);
+				comp(&resp, &resp_len, &csr);
 		} else {
 			resp = realloc(resp, sizeof(wchar_t) * (++resp_len + 1));
 			memmove(resp + csr + 1, resp + csr, sizeof(wchar_t) * (resp_len - csr));
@@ -109,7 +110,7 @@ prompt_yes_no(wchar_t const *msg, bool deflt)
 	swprintf(full_msg, full_msg_len, L"%ls %ls ", msg, deflt_mk);
 	
 ask_again:;
-	wchar_t *resp = prompt_ask(full_msg, NULL, NULL);
+	wchar_t *resp = prompt_ask(full_msg, NULL);
 	if (!resp) {
 		free(full_msg);
 		return -1;
@@ -131,8 +132,85 @@ ask_again:;
 }
 
 void
-prompt_comp_path(wchar_t **resp, size_t *rlen, void *cdata)
+prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 {
+	if (*csr != *rlen)
+		return;
+	
+	// 16 bytes added to path to avoid buffer overflow when, e.g. a 3 byte
+	// character is written and `path_bytes` is `PATH_MAX` - 1.
+	char path[PATH_MAX + 16] = {0};
+	
+	size_t path_bytes = 0, path_len = 0;
+	while (path_len < *rlen && path_bytes < PATH_MAX) {
+		int nbytes = wctomb(&path[path_bytes], (*resp)[path_len]);
+		if (nbytes == -1)
+			return;
+		
+		++path_len;
+		path_bytes += nbytes;
+	}
+	
+	if (path_bytes > PATH_MAX)
+		return;
+	
+	char dir[PATH_MAX];
+	memcpy(dir, path, PATH_MAX);
+	char *last_slash = strrchr(dir, '/');
+	if (!last_slash) {
+		dir[0] = '.';
+		dir[1] = 0;
+	} else
+		*last_slash = 0;
+	
+	unsigned long fts_opts = FTS_LOGICAL | FTS_COMFOLLOW | FTS_NOCHDIR;
+	char *const fts_dirs[] = {dir, NULL};
+	FTS *fts_p = fts_open(fts_dirs, fts_opts, NULL);
+	
+	if (!fts_p || !fts_children(fts_p, 0))
+		return;
+	
+	FTSENT *fts_ent;
+	while (fts_ent = fts_read(fts_p)) {
+		size_t fts_cmp_off = last_slash ? 0 : 2;
+		if (memcmp(path, fts_ent->fts_path + fts_cmp_off, path_bytes))
+			continue;
+		
+		// temporarily allocate too much memory, then reduce this later
+		// to reduce usage.
+		// this should save computation by only doing one pass through
+		// the multibyte path string instead of two.
+		*resp = realloc(*resp, sizeof(wchar_t) * (PATH_MAX + 1));
+		
+		// this assumes path name will be valid when read as
+		// multibyte string in locale.
+		size_t new_path_len = 0, new_path_bytes = 0;
+		while (new_path_bytes < fts_ent->fts_pathlen) {
+			wchar_t wch;
+			size_t nbytes = mbstowcs(&wch, &fts_ent->fts_path[new_path_bytes], 1);
+			if (nbytes == (size_t)-1) {
+				fts_close(fts_p);
+				return;
+			}
+			
+			(*resp)[new_path_len] = wch;
+			++new_path_len;
+			new_path_bytes += nbytes;
+		}
+		
+		if (fts_ent->fts_info == FTS_D || fts_ent->fts_info == FTS_DC) {
+			(*resp)[new_path_len] = '/';
+			++new_path_len;
+		}
+		
+		*csr = *rlen = new_path_len;
+		*resp = realloc(*resp, sizeof(wchar_t) * new_path_len);
+		
+		fts_close(fts_p);
+		return;
+	}
+	
+	fts_close(fts_p);
 }
 
 static void
