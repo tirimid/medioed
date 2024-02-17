@@ -99,7 +99,7 @@ bind_indent(void)
 	unsigned ntab = comp_tabs(first_ch, last_sig_ch), nspace = 0;
 	
 	if (prev_ln != ln) {
-		size_t prev_last_ch = ln - 2 * (ln > 1);
+		size_t prev_last_ch = ln - 1 * (ln > 1);
 		while (prev_last_ch > prev_ln && iswspace(src[prev_last_ch]))
 			--prev_last_ch;
 
