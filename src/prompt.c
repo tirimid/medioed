@@ -5,7 +5,7 @@
 #include <string.h>
 #include <limits.h>
 
-#include <fts.h>
+#include <dirent.h>
 #include <sys/ioctl.h>
 
 #include "conf.h"
@@ -155,62 +155,67 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 		return;
 	
 	char dir[PATH_MAX];
-	memcpy(dir, path, PATH_MAX);
+	strncpy(dir, path, PATH_MAX);
 	char *last_slash = strrchr(dir, '/');
 	if (!last_slash) {
 		dir[0] = '.';
 		dir[1] = 0;
 	} else
 		*last_slash = 0;
+	size_t dir_len = strlen(dir);
 	
-	unsigned long fts_opts = FTS_LOGICAL | FTS_COMFOLLOW | FTS_NOCHDIR;
-	char *const fts_dirs[] = {dir, NULL};
-	FTS *fts_p = fts_open(fts_dirs, fts_opts, NULL);
+	char const *name = last_slash ? last_slash + 1 : path;
+	size_t name_len = strlen(name);
 	
-	if (!fts_p || !fts_children(fts_p, 0))
+	DIR *dir_p = opendir(dir);
+	if (!dir_p)
 		return;
 	
-	FTSENT *fts_ent;
-	while (fts_ent = fts_read(fts_p)) {
-		size_t fts_cmp_off = last_slash ? 0 : 2;
-		if (memcmp(path, fts_ent->fts_path + fts_cmp_off, path_bytes))
+	struct dirent *dir_ent;
+	while (dir_ent = readdir(dir_p)) {
+		if (strncmp_case_insen(name, dir_ent->d_name, name_len)
+		    || dir_ent->d_type != DT_DIR && dir_ent->d_type != DT_REG) {
 			continue;
+		}
 		
-		// temporarily allocate too much memory, then reduce this later
-		// to reduce usage.
-		// this should save computation by only doing one pass through
-		// the multibyte path string instead of two.
+		char new_path[PATH_MAX];
+		strcpy(new_path, dir);
+		strcat(new_path, "/");
+		strcat(new_path, dir_ent->d_name);
+		if (dir_ent->d_type == DT_DIR)
+			strcat(new_path, "/");
+		size_t new_path_bytes = strlen(new_path);
+		
+		// temporarily allocate potentially too much memory, then reduce
+		// when done.
+		// this allows one pass to be done when converting to wide chars
+		// rather than two, saving computation.
 		*resp = realloc(*resp, sizeof(wchar_t) * (PATH_MAX + 1));
 		
-		// this assumes path name will be valid when read as
-		// multibyte string in locale.
-		size_t new_path_len = 0, new_path_bytes = 0;
-		while (new_path_bytes < fts_ent->fts_pathlen) {
+		// this assumes path name will be valid when read as multibyte
+		// string in locale.
+		size_t new_path_len = 0, new_path_bytes_read = 0;
+		while (new_path_bytes_read < new_path_bytes) {
 			wchar_t wch;
-			size_t nbytes = mbstowcs(&wch, &fts_ent->fts_path[new_path_bytes], 1);
+			size_t nbytes = mbstowcs(&wch, &new_path[new_path_bytes_read], 1);
 			if (nbytes == (size_t)-1) {
-				fts_close(fts_p);
+				closedir(dir_p);
 				return;
 			}
 			
-			(*resp)[new_path_len] = wch;
-			++new_path_len;
-			new_path_bytes += nbytes;
-		}
-		
-		if (fts_ent->fts_info == FTS_D || fts_ent->fts_info == FTS_DC) {
-			(*resp)[new_path_len] = '/';
-			++new_path_len;
+			(*resp)[new_path_len++] = wch;
+			new_path_bytes_read += nbytes;
 		}
 		
 		*csr = *rlen = new_path_len;
 		*resp = realloc(*resp, sizeof(wchar_t) * (new_path_len + 1));
 		
-		fts_close(fts_p);
+		closedir(dir_p);
+		
 		return;
 	}
 	
-	fts_close(fts_p);
+	closedir(dir_p);
 }
 
 static void

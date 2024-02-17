@@ -140,5 +140,6 @@ STK_DEF_PROTO(unsigned)
 char const *file_ext(char const *path);
 int mk_dir_rec(char const *dir);
 int mk_file(char const *path);
+int strncmp_case_insen(char const *a, char const *b, size_t n);
 
 #endif

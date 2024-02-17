@@ -1,5 +1,6 @@
 #include "util.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -84,6 +85,27 @@ mk_file(char const *path)
 	// directory, like `$ medioed hello/`.
 	if (stat(path, &s) || !S_ISREG(s.st_mode))
 		return 1;
+	
+	return 0;
+}
+
+int
+strncmp_case_insen(char const *a, char const *b, size_t n)
+{
+	for (size_t i = 0; i < n; ++i) {
+		if (!a[i] && !b[i])
+			break;
+		else if (isalpha(a[i]) && isalpha(b[i])) {
+			char a_i = tolower(a[i]), b_i = tolower(b[i]);
+			if (a_i > b_i)
+				return 1;
+			else if (a_i < b_i)
+				return -1;
+		} else if (a[i] > b[i])
+			return 1;
+		else if (a[i] < b[i])
+			return -1;
+	}
 	
 	return 0;
 }
