@@ -34,6 +34,10 @@ static struct frame *mf;
 
 static int rs_bind_indent[] = {K_TAB, -1};
 
+static wchar_t const *no_indent_kw[] = {
+	L"where",
+};
+
 void
 mode_rs_init(struct frame *f)
 {
@@ -96,8 +100,30 @@ bind_indent(void)
 			--prev_last_ch;
 		
 		size_t prev_first_ch = prev_ln;
-		while (iswspace(src[prev_first_ch]))
+		while (prev_first_ch < mf->buf->size
+		       && iswspace(src[prev_first_ch])) {
 			++prev_first_ch;
+		}
+		
+		size_t last_ch = first_ch;
+		while (last_ch < mf->buf->size && src[last_ch] != L'\n')
+			++last_ch;
+		while (last_ch >= ln && iswspace(src[last_ch]))
+			--last_ch;
+		
+		bool no_indent = false;
+		for (size_t i = 0; i < ARRAY_SIZE(no_indent_kw); ++i) {
+			size_t len = wcslen(no_indent_kw[i]);
+			
+			if (len <= last_ch
+			    && !iswalnum(src[last_ch - len])
+			    && !wcsncmp(no_indent_kw[i], &src[last_ch - len + 1], len)) {
+				no_indent = true;
+				break;
+			}
+		}
+		
+		// TODO: add `where` clause handling.
 		
 		if (!iswspace(src[prev_last_ch])
 		    && !iswspace(src[first_ch])
@@ -106,7 +132,8 @@ bind_indent(void)
 		    && !wcschr(L"#", src[prev_first_ch])
 		    && wcsncmp(L"//", &src[prev_first_ch], 2)
 		    && wcsncmp(L"//", &src[first_ch], 2)
-		    && (prev_last_ch == 0 || wcsncmp(L"*/", &src[prev_last_ch - 1], 2))) {
+		    && (prev_last_ch == 0 || wcsncmp(L"*/", &src[prev_last_ch - 1], 2))
+		    && !no_indent) {
 			++ntab;
 		}
 	}

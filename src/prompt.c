@@ -156,12 +156,16 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 	
 	char dir[PATH_MAX];
 	strncpy(dir, path, PATH_MAX);
-	char *last_slash = strrchr(dir, '/');
+	char *first_slash = strchr(dir, '/'), *last_slash = strrchr(dir, '/');
+	
 	if (!last_slash) {
 		dir[0] = '.';
 		dir[1] = 0;
-	} else
+	} else if (first_slash && first_slash == last_slash)
+		*(last_slash + 1) = 0;
+	else
 		*last_slash = 0;
+	
 	size_t dir_len = strlen(dir);
 	
 	char const *name = last_slash ? last_slash + 1 : path;
@@ -174,13 +178,19 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 	struct dirent *dir_ent;
 	while (dir_ent = readdir(dir_p)) {
 		if (strncmp_case_insen(name, dir_ent->d_name, name_len)
-		    || dir_ent->d_type != DT_DIR && dir_ent->d_type != DT_REG) {
+		    || dir_ent->d_type != DT_DIR && dir_ent->d_type != DT_REG
+		    || !strcmp(".", dir_ent->d_name)
+		    || !strcmp("..", dir_ent->d_name)) {
 			continue;
 		}
 		
 		char new_path[PATH_MAX];
 		strcpy(new_path, dir);
-		strcat(new_path, "/");
+		
+		// only add '/' if not root, otherwise you'd get "//...".
+		if (!first_slash || first_slash != last_slash)
+			strcat(new_path, "/");
+		
 		strcat(new_path, dir_ent->d_name);
 		if (dir_ent->d_type == DT_DIR)
 			strcat(new_path, "/");
