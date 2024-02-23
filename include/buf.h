@@ -8,9 +8,6 @@
 
 #include "util.h"
 
-typedef struct buf *p_buf;
-typedef struct buf_op buf_op;
-
 enum buf_src_type {
 	BST_FRESH = 0,
 	BST_FILE,
@@ -34,7 +31,7 @@ struct buf_op {
 	unsigned char type;
 };
 
-VEC_DEF_PROTO(buf_op)
+VEC_DEF_PROTO(struct buf_op, buf_op)
 
 struct buf {
 	wchar_t *conts;
@@ -45,7 +42,7 @@ struct buf {
 	struct vec_buf_op hist;
 };
 
-VEC_DEF_PROTO(p_buf)
+VEC_DEF_PROTO(struct buf *, p_buf)
 
 struct buf buf_create(bool writable);
 struct buf buf_from_file(char const *path);

@@ -8,15 +8,13 @@
 #include "conf.h"
 #include "util.h"
 
-typedef struct bind bind;
-
 struct bind {
 	int const *key_seq;
 	size_t len;
 	void (*fn)(void);
 };
 
-VEC_DEF_PROTO_STATIC(bind)
+VEC_DEF_PROTO_STATIC(struct bind, bind)
 
 static int cmp_binds(void const *a, void const *b);
 
@@ -243,7 +241,7 @@ keybd_cur_mac(size_t *out_len)
 	return cur_mac_len ? cur_mac : NULL;
 }
 
-VEC_DEF_IMPL_STATIC(bind)
+VEC_DEF_IMPL_STATIC(struct bind, bind)
 
 static int
 cmp_binds(void const *a, void const *b)

@@ -23,6 +23,9 @@ static unsigned comp_tabs(size_t first_ch, size_t last_sig_ch);
 static unsigned comp_smart_spaces(size_t first_spc, size_t off, size_t ln, size_t first_ch);
 static long nopen_at(size_t pos, wchar_t open, wchar_t close);
 static int comp_next_state(size_t pos, size_t *off, struct rd_state *rds);
+static bool not_iswspace(wchar_t wch);
+static bool is_sig_last(wchar_t wch);
+static struct vec_mu_region get_skip_regs(void);
 
 static struct frame *mf;
 
@@ -70,42 +73,20 @@ bind_indent(void)
 		return;
 	
 	wchar_t const *src = mf->buf->conts;
-
-	size_t ln = mf->csr;
-	while (ln > 0 && src[ln - 1] != L'\n')
-		--ln;
-
-	size_t prev_ln = ln - (ln > 0);
-	while (prev_ln > 0 && src[prev_ln - 1] != L'\n')
-		--prev_ln;
-
-	size_t first_ch = ln;
-	while (first_ch < mf->buf->size
-	       && src[first_ch] != L'\n'
-	       && iswspace(src[first_ch])) {
-		++first_ch;
-	}
+	struct vec_mu_region skip = get_skip_regs();
 	
-	size_t last_sig_ch = ln;
-	while (last_sig_ch < mf->buf->size && src[last_sig_ch] != L'\n')
-		++last_sig_ch;
-	while (last_sig_ch > ln
-	       && last_sig_ch < mf->buf->size
-	       && !wcschr(L"+-()[].<>!~*&/%=?:|,", src[last_sig_ch])
-	       && !iswalnum(src[last_sig_ch])) {
-		--last_sig_ch;
-	}
+	size_t ln = mu_get_ln(mf->csr, &skip);
+	size_t ln_end = mu_get_ln_end(mf->csr, &skip);
+	size_t prev_ln = mu_get_prev_ln(ln, &skip);
+	size_t first_ch = mu_get_first(ln, &skip, not_iswspace);
+	size_t last_sig_ch = mu_get_last(ln_end, &skip, is_sig_last);
 	
 	unsigned ntab = comp_tabs(first_ch, last_sig_ch), nspace = 0;
 	
 	if (prev_ln != ln) {
-		size_t prev_last_ch = ln - 1 * (ln > 1);
-		while (prev_last_ch > prev_ln && iswspace(src[prev_last_ch]))
-			--prev_last_ch;
-
-		size_t prev_first_ch = prev_ln;
-		while (prev_first_ch < ln - 1 && iswspace(src[prev_first_ch]))
-			++prev_first_ch;
+		size_t prev_ln_end = mu_get_ln_end(prev_ln, &skip);
+		size_t prev_first_ch = mu_get_first(prev_ln, &skip, not_iswspace);
+		size_t prev_last_ch = mu_get_last(prev_ln_end, &skip, not_iswspace);
 		
 		if (src[prev_last_ch] == L')' && src[prev_first_ch] != L'#') {
 			if (nopen_at(prev_last_ch + 1, L'(', L')') == 0
@@ -148,6 +129,7 @@ bind_indent(void)
 	}
 	
 	mu_finish_indent(ln, first_ch, ntab, nspace);
+	vec_mu_region_destroy(&skip);
 }
 
 static void
@@ -326,4 +308,23 @@ comp_next_state(size_t pos, size_t *off, struct rd_state *rds)
 	}
 	
 	return 0;
+}
+
+static bool
+not_iswspace(wchar_t wch)
+{
+	return !iswspace(wch);
+}
+
+static bool
+is_sig_last(wchar_t wch)
+{
+	return wcschr(L"+-()[].<>!~*&/%=?:|,", wch) || iswalnum(wch);
+}
+
+static struct vec_mu_region
+get_skip_regs(void)
+{
+	// TODO: implement skip region collection.
+	return vec_mu_region_create();
 }

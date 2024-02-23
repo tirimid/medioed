@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-STK_DEF_IMPL(unsigned)
+STK_DEF_IMPL(unsigned, unsigned)
 
 char const *
 file_ext(char const *path)

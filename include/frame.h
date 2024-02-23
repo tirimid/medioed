@@ -8,8 +8,6 @@
 #include "buf.h"
 #include "util.h"
 
-typedef struct frame frame;
-
 enum frame_draw_flag {
 	FDF_ACTIVE = 0x1,
 	FDF_MONO = 0x2,
@@ -26,7 +24,7 @@ struct frame {
 	unsigned csr_want_col;
 };
 
-VEC_DEF_PROTO(frame)
+VEC_DEF_PROTO(struct frame, frame)
 
 struct frame frame_create(wchar_t const *name, struct buf *buf);
 void frame_destroy(struct frame *f);

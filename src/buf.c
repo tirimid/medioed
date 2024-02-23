@@ -14,8 +14,8 @@
 // be deleted in order to make space.
 #define MAX_HIST_SIZE 512
 
-VEC_DEF_IMPL(buf_op)
-VEC_DEF_IMPL(p_buf)
+VEC_DEF_IMPL(struct buf_op, buf_op)
+VEC_DEF_IMPL(struct buf *, p_buf)
 
 extern bool flag_r;
 

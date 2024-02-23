@@ -16,7 +16,7 @@
 static void draw_line(struct frame const *f, unsigned *line, size_t *draw_csr);
 static void exec_highlight(struct frame const *f, struct highlight const *hl);
 
-VEC_DEF_IMPL(frame)
+VEC_DEF_IMPL(struct frame, frame)
 
 struct frame
 frame_create(wchar_t const *name, struct buf *buf)
