@@ -20,12 +20,14 @@ static void bind_pair_close_ag(void);
 static void bind_pair_sq(void);
 static void bind_pair_dq(void);
 static void bind_del_back_ch(void);
+static void bind_new_line(void);
 static ssize_t get_nearest_reg_fwd(struct vec_mu_region const *regs, size_t pos);
 static ssize_t get_nearest_reg_back(struct vec_mu_region const *regs, size_t pos);
 
 static struct frame *mf;
 static bool opt_base = false, opt_pairing = false;
 static unsigned long pair_flags = 0;
+static void (*bind_indent)(void);
 
 static int mu_bind_pair_open_pn[] = {'(', -1};
 static int mu_bind_pair_open_bk[] = {'[', -1};
@@ -94,6 +96,14 @@ mu_set_pairing(unsigned long flags)
 	if (flags & PF_DQUOTE)
 		keybd_bind(mu_bind_pair_dq, bind_pair_dq);
 	
+	keybd_organize();
+}
+
+void
+mu_set_bind_new_line(void (*mode_bind_indent)(void))
+{
+	bind_indent = mode_bind_indent;
+	keybd_bind(conf_bind_new_line, bind_new_line);
 	keybd_organize();
 }
 
@@ -334,6 +344,21 @@ bind_del_back_ch(void)
 		buf_erase(mf->buf, mf->csr, mf->csr + nch);
 		frame_comp_boundary(mf);
 	}
+}
+
+// generic bind for handling newline entry.
+// modes like C and Rust use this, but modes like HTML require special behavior
+// upon newline entry, so they set their own.
+static void
+bind_new_line(void)
+{
+	bind_indent();
+	
+	buf_push_hist_brk(mf->buf);
+	buf_write_wch(mf->buf, mf->csr, L'\n');
+	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
+	
+	bind_indent();
 }
 
 static ssize_t

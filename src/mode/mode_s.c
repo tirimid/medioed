@@ -9,7 +9,6 @@
 #include "util.h"
 
 static void bind_indent(void);
-static void bind_new_line(void);
 
 static struct frame *mf;
 
@@ -23,8 +22,8 @@ mode_s_init(struct frame *f)
 	
 	mu_set_base();
 	mu_set_pairing(PF_BRACKET | PF_SQUOTE | PF_DQUOTE);
+	mu_set_bind_new_line(bind_indent);
 	
-	keybd_bind(conf_bind_new_line, bind_new_line);
 	keybd_bind(s_bind_indent, bind_indent);
 	
 	keybd_organize();
@@ -81,16 +80,4 @@ bind_indent(void)
 		ntab = 0;
 	
 	mu_finish_indent(ln, first_ch, ntab, 0);
-}
-
-static void
-bind_new_line(void)
-{
-	bind_indent();
-
-	buf_push_hist_brk(mf->buf);
-	buf_write_wch(mf->buf, mf->csr, L'\n');
-	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-	
-	bind_indent();
 }

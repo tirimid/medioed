@@ -6,7 +6,6 @@
 #include <string.h>
 #include <wctype.h>
 
-#include "conf.h"
 #include "keybd.h"
 #include "mode/mutil.h"
 #include "util.h"
@@ -26,7 +25,6 @@ struct rd_state {
 };
 
 static void bind_indent(void);
-static void bind_new_line(void);
 static long nopen_at(struct rd_state *out_rds, size_t pos, wchar_t const *open, wchar_t const *close);
 static int comp_next_state(size_t *off, size_t limit, struct rd_state *rds);
 
@@ -46,8 +44,8 @@ mode_rs_init(struct frame *f)
 
 	mu_set_base();
 	mu_set_pairing(PF_PAREN | PF_BRACKET | PF_BRACE | PF_ANGLE | PF_DQUOTE);
+	mu_set_bind_new_line(bind_indent);
 
-	keybd_bind(conf_bind_new_line, bind_new_line);
 	keybd_bind(rs_bind_indent, bind_indent);
 
 	keybd_organize();
@@ -73,6 +71,8 @@ bind_indent(void)
 {
 	if (!(mf->buf->flags & BF_WRITABLE))
 		return;
+	
+	// TODO: rework to use skip-region technique.
 	
 	wchar_t const *src = mf->buf->conts;
 	
@@ -151,18 +151,6 @@ bind_indent(void)
 	ntab = MAX(0, ntab);
 	
 	mu_finish_indent(ln, first_ch, ntab, 0);
-}
-
-static void
-bind_new_line(void)
-{
-	bind_indent();
-
-	buf_push_hist_brk(mf->buf);
-	buf_write_wch(mf->buf, mf->csr, L'\n');
-	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-	
-	bind_indent();
 }
 
 static long

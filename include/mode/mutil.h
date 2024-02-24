@@ -26,6 +26,7 @@ VEC_DEF_PROTO(struct mu_region, mu_region)
 void mu_init(struct frame *f);
 void mu_set_base(void);
 void mu_set_pairing(unsigned long flags);
+void mu_set_bind_new_line(void (*mode_bind_indent)(void));
 void mu_finish_indent(size_t ln, size_t first_ch, unsigned ntab, unsigned nspace);
 
 // `skip` regions are expected to be in forward-linear order.

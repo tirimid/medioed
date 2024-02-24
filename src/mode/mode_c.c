@@ -4,8 +4,6 @@
 #include <string.h>
 #include <wctype.h>
 
-#include "buf.h"
-#include "conf.h"
 #include "keybd.h"
 #include "mode/mutil.h"
 #include "util.h"
@@ -18,7 +16,6 @@ struct rd_state {
 };
 
 static void bind_indent(void);
-static void bind_new_line(void);
 static unsigned comp_tabs(size_t first_ch, size_t last_sig_ch);
 static unsigned comp_smart_spaces(size_t first_spc, size_t off, size_t ln, size_t first_ch);
 static long nopen_at(size_t pos, wchar_t open, wchar_t close);
@@ -44,9 +41,9 @@ mode_c_init(struct frame *f)
 
 	mu_set_base();
 	mu_set_pairing(PF_PAREN | PF_BRACKET | PF_BRACE | PF_SQUOTE | PF_DQUOTE);
-
+	mu_set_bind_new_line(bind_indent);
+	
 	keybd_bind(c_bind_indent, bind_indent);
-	keybd_bind(conf_bind_new_line, bind_new_line);
 	
 	keybd_organize();
 }
@@ -133,18 +130,6 @@ bind_indent(void)
 	vec_mu_region_destroy(&skip);
 }
 
-static void
-bind_new_line(void)
-{
-	bind_indent();
-
-	buf_push_hist_brk(mf->buf);
-	buf_write_wch(mf->buf, mf->csr, L'\n');
-	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-	
-	bind_indent();
-}
-
 static unsigned
 comp_tabs(size_t first_ch, size_t last_sig_ch)
 {
@@ -167,7 +152,7 @@ comp_tabs(size_t first_ch, size_t last_sig_ch)
 		
 		if (rds.in_str || rds.in_ch || rds.in_blk_cmt || rds.in_ln_cmt)
 			continue;
-		else if (wch == L'\n') {
+		else if (wcschr(L"\n)", wch)) {
 			if (pause_stk_open.size > prev_npause) {
 				free(stk_unsigned_pop(&pause_stk_open));
 				free(stk_unsigned_pop(&pause_stk_close));
@@ -216,8 +201,14 @@ comp_smart_spaces(size_t first_spc, size_t off, size_t ln, size_t first_ch)
 	struct rd_state rds;
 	memset(&rds, 0, sizeof(rds));
 	
-	while (first_spc + off < ln
-	       && (src[first_spc + off] != L'(' || rds.in_str || rds.in_ch || rds.in_blk_cmt || rds.in_ln_cmt)) {
+	while (src[first_spc + off] != L'('
+	       || rds.in_str
+	       || rds.in_ch
+	       || rds.in_blk_cmt
+	       || rds.in_ln_cmt) {
+		if (first_spc + off >= ln)
+			break;
+		
 		if (comp_next_state(first_spc, &off, &rds) == CNS_CONTINUE)
 			continue;
 		
@@ -291,19 +282,23 @@ comp_next_state(size_t pos, size_t *off, struct rd_state *rds)
 		rds->in_ch = !rds->in_ch;
 	} else if (wch == L'\n' && !rds->in_blk_cmt)
 		rds->in_ln_cmt = rds->in_str = rds->in_ch = false;
-	else if (!wcsncmp(&src[pos + *off], L"//", 2)
-	           && !rds->in_ch
-	           && !rds->in_str
-	           && !rds->in_blk_cmt) {
+	else if (pos + *off + 1 < mf->buf->size
+	         && !wcsncmp(&src[pos + *off], L"//", 2)
+	         && !rds->in_ch
+	         && !rds->in_str
+	         && !rds->in_blk_cmt) {
 		++*off;
 		rds->in_ln_cmt = true;
-	} else if (!wcsncmp(&src[pos + *off], L"/*", 2)
+	} else if (pos + *off + 1 < mf->buf->size
+	           && !wcsncmp(&src[pos + *off], L"/*", 2)
 	           && !rds->in_ch
 	           && !rds->in_str
 	           && !rds->in_ln_cmt) {
 		++*off;
 		rds->in_blk_cmt = true;
-	} else if (!wcsncmp(&src[pos + *off], L"*/", 2) && rds->in_blk_cmt) {
+	} else if (pos + *off + 1 < mf->buf->size
+	           && !wcsncmp(&src[pos + *off], L"*/", 2)
+	           && rds->in_blk_cmt) {
 		++*off;
 		rds->in_blk_cmt = false;
 	}
@@ -328,43 +323,23 @@ get_skip_regs(void)
 {
 	struct vec_mu_region skip = vec_mu_region_create();
 	
-	wchar_t const *src = mf->buf->conts;
-	bool in_str = false, in_ch = false;
+	struct rd_state rds;
+	memset(&rds, 0, sizeof(rds));
+	
+	bool in_cmt = false;
+	size_t lb = 0;
 	for (size_t i = 0; i < mf->buf->size; ++i) {
-		if (src[i] == L'"' && !in_ch)
-			in_str = !in_str;
-		else if (src[i] == L'\'' && !in_str)
-			in_ch = !in_ch;
-		else if ((in_ch || in_str) && src[i] == L'\\')
-			++i;
-		else if (i < mf->buf->size - 1
-		         && !in_ch
-		         && !in_str
-		         && !wcsncmp(&src[i], L"//", 2)) {
-			size_t lb = i;
-			
-			while (i < mf->buf->size && src[i] != L'\n')
-				++i;
-			
+		if (comp_next_state(0, &i, &rds) == CNS_CONTINUE)
+			continue;
+		
+		if (!in_cmt && (rds.in_ln_cmt || rds.in_blk_cmt)) {
+			lb = i - 1;
+			in_cmt = true;
+		} else if (in_cmt && !rds.in_ln_cmt && !rds.in_blk_cmt) {
+			in_cmt = false;
 			struct mu_region reg = {
 				.lb = lb,
-				.ub = --i,
-			};
-			vec_mu_region_add(&skip, &reg);
-		} else if (i < mf->buf->size - 1
-		           && !in_ch
-		           && !in_str
-		           && !wcsncmp(&src[i], L"/*", 2)) {
-			size_t lb = i;
-			
-			while (i < mf->buf->size - 1
-			       && wcsncmp(&src[i], L"*/", 2)) {
-				++i;
-			}
-			
-			struct mu_region reg = {
-				.lb = lb,
-				.ub = ++i,
+				.ub = i,
 			};
 			vec_mu_region_add(&skip, &reg);
 		}

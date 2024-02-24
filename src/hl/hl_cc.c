@@ -256,25 +256,20 @@ hl_rstring(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 		++*i;
 	
 	size_t j = *i + 1;
-	while (j - *i <= 16 && src[j] != L'(' && src[j] != L'"')
+	while (j < len && j - *i <= 16 && src[j] != L'(' && src[j] != L'"')
 		++j;
 	
-	// `d-char-seq` is max 16 chars, plus 3 for '"', ')', and 0.
-	wchar_t term_seq[19] = {0};
-	size_t d_char_seq_len = 0;
-	if (src[j] == L'(') {
-		d_char_seq_len = j - *i - 1;
-		
-		for (size_t k = 0; k < d_char_seq_len; ++k)
-			term_seq[k + 1] = src[*i + k + 1];
-		
-		term_seq[0] = L')';
-		term_seq[d_char_seq_len + 1] = L'"';
-		term_seq[d_char_seq_len + 2] = 0;
-	} else {
-		term_seq[0] = L'"';
-		term_seq[1] = 0;
-	}
+	if (j >= len || src[j] != L'(')
+		return 1;
+	
+	// `d-char-seq` is max 16 chars, plus 2 for '"' and ')'.
+	wchar_t term_seq[18] = {0};
+	size_t d_char_seq_len = j - *i - 1;
+	
+	for (size_t k = 0; k < d_char_seq_len; ++k)
+		term_seq[k + 1] = src[*i + k + 1];
+	term_seq[0] = L')';
+	term_seq[d_char_seq_len + 1] = L'"';
 	
 	while (j + d_char_seq_len + 2 < len
 	       && wcsncmp(&src[j], term_seq, d_char_seq_len + 2)) {
