@@ -75,21 +75,22 @@ bind_indent(void)
 	wchar_t const *src = mf->buf->conts;
 	struct vec_mu_region skip = get_skip_regs();
 	
-	size_t ln = mu_get_ln(mf->csr, &skip);
-	size_t ln_end = mu_get_ln_end(mf->csr, &skip);
-	size_t prev_ln = mu_get_prev_ln(ln, &skip);
-	size_t first_ch = mu_get_first(ln, &skip, not_iswspace);
+	size_t ln = mu_get_ln(mf->csr, NULL);
+	size_t ln_end = mu_get_ln_end(mf->csr, NULL);
+	size_t prev_ln = mu_get_prev_ln(ln, NULL);
+	size_t first_ch = mu_get_first(ln, NULL, not_iswspace);
 	size_t last_sig_ch = mu_get_last(ln_end, &skip, is_sig_last);
 	
 	unsigned ntab = comp_tabs(first_ch, last_sig_ch), nspace = 0;
 	
 	if (prev_ln != ln) {
-		size_t prev_ln_end = mu_get_ln_end(prev_ln, &skip);
-		size_t prev_first_ch = mu_get_first(prev_ln, &skip, not_iswspace);
+		size_t prev_ln_end = mu_get_ln_end(prev_ln, NULL);
+		size_t prev_first_ch = mu_get_first(prev_ln, NULL, not_iswspace);
 		size_t prev_last_ch = mu_get_last(prev_ln_end, &skip, not_iswspace);
 		
 		if (src[prev_last_ch] == L')' && src[prev_first_ch] != L'#') {
-			if (nopen_at(prev_last_ch + 1, L'(', L')') == 0
+			if (ntab > 0
+			    && nopen_at(prev_last_ch + 1, L'(', L')') == 0
 			    && !wcschr(L"{}", src[first_ch])) {
 				++ntab;
 			}
@@ -325,6 +326,49 @@ is_sig_last(wchar_t wch)
 static struct vec_mu_region
 get_skip_regs(void)
 {
-	// TODO: implement skip region collection.
-	return vec_mu_region_create();
+	struct vec_mu_region skip = vec_mu_region_create();
+	
+	wchar_t const *src = mf->buf->conts;
+	bool in_str = false, in_ch = false;
+	for (size_t i = 0; i < mf->buf->size; ++i) {
+		if (src[i] == L'"' && !in_ch)
+			in_str = !in_str;
+		else if (src[i] == L'\'' && !in_str)
+			in_ch = !in_ch;
+		else if ((in_ch || in_str) && src[i] == L'\\')
+			++i;
+		else if (i < mf->buf->size - 1
+		         && !in_ch
+		         && !in_str
+		         && !wcsncmp(&src[i], L"//", 2)) {
+			size_t lb = i;
+			
+			while (i < mf->buf->size && src[i] != L'\n')
+				++i;
+			
+			struct mu_region reg = {
+				.lb = lb,
+				.ub = --i,
+			};
+			vec_mu_region_add(&skip, &reg);
+		} else if (i < mf->buf->size - 1
+		           && !in_ch
+		           && !in_str
+		           && !wcsncmp(&src[i], L"/*", 2)) {
+			size_t lb = i;
+			
+			while (i < mf->buf->size - 1
+			       && wcsncmp(&src[i], L"*/", 2)) {
+				++i;
+			}
+			
+			struct mu_region reg = {
+				.lb = lb,
+				.ub = ++i,
+			};
+			vec_mu_region_add(&skip, &reg);
+		}
+	}
+	
+	return skip;
 }

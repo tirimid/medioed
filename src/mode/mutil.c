@@ -119,7 +119,7 @@ size_t
 mu_get_ln(size_t pos, struct vec_mu_region const *skip)
 {
 	size_t ln = pos;
-	ssize_t reg_ind = get_nearest_reg_back(skip, ln);
+	ssize_t reg_ind = skip ? get_nearest_reg_back(skip, ln) : -1;
 	
 	while (ln > 0) {
 		struct mu_region const *reg = reg_ind == -1 ? NULL : &skip->data[reg_ind];
@@ -142,10 +142,10 @@ size_t
 mu_get_ln_end(size_t pos, struct vec_mu_region const *skip)
 {
 	size_t ln_end = pos;
-	ssize_t reg_ind = get_nearest_reg_fwd(skip, ln_end);
+	ssize_t reg_ind = skip ? get_nearest_reg_fwd(skip, ln_end) : -1;
 	
 	while (ln_end < mf->buf->size) {
-		struct mu_region const *reg = reg_ind >= skip->size ? NULL : &skip->data[reg_ind];
+		struct mu_region const *reg = reg_ind == -1 ? NULL : &skip->data[reg_ind];
 		
 		if (mf->buf->conts[ln_end] == L'\n') {
 			if (reg
@@ -155,8 +155,10 @@ mu_get_ln_end(size_t pos, struct vec_mu_region const *skip)
 			}
 		}
 		
-		if (reg && ln_end == reg->ub)
-			++reg_ind;
+		if (reg && ln_end == reg->ub) {
+			if (++reg_ind >= skip->size)
+				reg_ind = -1;
+		}
 		
 		++ln_end;
 	}
@@ -181,10 +183,10 @@ mu_get_first(size_t pos, struct vec_mu_region const *skip,
              bool (*is_sig)(wchar_t))
 {
 	size_t first_ch = pos;
-	ssize_t reg_ind = get_nearest_reg_fwd(skip, first_ch);
+	ssize_t reg_ind = skip ? get_nearest_reg_fwd(skip, first_ch) : -1;
 	
 	while (first_ch < mf->buf->size) {
-		struct mu_region const *reg = reg_ind >= skip->size ? NULL : &skip->data[reg_ind];
+		struct mu_region const *reg = reg_ind == -1 ? NULL : &skip->data[reg_ind];
 		
 		if (mf->buf->conts[first_ch] == L'\n'
 		    || is_sig(mf->buf->conts[first_ch])) {
@@ -195,8 +197,10 @@ mu_get_first(size_t pos, struct vec_mu_region const *skip,
 			}
 		}
 		
-		if (reg && first_ch == reg->ub)
-			++reg_ind;
+		if (reg && first_ch == reg->ub) {
+			if (++reg_ind >= skip->size)
+				reg_ind = -1;
+		}
 		
 		++first_ch;
 	}
@@ -209,7 +213,7 @@ mu_get_last(size_t pos, struct vec_mu_region const *skip,
             bool (*is_sig)(wchar_t))
 {
 	size_t last_ch = pos;
-	ssize_t reg_ind = get_nearest_reg_back(skip, last_ch);
+	ssize_t reg_ind = skip ? get_nearest_reg_back(skip, last_ch) : -1;
 	
 	while (last_ch > 0) {
 		struct mu_region const *reg = reg_ind == -1 ? NULL : &skip->data[reg_ind];
@@ -364,7 +368,7 @@ get_nearest_reg_back(struct vec_mu_region const *regs, size_t pos)
 	ssize_t nearest = -1;
 	size_t min_dst = SIZE_MAX;
 	for (size_t i = 0; i < regs->size; ++i) {
-		if (pos >= regs->data[i - 1].lb && pos <= regs->data[i - 1].ub)
+		if (pos >= regs->data[i].lb && pos <= regs->data[i].ub)
 			return i;
 		
 		if (regs->data[i].ub < pos
