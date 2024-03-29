@@ -4,10 +4,9 @@
 
 medioed, or (Medio)cre Text (Ed)itor, is a text editor program I'm making
 because I want to. The user experience should be somewhat similar to a less
-configurable (and substantially more minimal) GNU Emacs. Basically, I'm trying
-to make *my* perfect text editor, with all the features that *I* want from one.
-Thus, this probably won't be very useful to you, unless you and I happen to be
-the same person.
+configurable (and substantially more minimal) GNU Emacs. This won't be anything
+serious, just an educational project with the side effect of creating a text
+editor that I personally enjoy using.
 
 ## Dependencies
 
