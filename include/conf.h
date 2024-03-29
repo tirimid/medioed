@@ -56,13 +56,18 @@
 	L"| | | | | |  __/ (_| | | (_) |  __/ (_| |\n" \
 	L"|_| |_| |_|\\___|\\__,_|_|\\___/ \\___|\\__,_|\n" \
 	L"\n" \
-	L"Welcome to medioed, the (Medio)cre Text (Ed)itor. You can find more information\n" \
-	L"regarding this program at https://tirimid.net/software/medioed.html.\n" \
+	L"Welcome to medioed, the (Medio)cre Text (Ed)itor inspired by GNU Emacs.\n" \
 	L"\n" \
-	L"Copyleft (c) Fuck Copyright\n" \
+	L"Medioed has always been, and will always be, Free Software, licensed under the\n" \
+	L"GNU GPLv3, for the benefit of users and anyone wishing to study the source. I\n" \
+	L"created medioed for my own personal use, but you are free to use it on your own\n" \
+	L"machines as well.\n" \
 	L"\n" \
-	L"This program is 100% free software, licensed under the GNU GPLv3. The source is\n" \
-	L"available at https://gitlab.com/tirimid/medioed.\n"
+	L"Additional resources:\n" \
+	L"\tSource code    https://github.com/tirimid/medioed\n" \
+	L"\tDocumentation  https://tirimid.net/software/medioed\n" \
+	L"\n" \
+	L"(The greeter logo seen above was generated with the use of Figlet)\n"
 
 struct highlight {
 	char const *local_mode;

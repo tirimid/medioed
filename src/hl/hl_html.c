@@ -4,7 +4,6 @@
 #include <wctype.h>
 
 #include "conf.h"
-#include "draw.h"
 
 #define A_TAG_FG CONF_A_ACCENT_1_FG
 #define A_TAG_BG CONF_A_ACCENT_1_BG

@@ -5,7 +5,6 @@
 #include <wctype.h>
 
 #include "conf.h"
-#include "draw.h"
 
 #define A_PREPROC_FG CONF_A_ACCENT_3_FG
 #define A_PREPROC_BG CONF_A_ACCENT_3_BG
@@ -161,9 +160,21 @@ hl_char(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
         size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 1;
-	if (j < len && src[j] == L'\\')
-		j += 2;
-	else
+	if (j < len && src[j] == L'\\') {
+		++j;
+		
+		if (j < len && wcschr(L"01234567", src[j])) {
+			// octal escape sequences.
+			while (j < len && wcschr(L"01234567", src[j]))
+				++j;
+		} else if (j < len && wcschr(L"xuU", src[j])) {
+			// hexadecimal-based escape seuences.
+			++j;
+			while (j < len && iswxdigit(src[j]))
+				++j;
+		} else
+			++j;
+	} else
 		++j;
 
 	if (j < len && src[j] == L'\'') {
@@ -187,7 +198,7 @@ hl_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 		while (j < len && src[j] != L'\n')
 			++j;
 	} else {
-		while (j < len && wcsncmp(src + j, L"*/", 2))
+		while (j + 1 < len && wcsncmp(src + j, L"*/", 2))
 			++j;
 	}
 

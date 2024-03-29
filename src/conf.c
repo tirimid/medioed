@@ -7,6 +7,7 @@
 
 #include "hl/hl_c.h"
 #include "hl/hl_cc.h"
+#include "hl/hl_cs.h"
 #include "hl/hl_html.h"
 #include "hl/hl_lua.h"
 #include "hl/hl_md.h"
@@ -15,6 +16,7 @@
 #include "hl/hl_sh.h"
 #include "mode/mode_c.h"
 #include "mode/mode_cc.h"
+#include "mode/mode_cs.h"
 #include "mode/mode_html.h"
 #include "mode/mode_lua.h"
 #include "mode/mode_md.h"
@@ -62,13 +64,14 @@ int const conf_bind_toggle_mono[] = {K_CTL('c'), 'm', -1};
 
 // language mode extensions.
 static char const *ext_c[] = {"c", "h", NULL};
-static char const *ext_md[] = {"md", NULL};
-static char const *ext_sh[] = {"sh", NULL};
-static char const *ext_rs[] = {"rs", NULL};
-static char const *ext_s[] = {"S", NULL};
+static char const *ext_cc[] = {"cc", "hh", NULL};
+static char const *ext_cs[] = {"cs", NULL};
 static char const *ext_html[] = {"html", NULL};
 static char const *ext_lua[] = {"lua", NULL};
-static char const *ext_cc[] = {"cc", "hh", NULL};
+static char const *ext_md[] = {"md", NULL};
+static char const *ext_rs[] = {"rs", NULL};
+static char const *ext_s[] = {"s", "S", NULL};
+static char const *ext_sh[] = {"sh", NULL};
 
 // highlight table.
 struct highlight const conf_htab[] = {
@@ -77,20 +80,12 @@ struct highlight const conf_htab[] = {
 		.find = hl_c_find,
 	},
 	{
-		.local_mode = "md",
-		.find = hl_md_find,
+		.local_mode = "cc",
+		.find = hl_cc_find,
 	},
 	{
-		.local_mode = "sh",
-		.find = hl_sh_find,
-	},
-	{
-		.local_mode = "rs",
-		.find = hl_rs_find,
-	},
-	{
-		.local_mode = "s",
-		.find = hl_s_find,
+		.local_mode = "cs",
+		.find = hl_cs_find,
 	},
 	{
 		.local_mode = "html",
@@ -101,8 +96,20 @@ struct highlight const conf_htab[] = {
 		.find = hl_lua_find,
 	},
 	{
-		.local_mode = "cc",
-		.find = hl_cc_find,
+		.local_mode = "md",
+		.find = hl_md_find,
+	},
+	{
+		.local_mode = "rs",
+		.find = hl_rs_find,
+	},
+	{
+		.local_mode = "s",
+		.find = hl_s_find,
+	},
+	{
+		.local_mode = "sh",
+		.find = hl_sh_find,
 	},
 };
 size_t const conf_htab_size = ARRAY_SIZE(conf_htab);
@@ -134,32 +141,18 @@ struct mode const conf_lmtab[] = {
 		.keypress = mode_c_keypress,
 	},
 	{
-		.name = "md",
-		.init = mode_md_init,
-		.quit = mode_md_quit,
-		.update = mode_md_update,
-		.keypress = mode_md_keypress,
+		.name = "cc",
+		.init = mode_cc_init,
+		.quit = mode_cc_quit,
+		.update = mode_cc_update,
+		.keypress = mode_cc_keypress,
 	},
 	{
-		.name = "sh",
-		.init = mode_sh_init,
-		.quit = mode_sh_quit,
-		.update = mode_sh_update,
-		.keypress = mode_sh_keypress,
-	},
-	{
-		.name = "rs",
-		.init = mode_rs_init,
-		.quit = mode_rs_quit,
-		.update = mode_rs_update,
-		.keypress = mode_rs_keypress,
-	},
-	{
-		.name = "s",
-		.init = mode_s_init,
-		.quit = mode_s_quit,
-		.update = mode_s_update,
-		.keypress = mode_s_keypress,
+		.name = "cs",
+		.init = mode_cs_init,
+		.quit = mode_cs_quit,
+		.update = mode_cs_update,
+		.keypress = mode_cs_keypress,
 	},
 	{
 		.name = "html",
@@ -176,11 +169,32 @@ struct mode const conf_lmtab[] = {
 		.keypress = mode_lua_keypress,
 	},
 	{
-		.name = "cc",
-		.init = mode_cc_init,
-		.quit = mode_cc_quit,
-		.update = mode_cc_update,
-		.keypress = mode_cc_keypress,
+		.name = "md",
+		.init = mode_md_init,
+		.quit = mode_md_quit,
+		.update = mode_md_update,
+		.keypress = mode_md_keypress,
+	},
+	{
+		.name = "rs",
+		.init = mode_rs_init,
+		.quit = mode_rs_quit,
+		.update = mode_rs_update,
+		.keypress = mode_rs_keypress,
+	},
+	{
+		.name = "s",
+		.init = mode_s_init,
+		.quit = mode_s_quit,
+		.update = mode_s_update,
+		.keypress = mode_s_keypress,
+	},
+	{
+		.name = "sh",
+		.init = mode_sh_init,
+		.quit = mode_sh_quit,
+		.update = mode_sh_update,
+		.keypress = mode_sh_keypress,
 	},
 };
 size_t const conf_lmtab_size = ARRAY_SIZE(conf_lmtab);
@@ -192,20 +206,12 @@ struct mode_ext const conf_metab[] = {
 		.mode = "c",
 	},
 	{
-		.exts = ext_md,
-		.mode = "md",
+		.exts = ext_cc,
+		.mode = "cc",
 	},
 	{
-		.exts = ext_sh,
-		.mode = "sh",
-	},
-	{
-		.exts = ext_rs,
-		.mode = "rs",
-	},
-	{
-		.exts = ext_s,
-		.mode = "s",
+		.exts = ext_cs,
+		.mode = "cs",
 	},
 	{
 		.exts = ext_html,
@@ -216,8 +222,20 @@ struct mode_ext const conf_metab[] = {
 		.mode = "lua",
 	},
 	{
-		.exts = ext_cc,
-		.mode = "cc",
+		.exts = ext_md,
+		.mode = "md",
+	},
+	{
+		.exts = ext_rs,
+		.mode = "rs",
+	},
+	{
+		.exts = ext_s,
+		.mode = "s",
+	},
+	{
+		.exts = ext_sh,
+		.mode = "sh",
 	},
 };
 size_t const conf_metab_size = ARRAY_SIZE(conf_metab);

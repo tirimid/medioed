@@ -3,7 +3,6 @@
 #include <wctype.h>
 
 #include "conf.h"
-#include "draw.h"
 
 #define A_CODE_BLOCK_FG CONF_A_ACCENT_3_FG
 #define A_CODE_BLOCK_BG CONF_A_ACCENT_3_BG

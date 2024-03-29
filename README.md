@@ -13,11 +13,13 @@ the same person.
 
 Software / system dependencies are:
 
-* A shell environment for program execution
+* A shell environment (for program execution)
+* mincbuild (for build, optional)
+* Make (for build, optional)
 
 ## Management
 
-* To build the program, run `mincbuild`
+* To build the program, run `mincbuild` or `make`
 * To install the program, run `./install.sh`
 * To uninstall the program from the system, run `./uninstall.sh`
 
@@ -29,5 +31,8 @@ there, edit the files as necessary.
 
 ## Contributing
 
-I am not accepting pull requests from anyone other than myself. Feel free to
-fork this project and make your own version.
+To contribute, please open a pull request with your changes or an issue with a
+suggestion. As a rule of thumb, I will be more likely to accept pull requests
+which fix bugs or improve compatiblity rather than those which add new features.
+If you want to add a feature, I would prefer you opened an issue - however I
+will accept pull requests if I like them.

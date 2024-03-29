@@ -4,8 +4,6 @@
 #include <wctype.h>
 
 #include "conf.h"
-#include "draw.h"
-#include "util.h"
 
 #define A_SPECIAL_FG CONF_A_SPECIAL_FG
 #define A_SPECIAL_BG CONF_A_SPECIAL_BG

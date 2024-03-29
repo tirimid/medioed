@@ -1,12 +1,11 @@
-#include "hl/hl_cc.h"
+#include "hl/hl_cs.h"
 
 #include <stdbool.h>
 #include <string.h>
 #include <wctype.h>
 
-#include <unistd.h>
-
 #include "conf.h"
+#include "util.h"
 
 #define A_PREPROC_FG CONF_A_ACCENT_3_FG
 #define A_PREPROC_BG CONF_A_ACCENT_3_BG
@@ -18,15 +17,12 @@
 #define A_STRING_BG CONF_A_STRING_BG
 #define A_FUNC_FG CONF_A_ACCENT_4_FG
 #define A_FUNC_BG CONF_A_ACCENT_4_BG
-#define A_MACRO_FG CONF_A_ACCENT_2_FG
-#define A_MACRO_BG CONF_A_ACCENT_2_BG
 #define A_SPECIAL_FG CONF_A_SPECIAL_FG
 #define A_SPECIAL_BG CONF_A_SPECIAL_BG
 
 #define SPECIAL L"+-()[].<>{}!~*&/%=?:|;,"
 
 enum word_type {
-	WT_MACRO,
 	WT_FUNC,
 	WT_KEYWORD,
 	WT_BASIC,
@@ -35,125 +31,140 @@ enum word_type {
 static int hl_preproc(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 static int hl_string(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 static int hl_char(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
-static int hl_rstring(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 static int hl_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 static int hl_special(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 static int hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 
 static wchar_t const *keywords[] = {
-	L"alignas",
-	L"alignof",
+	L"abstract",
+	L"add",
+	L"alias",
 	L"and",
-	L"and_eq",
-	L"asm",
-	L"atomic_cancel",
-	L"atomic_commit",
-	L"atomic_noexcept",
-	L"auto",
-	L"bitand",
-	L"bitor",
+	L"args",
+	L"as",
+	L"ascending",
+	L"async",
+	L"await",
+	L"base",
 	L"bool",
 	L"break",
+	L"by",
+	L"byte",
 	L"case",
 	L"catch",
 	L"char",
-	L"char8_t",
-	L"char16_t",
-	L"char32_t",
+	L"checked",
 	L"class",
-	L"compl",
-	L"concept",
 	L"const",
-	L"consteval",
-	L"constexpr",
-	L"constinit",
-	L"const_cast",
 	L"continue",
-	L"co_await",
-	L"co_return",
-	L"co_yield",
-	L"decltype",
+	L"decimal",
 	L"default",
-	L"delete",
+	L"delegate",
+	L"descending",
 	L"do",
 	L"double",
-	L"dynamic_cast",
+	L"dynamic",
 	L"else",
 	L"enum",
+	L"equals",
+	L"event",
 	L"explicit",
-	L"export",
 	L"extern",
 	L"false",
+	L"file",
+	L"finally",
+	L"fixed",
 	L"float",
 	L"for",
-	L"friend",
+	L"foreach",
+	L"from",
+	L"get",
+	L"global",
 	L"goto",
+	L"group",
 	L"if",
-	L"inline",
+	L"implicit",
+	L"in",
+	L"init",
 	L"int",
+	L"interface",
+	L"internal",
+	L"into",
+	L"is",
+	L"join",
+	L"let",
+	L"lock",
 	L"long",
-	L"mutable",
+	L"managed",
+	L"nameof",
 	L"namespace",
 	L"new",
-	L"noexcept",
+	L"nint",
 	L"not",
-	L"not_eq",
-	L"nullptr",
+	L"notnull",
+	L"nuint",
+	L"null",
+	L"object",
+	L"on",
 	L"operator",
 	L"or",
-	L"or_eq",
+	L"orderby",
+	L"out",
+	L"override",
+	L"params",
+	L"partial",
 	L"private",
 	L"protected",
 	L"public",
-	L"reflexpr",
-	L"register",
-	L"reinterpret_cast",
-	L"requires",
+	L"readonly",
+	L"record",
+	L"ref",
+	L"remove",
+	L"required",
 	L"return",
+	L"sbyte",
+	L"scoped",
+	L"sealed",
+	L"select",
+	L"set",
 	L"short",
-	L"signed",
 	L"sizeof",
+	L"stackalloc",
 	L"static",
-	L"static_assert",
-	L"static_cast",
+	L"string",
 	L"struct",
 	L"switch",
-	L"synchronized",
-	L"template",
 	L"this",
-	L"thread_local",
 	L"throw",
 	L"true",
 	L"try",
-	L"typedef",
-	L"typeid",
-	L"typename",
-	L"union",
-	L"unsigned",
+	L"typeof",
+	L"uint",
+	L"ulong",
+	L"unchecked",
+	L"unmanaged",
+	L"unsafe",
+	L"ushort",
 	L"using",
+	L"value",
+	L"var",
 	L"virtual",
 	L"void",
 	L"volatile",
-	L"wchar_t",
+	L"when",
+	L"where",
 	L"while",
-	L"xor",
-	L"xor_eq",
+	L"with",
+	L"yield",
 };
 
 int
-hl_cc_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
+hl_cs_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
            size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
-		for (size_t i = off; i < len; ++i) {
+	for (size_t i = off; i < len; ++i) {
 		if (src[i] == L'#') {
 			if (!hl_preproc(src, len, &i, out_lb, out_ub, out_fg, out_bg))
-				return 0;
-		} else if (i + 2 < len && !wcsncmp(&src[i], L"R\"", 2)
-		           || i + 3 < len && !wcsncmp(&src[i], L"LR\"", 3)
-		           || i + 4 < len && !wcsncmp(&src[i], L"u8R\"", 4)
-		           || i + 3 < len && !wcsncmp(&src[i], L"uR\"", 3)
-		           || i + 3 < len && !wcsncmp(&src[i], L"UR\"", 3)) {
-			if (!hl_rstring(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (src[i] == L'"') {
 			if (!hl_string(src, len, &i, out_lb, out_ub, out_fg, out_bg))
@@ -163,7 +174,7 @@ hl_cc_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 				return 0;
 		} else if (i + 1 < len
 		           && src[i] == L'/'
-		           && (src[i + 1] == L'/' || src[i + 1] == L'*')) {
+		           && wcschr(L"/*", src[i + 1])) {
 			if (!hl_comment(src, len, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (wcschr(SPECIAL, src[i])) {
@@ -183,18 +194,9 @@ hl_preproc(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
            size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i;
-	while (j < len) {
+	while (j < len && src[j] != L'\n')
 		++j;
-		if (src[j] == L'\\') {
-			++j;
-			while (iswspace(src[j]) && src[j] != L'\n')
-				++j;
-			if (src[j] == L'\n')
-				++j;
-		} else if (src[j] == L'\n')
-			break;
-	}
-
+	
 	*out_lb = *i;
 	*out_ub = j;
 	*out_fg = A_PREPROC_FG;
@@ -207,41 +209,18 @@ static int
 hl_string(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
           size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
-	size_t j = *i;
-	while (j < len) {
-		++j;
-		if (src[j] == L'\\') {
-			++j;
-			continue;
-		} else if (src[j] == L'"' || src[j] == L'\n')
-			break;
-	}
-	
-	*out_lb = *i;
-	*out_ub = j + (j < len);
-	*out_fg = A_STRING_FG;
-	*out_bg = A_STRING_BG;
-	
-	return 0;
+	// TODO: implement.
+	return 1;
 }
 
 static int
 hl_char(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
         size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
-	// C++23 escape sequences not handled here.
-	// they should be trivial to add if actually needed.
-	
 	size_t j = *i + 1;
 	if (j < len && src[j] == L'\\') {
 		++j;
-		
-		if (j < len && wcschr(L"01234567", src[j])) {
-			// octal escape sequences.
-			while (j < len && wcschr(L"01234567", src[j]))
-				++j;
-		} else if (j < len && wcschr(L"xuU", src[j])) {
-			// hexadecimal-based escape seuences.
+		if (j < len && wcschr(L"xu", src[j])) {
 			++j;
 			while (j < len && iswxdigit(src[j]))
 				++j;
@@ -260,45 +239,6 @@ hl_char(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 	}
 	
 	return 1;
-}
-
-static int
-hl_rstring(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-           size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
-{
-	while (src[*i] != L'"')
-		++*i;
-	
-	size_t j = *i + 1;
-	while (j < len && j - *i <= 16 && src[j] != L'(' && src[j] != L'"')
-		++j;
-	
-	if (j >= len || src[j] != L'(')
-		return 1;
-	
-	// `d-char-seq` is max 16 chars, plus 2 for '"' and ')'.
-	wchar_t term_seq[18] = {0};
-	size_t d_char_seq_len = j - *i - 1;
-	
-	for (size_t k = 0; k < d_char_seq_len; ++k)
-		term_seq[k + 1] = src[*i + k + 1];
-	term_seq[0] = L')';
-	term_seq[d_char_seq_len + 1] = L'"';
-	
-	while (j + d_char_seq_len + 2 < len
-	       && wcsncmp(&src[j], term_seq, d_char_seq_len + 2)) {
-		++j;
-	}
-	
-	if (j + d_char_seq_len + 2 >= len)
-		return 1;
-	
-	*out_lb = *i;
-	*out_ub = j + d_char_seq_len + 2;
-	*out_fg = A_STRING_FG;
-	*out_bg = A_STRING_BG;
-	
-	return 0;
 }
 
 static int
@@ -342,58 +282,52 @@ static int
 hl_word(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
         size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
 {
-	enum word_type wt = WT_MACRO;
+	enum word_type wt = WT_BASIC;
+	bool ident_pfx = *i > 0 && src[*i - 1] == L'@';
 	
 	size_t j = *i;
-	while (j < len && (src[j] == L'_' || iswalnum(src[j]))) {
-		if (iswlower(src[j]))
-			wt = WT_BASIC;
+	while (j < len && (src[j] == L'_' || iswalnum(src[j])))
 		++j;
-	}
-
-	if (wt == WT_BASIC) {
-		size_t k = j;
-		while (k < len && iswspace(src[k]))
-			++k;
-		
-		// very dumb, does not do string or comment checking.
-		// generally people don't put strings in function template
-		// arguments anyway so that's probably fine.
-		// at least, *I* never do that, and this is *my* editor.
-		// fight me.
-		if (k < len && src[k] == L'<') {
-			++k;
-			for (unsigned nopen = 1; k < len && nopen > 0; ++k) {
-				nopen += src[k] == L'<';
-				nopen -= src[k] == L'>';
-			}
+	
+	// check for (generic) function.
+	// similarly to C++ highlight mode template checking, this is very
+	// stupid and doesn't account for embedded comments.
+	// however, this defect arguably doesn't even slightly matter.
+	
+	size_t k = j;
+	while (k < len && iswspace(src[k]))
+		++k;
+	
+	if (k < len && src[k] == L'<') {
+		++k;
+		for (unsigned nopen = 1; k < len && nopen > 0; ++k) {
+			nopen += src[k] == L'<';
+			nopen -= src[k] == L'>';
 		}
-		
-		while (k < len && iswspace(src[k]))
-			++k;
-
-		if (k < len && src[k] == L'(')
-			wt = WT_FUNC;
 	}
 	
-	for (size_t kw = 0; kw < ARRAY_SIZE(keywords); ++kw) {
-		if (wcslen(keywords[kw]) != j - *i)
-			continue;
-		
-		if (!wcsncmp(keywords[kw], src + *i, j - *i)) {
-			wt = WT_KEYWORD;
-			break;
+	while (k < len && iswspace(src[k]))
+		++k;
+	
+	if (k < len && src[k] == L'(')
+		wt = WT_FUNC;
+	
+	if (!ident_pfx) {
+		for (size_t kw = 0; kw < ARRAY_SIZE(keywords); ++kw) {
+			if (wcslen(keywords[kw]) != j - *i)
+				continue;
+			
+			if (!wcsncmp(keywords[kw], src + *i, j - *i)) {
+				wt = WT_KEYWORD;
+				break;
+			}
 		}
 	}
-
+	
 	*out_lb = *i;
 	*out_ub = j;
-
+	
 	switch (wt) {
-	case WT_MACRO:
-		*out_fg = A_MACRO_FG;
-		*out_bg = A_MACRO_BG;
-		break;
 	case WT_FUNC:
 		*out_fg = A_FUNC_FG;
 		*out_bg = A_FUNC_BG;
