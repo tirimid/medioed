@@ -134,7 +134,7 @@ mu_get_ln(size_t pos, struct vec_mu_region const *skip)
 	while (ln > 0) {
 		struct mu_region const *reg = reg_ind == -1 ? NULL : &skip->data[reg_ind];
 		
-		if (mf->buf->conts[ln - 1] == L'\n') {
+		if (buf_get_wch(mf->buf, ln - 1) == L'\n') {
 			if (reg && (ln < reg->lb || ln > reg->ub) || !reg)
 				break;
 		}
@@ -157,7 +157,7 @@ mu_get_ln_end(size_t pos, struct vec_mu_region const *skip)
 	while (ln_end < mf->buf->size) {
 		struct mu_region const *reg = reg_ind == -1 ? NULL : &skip->data[reg_ind];
 		
-		if (mf->buf->conts[ln_end] == L'\n') {
+		if (buf_get_wch(mf->buf, ln_end) == L'\n') {
 			if (reg
 			    && (ln_end < reg->lb || ln_end > reg->ub)
 			    || !reg) {
@@ -198,8 +198,8 @@ mu_get_first(size_t pos, struct vec_mu_region const *skip,
 	while (first_ch < mf->buf->size) {
 		struct mu_region const *reg = reg_ind == -1 ? NULL : &skip->data[reg_ind];
 		
-		if (mf->buf->conts[first_ch] == L'\n'
-		    || is_sig(mf->buf->conts[first_ch])) {
+		if (buf_get_wch(mf->buf, first_ch) == L'\n'
+		    || is_sig(buf_get_wch(mf->buf, first_ch))) {
 			if (reg
 			    && (first_ch < reg->lb || first_ch > reg->ub)
 			    || !reg) {
@@ -228,8 +228,8 @@ mu_get_last(size_t pos, struct vec_mu_region const *skip,
 	while (last_ch > 0) {
 		struct mu_region const *reg = reg_ind == -1 ? NULL : &skip->data[reg_ind];
 		
-		if (mf->buf->conts[last_ch - 1] == L'\n'
-		    || is_sig(mf->buf->conts[last_ch])) {
+		if (buf_get_wch(mf->buf, last_ch - 1) == L'\n'
+		    || is_sig(buf_get_wch(mf->buf, last_ch))) {
 			if (reg
 			    && (last_ch < reg->lb || last_ch > reg->ub)
 			    || !reg) {
@@ -277,7 +277,7 @@ bind_pair_open_ag(void)
 static void
 bind_pair_close_pn(void)
 {
-	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L')')
+	if (mf->csr >= mf->buf->size || buf_get_wch(mf->buf, mf->csr) != L')')
 		buf_write_wch(mf->buf, mf->csr, L')');
 	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
@@ -285,7 +285,7 @@ bind_pair_close_pn(void)
 static void
 bind_pair_close_bk(void)
 {
-	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L']')
+	if (mf->csr >= mf->buf->size || buf_get_wch(mf->buf, mf->csr) != L']')
 		buf_write_wch(mf->buf, mf->csr, L']');
 	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
@@ -293,7 +293,7 @@ bind_pair_close_bk(void)
 static void
 bind_pair_close_bc(void)
 {
-	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L'}')
+	if (mf->csr >= mf->buf->size || buf_get_wch(mf->buf, mf->csr) != L'}')
 		buf_write_wch(mf->buf, mf->csr, L'}');
 	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
@@ -301,7 +301,7 @@ bind_pair_close_bc(void)
 static void
 bind_pair_close_ag(void)
 {
-	if (mf->csr >= mf->buf->size || mf->buf->conts[mf->csr] != L'>')
+	if (mf->csr >= mf->buf->size || buf_get_wch(mf->buf, mf->csr) != L'>')
 		buf_write_wch(mf->buf, mf->csr, L'>');
 	frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
 }
@@ -331,12 +331,14 @@ bind_del_back_ch(void)
 		if (opt_pairing
 		    && mf->buf->size > 1
 		    && mf->csr < mf->buf->size - 1) {
-			if (!wcsncmp(mf->buf->conts + mf->csr, L"()", 2) && (pair_flags & PF_PAREN)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"[]", 2) && (pair_flags & PF_BRACKET)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"{}", 2) && (pair_flags & PF_BRACE)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"<>", 2) && (pair_flags & PF_ANGLE)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"\"\"", 2) && (pair_flags & PF_DQUOTE)
-			    || !wcsncmp(mf->buf->conts + mf->csr, L"''", 2) && (pair_flags && PF_SQUOTE)) {
+			wchar_t const *cmp = buf_get_wstr(mf->buf,mf->csr, 2);
+			
+			if (!wcscmp(cmp, L"()") && (pair_flags & PF_PAREN)
+			    || !wcscmp(cmp, L"[]") && (pair_flags & PF_BRACKET)
+			    || !wcscmp(cmp, L"{}") && (pair_flags & PF_BRACE)
+			    || !wcscmp(cmp, L"<>") && (pair_flags & PF_ANGLE)
+			    || !wcscmp(cmp, L"\"\"") && (pair_flags & PF_DQUOTE)
+			    || !wcscmp(cmp, L"''") && (pair_flags & PF_SQUOTE)) {
 				nch = 2;
 			}
 		}

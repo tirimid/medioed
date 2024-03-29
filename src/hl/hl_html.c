@@ -12,23 +12,24 @@
 #define A_COMMENT_FG CONF_A_COMMENT_FG
 #define A_COMMENT_BG CONF_A_COMMENT_BG
 
-static int hl_tag(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
-static int hl_ent(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
-static int hl_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_tag(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_ent(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
+static int hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 
 int
-hl_html_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
-             size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
+hl_html_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
+             uint8_t *out_fg, uint8_t *out_bg)
 {
-	for (size_t i = off; i < len; ++i) {
-		if (i + 3 < len && !wcsncmp(&src[i], L"<!--", 4)) {
-			if (!hl_comment(src, len, &i, out_lb, out_ub, out_fg, out_bg))
+	for (size_t i = off; i < buf->size; ++i) {
+		if (i + 3 < buf->size
+		    && !wcscmp(buf_get_wstr(buf, i, 4), L"<!--")) {
+			if (!hl_comment(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (src[i] == L'<') {
-			if (!hl_tag(src, len, &i, out_lb, out_ub, out_fg, out_bg))
+		} else if (buf_get_wch(buf, i) == L'<') {
+			if (!hl_tag(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (src[i] == L'&') {
-			if (!hl_ent(src, len, &i, out_lb, out_ub, out_fg, out_bg))
+		} else if (buf_get_wch(buf, i) == L'&') {
+			if (!hl_ent(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		}
 	}
@@ -37,14 +38,14 @@ hl_html_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
 }
 
 static int
-hl_tag(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-       size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
+hl_tag(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
+       uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 1;
-	while (j < len && src[j] != L'>')
+	while (j < buf->size && buf_get_wch(buf, j) != L'>')
 		++j;
 	
-	if (j == len)
+	if (j >= buf->size)
 		return 1;
 	
 	*out_lb = *i;
@@ -56,14 +57,14 @@ hl_tag(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 }
 
 static int
-hl_ent(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-       size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
+hl_ent(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
+       uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 1;
-	while (j < len && iswalnum(src[j]))
+	while (j < buf->size && iswalnum(buf_get_wch(buf, j)))
 		++j;
 	
-	if (j < len && src[j] == L';') {
+	if (j < buf->size && buf_get_wch(buf, j) == L';') {
 		*out_lb = *i;
 		*out_ub = j + 1;
 		*out_fg = A_ENT_FG;
@@ -76,14 +77,14 @@ hl_ent(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
 }
 
 static int
-hl_comment(wchar_t const *src, size_t len, size_t *i, size_t *out_lb,
-           size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
+hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
+           uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 4;
-	while (j < len && wcsncmp(&src[j], L"-->", 3))
+	while (j < buf->size && wcscmp(buf_get_wstr(buf, j, 3), L"-->"))
 		++j;
 	
-	if (j == len) {
+	if (j == buf->size) {
 		*i += 3;
 		return 1;
 	}

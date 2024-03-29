@@ -69,12 +69,11 @@ mode_html_keypress(wint_t k)
 static int
 open_diff(size_t ln, size_t ln_end)
 {
-	wchar_t const *src = mf->buf->conts;
 	int diff = 0;
 	
 	for (size_t i = ln; i < ln_end; ++i) {
-		if (i + 1 < ln_end && src[i] == L'<') {
-			switch (src[i + 1]) {
+		if (i + 1 < ln_end && buf_get_wch(mf->buf, i) == L'<') {
+			switch (buf_get_wch(mf->buf, i + 1)) {
 			case L'!':
 			case L'>':
 				break;
@@ -85,10 +84,12 @@ open_diff(size_t ln, size_t ln_end)
 				++diff;
 				break;
 			}
-		} else if (src[i] == L'<')
+		} else if (buf_get_wch(mf->buf, i) == L'<')
 			++diff;
-		else if (i + 1 < ln_end && !wcsncmp(&src[i], L"/>", 2))
+		else if (i + 1 < ln_end
+		         && !wcscmp(buf_get_wstr(mf->buf, i , 2), L"/>")) {
 			--diff;
+		}
 	}
 	
 	return diff ? SIGN(diff) : 0;
@@ -100,24 +101,24 @@ bind_indent(void)
 	if (!(mf->buf->flags & BF_WRITABLE))
 		return;
 	
-	wchar_t const *src = mf->buf->conts;
-	
 	size_t ln = mf->csr;
-	while (ln > 0 && src[ln - 1] != L'\n')
+	while (ln > 0 && buf_get_wch(mf->buf, ln - 1) != L'\n')
 		--ln;
 	
 	size_t first_ch = ln;
 	while (first_ch < mf->buf->size
-	       && src[first_ch] != L'\n'
-	       && iswspace(src[first_ch])) {
+	       && buf_get_wch(mf->buf, first_ch) != L'\n'
+	       && iswspace(buf_get_wch(mf->buf, first_ch))) {
 		++first_ch;
 	}
 	
 	unsigned nopen = 0;
 	for (size_t i = 0; i < ln; ++i) {
 		size_t ln_end = i;
-		while (ln_end < mf->buf->size && src[ln_end] != L'\n')
+		while (ln_end < mf->buf->size
+		       && buf_get_wch(mf->buf, ln_end) != L'\n') {
 			++ln_end;
+		}
 		
 		int diff = open_diff(i, ln_end);
 		if (nopen && diff < 0)
@@ -129,7 +130,7 @@ bind_indent(void)
 	}
 	
 	size_t ln_end = ln;
-	while (ln_end < mf->buf->size && src[ln_end] != L'\n')
+	while (ln_end < mf->buf->size && buf_get_wch(mf->buf, ln_end) != L'\n')
 		++ln_end;
 	
 	int diff = open_diff(ln, ln_end);
@@ -149,7 +150,7 @@ bind_new_line(void)
 	
 	if (auto_indent
 	    && mf->csr > 0
-	    && !wcsncmp(&mf->buf->conts[mf->csr - 1], L"><", 2)) {
+	    && !wcscmp(buf_get_wstr(mf->buf, mf->csr - 1, 2), L"><")) {
 		buf_write_wstr(mf->buf, mf->csr, L"\n\n");
 		mf->csr += 2;
 		bind_indent();

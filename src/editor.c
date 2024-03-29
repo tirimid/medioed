@@ -77,7 +77,8 @@ int
 editor_init(int argc, char const *argv[])
 {
 	keybd_init();
-
+	buf_sys_init();
+	
 	frames = vec_frame_create();
 	p_bufs = vec_p_buf_create();
 	cur_frame = 0;
@@ -183,7 +184,8 @@ editor_quit(void)
 
 	vec_frame_destroy(&frames);
 	vec_p_buf_destroy(&p_bufs);
-
+	
+	buf_sys_quit();
 	keybd_quit();
 }
 
@@ -514,9 +516,9 @@ bind_nav_fwd_word(void)
 {
 	struct frame *f = &frames.data[cur_frame];
 
-	while (f->csr < f->buf->size && !iswalnum(f->buf->conts[f->csr]))
+	while (f->csr < f->buf->size && !iswalnum(buf_get_wch(f->buf, f->csr)))
 		++f->csr;
-	while (f->csr < f->buf->size && iswalnum(f->buf->conts[f->csr]))
+	while (f->csr < f->buf->size && iswalnum(buf_get_wch(f->buf, f->csr)))
 		++f->csr;
 	
 	++f->csr;
@@ -532,8 +534,10 @@ bind_nav_fwd_page(void)
 	frame_mv_csr_rel(f, f->sr - 1, 0, false);
 	
 	f->buf_start = f->csr;
-	while (f->buf_start > 0 && f->buf->conts[f->buf_start - 1] != L'\n')
+	while (f->buf_start > 0
+	       && buf_get_wch(f->buf, f->buf_start - 1) != L'\n') {
 		--f->buf_start;
+	}
 
 	frame_comp_boundary(f);
 }
@@ -549,11 +553,11 @@ bind_nav_back_word(void)
 {
 	struct frame *f = &frames.data[cur_frame];
 
-	while (f->csr > 0 && !iswalnum(f->buf->conts[f->csr - 1]))
+	while (f->csr > 0 && !iswalnum(buf_get_wch(f->buf, f->csr - 1)))
 		--f->csr;
-	while (f->csr > 0 && iswalnum(f->buf->conts[f->csr - 1]))
+	while (f->csr > 0 && iswalnum(buf_get_wch(f->buf, f->csr - 1)))
 		--f->csr;
-
+	
 	++f->csr;
 	frame_mv_csr_rel(f, 0, -1, true);
 }
@@ -656,9 +660,9 @@ bind_del_back_word(void)
 
 	size_t ub = f->csr;
 
-	while (f->csr > 0 && !iswalnum(f->buf->conts[f->csr - 1]))
+	while (f->csr > 0 && !iswalnum(buf_get_wch(f->buf, f->csr - 1)))
 		--f->csr;
-	while (f->csr > 0 && iswalnum(f->buf->conts[f->csr - 1]))
+	while (f->csr > 0 && iswalnum(buf_get_wch(f->buf, f->csr - 1)))
 		--f->csr;
 
 	++f->csr;
@@ -740,7 +744,7 @@ bind_focus(void)
 	long dst_bsr = (long)csrr - (f->sr - 1) / 2;
 	dst_bsr = MAX(dst_bsr, 0);
 	while (f->buf_start < f->buf->size && bsr < dst_bsr) {
-		if (f->buf->conts[f->buf_start++] == L'\n')
+		if (buf_get_wch(f->buf, f->buf_start++) == L'\n')
 			++bsr;
 	}
 
@@ -758,13 +762,13 @@ bind_kill(void)
 		free(clipbuf);
 	
 	size_t ln_end = f->csr;
-	while (ln_end < f->buf->size && f->buf->conts[ln_end] != L'\n')
+	while (ln_end < f->buf->size && buf_get_wch(f->buf, ln_end) != L'\n')
 		++ln_end;
 	
 	size_t cp_size = (ln_end - f->csr) * sizeof(wchar_t);
 	clipbuf = malloc(cp_size + sizeof(wchar_t));
 	clipbuf[ln_end - f->csr] = 0;
-	memcpy(clipbuf, f->buf->conts + f->csr, cp_size);
+	memcpy(clipbuf, buf_get_wstr(f->buf, f->csr, ln_end - f->csr), cp_size);
 	
 	buf_erase(f->buf, f->csr, ln_end);
 }
@@ -834,17 +838,17 @@ bind_copy(void)
 	struct frame *f = &frames.data[cur_frame];
 	
 	size_t ln = f->csr;
-	while (ln > 0 && f->buf->conts[ln - 1] != L'\n')
+	while (ln > 0 && buf_get_wch(f->buf, ln - 1) != L'\n')
 		--ln;
 	
 	size_t ln_end = f->csr;
-	while (ln_end < f->buf->size && f->buf->conts[ln_end] != L'\n')
+	while (ln_end < f->buf->size && buf_get_wch(f->buf, ln_end) != L'\n')
 		++ln_end;
 	
 	size_t cp_size = (ln_end - ln) * sizeof(wchar_t);
 	clipbuf = malloc(cp_size + sizeof(wchar_t));
 	clipbuf[ln_end - ln] = 0;
-	memcpy(clipbuf, f->buf->conts + ln, cp_size);
+	memcpy(clipbuf, buf_get_wstr(f->buf, ln, ln_end - ln), cp_size);
 }
 
 static void
@@ -891,12 +895,12 @@ ask_again:;
 	struct frame *f = &frames.data[cur_frame];
 	
 	size_t reg_lb = f->csr;
-	while (reg_lb > 0 && f->buf->conts[reg_lb - 1] != L'\n')
+	while (reg_lb > 0 && buf_get_wch(f->buf, reg_lb - 1) != L'\n')
 		--reg_lb;
 	
 	size_t reg_ub = f->csr;
 	while (reg_ub < f->buf->size && ln_cnt > 0) {
-		while (f->buf->conts[reg_ub] != L'\n')
+		while (buf_get_wch(f->buf, reg_ub) != L'\n')
 			++reg_ub;
 		--ln_cnt;
 		reg_ub += ln_cnt > 0;
@@ -905,7 +909,7 @@ ask_again:;
 	size_t cp_size = (reg_ub - reg_lb) * sizeof(wchar_t);
 	clipbuf = malloc(cp_size + sizeof(wchar_t));
 	clipbuf[reg_ub - reg_lb] = 0;
-	memcpy(clipbuf, f->buf->conts + reg_lb, cp_size);
+	memcpy(clipbuf, buf_get_wstr(f->buf, reg_lb, reg_ub - reg_lb), cp_size);
 }
 
 static void
@@ -927,7 +931,7 @@ ask_again:;
 	size_t search_pos, needle_len = wcslen(needle);
 	struct frame *f = &frames.data[cur_frame];
 	for (search_pos = f->csr + 1; search_pos < f->buf->size; ++search_pos) {
-		if (!wcsncmp(&f->buf->conts[search_pos], needle, needle_len))
+		if (!wcscmp(buf_get_wstr(f->buf, search_pos, needle_len), needle))
 			break;
 	}
 	

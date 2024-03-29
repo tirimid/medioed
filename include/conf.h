@@ -71,7 +71,7 @@
 
 struct highlight {
 	char const *local_mode;
-	int (*find)(wchar_t const *, size_t, size_t, size_t *, size_t *, uint8_t *, uint8_t *);
+	int (*find)(struct buf const *, size_t, size_t *, size_t *, uint8_t *, uint8_t *);
 };
 
 struct margin {

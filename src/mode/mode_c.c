@@ -69,7 +69,6 @@ bind_indent(void)
 	if (!(mf->buf->flags & BF_WRITABLE))
 		return;
 	
-	wchar_t const *src = mf->buf->conts;
 	struct vec_mu_region skip = get_skip_regs();
 	
 	size_t ln = mu_get_ln(mf->csr, NULL);
@@ -85,21 +84,22 @@ bind_indent(void)
 		size_t prev_first_ch = mu_get_first(prev_ln, NULL, not_iswspace);
 		size_t prev_last_ch = mu_get_last(prev_ln_end, &skip, not_iswspace);
 		
-		if (src[prev_last_ch] == L')' && src[prev_first_ch] != L'#') {
+		if (buf_get_wch(mf->buf, prev_last_ch) == L')'
+		    && buf_get_wch(mf->buf, prev_first_ch) != L'#') {
 			if (ntab > 0
 			    && nopen_at(prev_last_ch + 1, L'(', L')') == 0
-			    && !wcschr(L"{}", src[first_ch])) {
+			    && !wcschr(L"{}", buf_get_wch(mf->buf, first_ch))) {
 				++ntab;
 			}
-		} else if (src[prev_last_ch] == L'\\')
+		} else if (buf_get_wch(mf->buf, prev_last_ch) == L'\\')
 			++ntab;
 
 		for (size_t i = 0; i < ARRAY_SIZE(indent_kw); ++i) {
 			size_t len = wcslen(indent_kw[i]);
 			
 			if (len <= prev_last_ch
-			    && !iswalnum(src[prev_last_ch - len])
-			    && !wcsncmp(indent_kw[i], &src[prev_last_ch - len + 1], len)) {
+			    && !iswalnum(buf_get_wch(mf->buf, prev_last_ch - len))
+			    && !wcscmp(indent_kw[i], buf_get_wstr(mf->buf, prev_last_ch - len + 1, len))) {
 				++ntab;
 				break;
 			}
@@ -108,18 +108,18 @@ bind_indent(void)
 		unsigned prev_ntab = 0, off = 0;
 		size_t first_spc = prev_ln;
 		
-		while (src[first_spc] == L'\t') {
+		while (buf_get_wch(mf->buf, first_spc) == L'\t') {
 			++first_spc;
 			++prev_ntab;
 		}
-		while (src[first_spc + off] == L' ')
+		while (buf_get_wch(mf->buf, first_spc + off) == L' ')
 			++off;
 		
 		if (first_ch < mf->buf->size
-		    && !wcschr(L"{}", src[first_ch])
-		    && !wcschr(L";/", src[prev_last_ch])
+		    && !wcschr(L"{}", buf_get_wch(mf->buf, first_ch))
+		    && !wcschr(L";/", buf_get_wch(mf->buf, prev_last_ch))
 		    && off != 0
-		    && !iswspace(src[first_spc + off])
+		    && !iswspace(buf_get_wch(mf->buf, first_spc + off))
 		    && ntab == prev_ntab) {
 			nspace = off;
 		} else if (off == 0 && ntab == prev_ntab)
@@ -133,8 +133,6 @@ bind_indent(void)
 static unsigned
 comp_tabs(size_t first_ch, size_t last_sig_ch)
 {
-	wchar_t const *src = mf->buf->conts;
-	
 	unsigned ntab = 0;
 	
 	struct rd_state rds;
@@ -145,7 +143,7 @@ comp_tabs(size_t first_ch, size_t last_sig_ch)
 	size_t prev_npause = 0;
 	
 	for (size_t i = 0; i < first_ch; ++i) {
-		wchar_t wch = src[i];
+		wchar_t wch = buf_get_wch(mf->buf, i);
 		
 		if (comp_next_state(0, &i, &rds) == CNS_CONTINUE)
 			continue;
@@ -180,14 +178,16 @@ comp_tabs(size_t first_ch, size_t last_sig_ch)
 	
 	if (!rds.in_blk_cmt && !rds.in_ln_cmt) {
 		size_t i = first_ch;
-		while (ntab > 0 && i < mf->buf->size && src[i] == L'}') {
+		while (ntab > 0
+		       && i < mf->buf->size
+		       && buf_get_wch(mf->buf, i) == L'}') {
 			--ntab;
 			++i;
 		}
 		
-		ntab -= ntab > 0 && src[last_sig_ch] == L':';
+		ntab -= ntab > 0 && buf_get_wch(mf->buf, last_sig_ch) == L':';
 		if (first_ch != mf->buf->size)
-			ntab *= src[first_ch] != L'#';
+			ntab *= buf_get_wch(mf->buf, first_ch) != L'#';
 	}
 	
 	return ntab;
@@ -196,12 +196,10 @@ comp_tabs(size_t first_ch, size_t last_sig_ch)
 static unsigned
 comp_smart_spaces(size_t first_spc, size_t off, size_t ln, size_t first_ch)
 {
-	wchar_t const *src = mf->buf->conts;
-	
 	struct rd_state rds;
 	memset(&rds, 0, sizeof(rds));
 	
-	while (src[first_spc + off] != L'('
+	while (buf_get_wch(mf->buf, first_spc + off) != L'('
 	       || rds.in_str
 	       || rds.in_ch
 	       || rds.in_blk_cmt
@@ -220,13 +218,14 @@ comp_smart_spaces(size_t first_spc, size_t off, size_t ln, size_t first_ch)
 		if (comp_next_state(0, &i, &rds) == CNS_CONTINUE)
 			continue;
 		
+		wchar_t wch = buf_get_wch(mf->buf, i);
 		bool in = rds.in_str || rds.in_ch || rds.in_blk_cmt || rds.in_ln_cmt;
-		nopen += src[i] == L'(' && !in;
-		nopen -= src[i] == L')' && !in && nopen > 0;
+		nopen += wch == L'(' && !in;
+		nopen -= wch == L')' && !in && nopen > 0;
 	}
 	
 	if (first_ch < mf->buf->size
-	    && !wcschr(L"{}", src[first_ch])
+	    && !wcschr(L"{}", buf_get_wch(mf->buf, first_ch))
 	    && first_spc + off < ln
 	    && nopen > 0) {
 		return off + 1;
@@ -244,7 +243,7 @@ nopen_at(size_t pos, wchar_t open, wchar_t close)
 	memset(&rds, 0, sizeof(rds));
 	
 	for (size_t i = 0; i < pos; ++i) {
-		wchar_t wch = mf->buf->conts[i];
+		wchar_t wch = buf_get_wch(mf->buf, i);
 		
 		if (comp_next_state(0, &i, &rds) == CNS_CONTINUE)
 			continue;
@@ -260,14 +259,13 @@ nopen_at(size_t pos, wchar_t open, wchar_t close)
 static int
 comp_next_state(size_t pos, size_t *off, struct rd_state *rds)
 {
-	wchar_t const *src = mf->buf->conts;
-	size_t wch = src[pos + *off];
+	size_t wch = buf_get_wch(mf->buf, pos + *off);
 	
 	if (wch == L'\\'
 	    && (rds->in_str || rds->in_ch)
 	    && !rds->in_blk_cmt
 	    && !rds->in_ln_cmt) {
-		if (src[pos + ++*off] == L'\n')
+		if (buf_get_wch(mf->buf, pos + ++*off) == L'\n')
 			rds->in_str = rds->in_ch = false;
 		return CNS_CONTINUE;
 	} else if (wch == L'"'
@@ -283,21 +281,21 @@ comp_next_state(size_t pos, size_t *off, struct rd_state *rds)
 	} else if (wch == L'\n' && !rds->in_blk_cmt)
 		rds->in_ln_cmt = rds->in_str = rds->in_ch = false;
 	else if (pos + *off + 1 < mf->buf->size
-	         && !wcsncmp(&src[pos + *off], L"//", 2)
+	         && !wcscmp(buf_get_wstr(mf->buf, pos + *off, 2), L"//")
 	         && !rds->in_ch
 	         && !rds->in_str
 	         && !rds->in_blk_cmt) {
 		++*off;
 		rds->in_ln_cmt = true;
 	} else if (pos + *off + 1 < mf->buf->size
-	           && !wcsncmp(&src[pos + *off], L"/*", 2)
+	           && !wcscmp(buf_get_wstr(mf->buf, pos + *off, 2), L"/*")
 	           && !rds->in_ch
 	           && !rds->in_str
 	           && !rds->in_ln_cmt) {
 		++*off;
 		rds->in_blk_cmt = true;
 	} else if (pos + *off + 1 < mf->buf->size
-	           && !wcsncmp(&src[pos + *off], L"*/", 2)
+	           && !wcscmp(buf_get_wstr(mf->buf, pos + *off, 2), L"*/")
 	           && rds->in_blk_cmt) {
 		++*off;
 		rds->in_blk_cmt = false;

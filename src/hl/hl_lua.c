@@ -27,8 +27,8 @@ static wchar_t const *keywords[] = {
 };
 
 int
-hl_lua_find(wchar_t const *src, size_t len, size_t off, size_t *out_lb,
-            size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg)
+hl_lua_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
+            uint8_t *out_fg, uint8_t *out_bg)
 {
 	// TODO: implement lua highlighting.
 	return 1;

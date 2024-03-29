@@ -155,10 +155,11 @@ frame_pos(struct frame const *f, size_t pos, unsigned *out_r, unsigned *out_c)
 	*out_c = 0;
 
 	for (size_t i = f->buf_start; i < pos && i < f->buf->size; ++i) {
-		if (f->buf->conts[i] == L'\t')
+		if (buf_get_wch(f->buf, i) == L'\t')
 			*out_c += CONF_TAB_SIZE - *out_c % CONF_TAB_SIZE - 1;
 
-		if (f->buf->conts[i] == L'\n' || *out_c >= right_edge - 1) {
+		if (buf_get_wch(f->buf, i) == L'\n'
+		    || *out_c >= right_edge - 1) {
 			*out_c = 0;
 			++*out_r;
 			continue;
@@ -176,17 +177,17 @@ frame_mv_csr(struct frame *f, unsigned r, unsigned c)
 	f->csr = 0;
 	
 	while (f->csr < f->buf->size && r > 0) {
-		if (f->buf->conts[f->csr++] == L'\n')
+		if (buf_get_wch(f->buf, f->csr++) == L'\n')
 			--r;
 	}
 	
 	while (f->csr < f->buf->size
-	       && f->buf->conts[f->csr] != L'\n'
+	       && buf_get_wch(f->buf, f->csr) != L'\n'
 	       && c > 0) {
 		++f->csr;
 		--c;
 	}
-
+	
 	frame_comp_boundary(f);
 }
 
@@ -234,12 +235,12 @@ frame_comp_boundary(struct frame *f)
 	while (csrr >= f->sr) {
 		++f->buf_start;
 		while (f->buf_start < f->buf->size
-		       && f->buf->conts[f->buf_start - 1] != L'\n') {
+		       && buf_get_wch(f->buf, f->buf_start - 1) != L'\n') {
 			++f->buf_start;
 		}
 		--csrr;
 	}
-
+	
 	unsigned bsr, bsc;
 	buf_pos(f->buf, f->buf_start, &bsr, &bsc);
 	buf_pos(f->buf, f->csr, &csrr, &csrc);
@@ -247,12 +248,12 @@ frame_comp_boundary(struct frame *f)
 	while (csrr < bsr) {
 		--f->buf_start;
 		while (f->buf_start > 0
-		       && f->buf->conts[f->buf_start - 1] != L'\n') {
+		       && buf_get_wch(f->buf, f->buf_start - 1) != L'\n') {
 			--f->buf_start;
 		}
 		++csrr;
 	}
-
+	
 	// fix linum width.
 	unsigned ber, bec;
 	buf_pos(f->buf, f->buf->size, &ber, &bec);
@@ -268,7 +269,8 @@ draw_line(struct frame const *f, unsigned *line, size_t *draw_csr)
 	unsigned right_edge = f->sc - left_edge;
 	unsigned c = 0;
 
-	while (*draw_csr < f->buf->size && f->buf->conts[*draw_csr] != L'\n') {
+	while (*draw_csr < f->buf->size
+	       && buf_get_wch(f->buf, *draw_csr) != L'\n') {
 		if (c >= right_edge) {
 			c = 0;
 			++*line;
@@ -276,9 +278,11 @@ draw_line(struct frame const *f, unsigned *line, size_t *draw_csr)
 
 		if (*line >= f->sr)
 			break;
-
-		wchar_t wch = f->buf->conts[*draw_csr];
+		
+		// 0xfffd used as replacement for non-printing chars.
+		wchar_t wch = buf_get_wch(f->buf, *draw_csr);
 		wch = wch == L'\t' || iswprint(wch) ? wch : 0xfffd;
+		
 		switch (wch) {
 		case L'\t': {
 			unsigned nch = CONF_TAB_SIZE - c % CONF_TAB_SIZE;
@@ -315,12 +319,12 @@ exec_highlight(struct frame const *f, struct highlight const *hl)
 	size_t off = f->buf_start;
 	size_t lb, ub;
 	uint8_t fg, bg;
-	while (!hl->find(f->buf->conts, f->buf->size, off, &lb, &ub, &fg, &bg)) {
+	while (!hl->find(f->buf, off, &lb, &ub, &fg, &bg)) {
 		unsigned hlr, hlc;
 		frame_pos(f, lb, &hlr, &hlc);
 		if (hlr >= f->sr)
 			break;
-
+		
 		unsigned c = hlc - left_edge, r = hlr;
 		for (size_t i = lb; i < ub; ++i) {
 			if (c >= f->sc - left_edge) {
@@ -332,7 +336,7 @@ exec_highlight(struct frame const *f, struct highlight const *hl)
 				break;
 
 			unsigned w;
-			switch (f->buf->conts[i]) {
+			switch (buf_get_wch(f->buf, i)) {
 			case L'\n':
 				c = 0;
 				++r;

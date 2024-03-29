@@ -10,8 +10,8 @@
 
 #include "prompt.h"
 
-// adding entries past `MAXHISTSIZE` will cause the earliest existing entries to
-// be deleted in order to make space.
+// adding entries past `MAX_HIST_SIZE` will cause the earliest existing entries
+// to be deleted in order to make space.
 #define MAX_HIST_SIZE 512
 
 VEC_DEF_IMPL(struct buf_op, buf_op)
@@ -21,11 +21,29 @@ extern bool flag_r;
 
 static void push_hist(struct buf *b, enum buf_op_type type, wchar_t const *data, size_t lb, size_t ub);
 
+// used for returning `buf_get_wstr()`.
+// this is a horribly ugly hack that ought to eventually be removed.
+// TODO: REMOVE THIS UTTER GARBAGE AS SOON AS POSSIBLE.
+static wchar_t *wstr_sv = NULL;
+static size_t wstr_sv_len = 0;
+
+void
+buf_sys_init(void)
+{
+	wstr_sv = malloc(1);
+}
+
+void
+buf_sys_quit(void)
+{
+	free(wstr_sv);
+}
+
 struct buf
 buf_create(bool writable)
 {
 	return (struct buf){
-		.conts = malloc(sizeof(wchar_t)),
+		.conts_ = malloc(sizeof(wchar_t)),
 		.size = 0,
 		.cap = 1,
 		.src = NULL,
@@ -111,7 +129,7 @@ buf_save(struct buf *b)
 		return 1;
 
 	for (size_t i = 0; i < b->size; ++i) {
-		wchar_t wcs[] = {b->conts[i], 0};
+		wchar_t wcs[] = {b->conts_[i], 0};
 		char mbs[sizeof(wchar_t) + 1] = {0};
 		wcstombs(mbs, wcs, sizeof(wchar_t) + 1);
 		fputs(mbs, fp);
@@ -161,7 +179,7 @@ buf_undo(struct buf *b)
 void
 buf_destroy(struct buf *b)
 {
-	free(b->conts);
+	free(b->conts_);
 	
 	if (b->src)
 		free(b->src);
@@ -181,11 +199,11 @@ buf_write_wch(struct buf *b, size_t ind, wchar_t wch)
 
 	if (b->size >= b->cap) {
 		b->cap *= 2;
-		b->conts = realloc(b->conts, sizeof(wchar_t) * b->cap);
+		b->conts_ = realloc(b->conts_, sizeof(wchar_t) * b->cap);
 	}
 
-	memmove(b->conts + ind + 1, b->conts + ind, sizeof(wchar_t) * (b->size - ind));
-	b->conts[ind] = wch;
+	memmove(b->conts_ + ind + 1, b->conts_ + ind, sizeof(wchar_t) * (b->size - ind));
+	b->conts_[ind] = wch;
 	++b->size;
 	b->flags |= BF_MODIFIED;
 	push_hist(b, BOT_WRITE, NULL, ind, ind + 1);
@@ -207,11 +225,11 @@ buf_write_wstr(struct buf *b, size_t ind, wchar_t const *wstr)
 
 	if (b->cap != newcap) {
 		b->cap = newcap;
-		b->conts = realloc(b->conts, sizeof(wchar_t) * b->cap);
+		b->conts_ = realloc(b->conts_, sizeof(wchar_t) * b->cap);
 	}
 
-	memmove(b->conts + ind + len, b->conts + ind, sizeof(wchar_t) * (b->size - ind));
-	memcpy(b->conts + ind, wstr, sizeof(wchar_t) * len);
+	memmove(b->conts_ + ind + len, b->conts_ + ind, sizeof(wchar_t) * (b->size - ind));
+	memcpy(b->conts_ + ind, wstr, sizeof(wchar_t) * len);
 	b->size += len;
 	b->flags |= BF_MODIFIED;
 	push_hist(b, BOT_WRITE, NULL, ind, ind + len);
@@ -223,8 +241,8 @@ buf_erase(struct buf *b, size_t lb, size_t ub)
 	if (!(b->flags & BF_WRITABLE))
 		return;
 
-	push_hist(b, BOT_ERASE, b->conts + lb, lb, ub);
-	memmove(b->conts + lb, b->conts + ub, sizeof(wchar_t) * (b->size - ub));
+	push_hist(b, BOT_ERASE, b->conts_ + lb, lb, ub);
+	memmove(b->conts_ + lb, b->conts_ + ub, sizeof(wchar_t) * (b->size - ub));
 	b->size -= ub - lb;
 	b->flags |= BF_MODIFIED;
 }
@@ -243,11 +261,34 @@ buf_pos(struct buf const *b, size_t pos, unsigned *out_r, unsigned *out_c)
 
 	for (size_t i = 0; i < pos && i < b->size; ++i) {
 		++*out_c;
-		if (b->conts[i] == L'\n') {
+		if (b->conts_[i] == L'\n') {
 			*out_c = 0;
 			++*out_r;
 		}
 	}
+}
+
+wchar_t
+buf_get_wch(struct buf const *b, size_t ind)
+{
+	return ind >= b->size ? 0 : b->conts_[ind];
+}
+
+wchar_t const *
+buf_get_wstr(struct buf const *b, size_t ind, size_t n)
+{
+	if (n == 0 || ind + n > b->size)
+		return NULL;
+	
+	if (n > wstr_sv_len) {
+		wstr_sv = realloc(wstr_sv, sizeof(wchar_t) * (n + 1));
+		wstr_sv_len = n;
+	}
+	
+	wcsncpy(wstr_sv, &b->conts_[ind], n);
+	wstr_sv[n] = 0;
+	
+	return wstr_sv;
 }
 
 static void

@@ -74,20 +74,18 @@ bind_indent(void)
 	
 	// TODO: rework to use skip-region technique.
 	
-	wchar_t const *src = mf->buf->conts;
-	
 	size_t ln = mf->csr;
-	while (ln > 0 && src[ln - 1] != L'\n')
+	while (ln > 0 && buf_get_wch(mf->buf, ln - 1) != L'\n')
 		--ln;
 
 	size_t prev_ln = ln - (ln > 0);
-	while (prev_ln > 0 && src[prev_ln - 1] != L'\n')
+	while (prev_ln > 0 && buf_get_wch(mf->buf, prev_ln - 1) != L'\n')
 		--prev_ln;
 
 	size_t first_ch = ln;
 	while (first_ch < mf->buf->size
-	       && src[first_ch] != L'\n'
-	       && iswspace(src[first_ch])) {
+	       && buf_get_wch(mf->buf, first_ch) != L'\n'
+	       && iswspace(buf_get_wch(mf->buf, first_ch))) {
 		++first_ch;
 	}
 	
@@ -96,19 +94,23 @@ bind_indent(void)
 	
 	if (!rds.in_blk_cmt && !rds.in_ln_cmt && prev_ln != ln) {
 		size_t prev_last_ch = ln - 1;
-		while (prev_last_ch > prev_ln && iswspace(src[prev_last_ch]))
+		while (prev_last_ch > prev_ln
+		       && iswspace(buf_get_wch(mf->buf, prev_last_ch))) {
 			--prev_last_ch;
+		}
 		
 		size_t prev_first_ch = prev_ln;
 		while (prev_first_ch < mf->buf->size
-		       && iswspace(src[prev_first_ch])) {
+		       && iswspace(buf_get_wch(mf->buf, prev_last_ch))) {
 			++prev_first_ch;
 		}
 		
 		size_t last_ch = first_ch;
-		while (last_ch < mf->buf->size && src[last_ch] != L'\n')
+		while (last_ch < mf->buf->size
+		       && buf_get_wch(mf->buf, last_ch) != L'\n') {
 			++last_ch;
-		while (last_ch >= ln && iswspace(src[last_ch]))
+		}
+		while (last_ch >= ln && iswspace(buf_get_wch(mf->buf, last_ch)))
 			--last_ch;
 		
 		bool no_indent = false;
@@ -116,8 +118,8 @@ bind_indent(void)
 			size_t len = wcslen(no_indent_kw[i]);
 			
 			if (len <= last_ch
-			    && !iswalnum(src[last_ch - len])
-			    && !wcsncmp(no_indent_kw[i], &src[last_ch - len + 1], len)) {
+			    && !iswalnum(buf_get_wch(mf->buf, last_ch - len))
+			    && !wcscmp(no_indent_kw[i], buf_get_wstr(mf->buf, last_ch - len + 1, len))) {
 				no_indent = true;
 				break;
 			}
@@ -125,14 +127,14 @@ bind_indent(void)
 		
 		// TODO: add `where` clause handling.
 		
-		if (!iswspace(src[prev_last_ch])
-		    && !iswspace(src[first_ch])
-		    && !wcschr(L"([{};,", src[prev_last_ch])
-		    && !wcschr(L")]}", src[first_ch])
-		    && !wcschr(L"#", src[prev_first_ch])
-		    && wcsncmp(L"//", &src[prev_first_ch], 2)
-		    && wcsncmp(L"//", &src[first_ch], 2)
-		    && (prev_last_ch == 0 || wcsncmp(L"*/", &src[prev_last_ch - 1], 2))
+		if (!iswspace(buf_get_wch(mf->buf, prev_last_ch))
+		    && !iswspace(buf_get_wch(mf->buf, first_ch))
+		    && !wcschr(L"([{};,", buf_get_wch(mf->buf, prev_last_ch))
+		    && !wcschr(L")]}", buf_get_wch(mf->buf, first_ch))
+		    && !wcschr(L"#", buf_get_wch(mf->buf, prev_first_ch))
+		    && wcscmp(L"//", buf_get_wstr(mf->buf, prev_first_ch, 2))
+		    && wcscmp(L"//", buf_get_wstr(mf->buf, first_ch, 2))
+		    && (prev_last_ch == 0 || wcscmp(L"*/", buf_get_wstr(mf->buf, prev_last_ch - 1, 2)))
 		    && !no_indent) {
 			++ntab;
 		}
@@ -142,7 +144,7 @@ bind_indent(void)
 		size_t i = first_ch;
 		while (ntab > 0
 		       && i < mf->buf->size
-		       && wcschr(L")]}", src[i])) {
+		       && wcschr(L")]}", buf_get_wch(mf->buf, i))) {
 			--ntab;
 			++i;
 		}
@@ -157,8 +159,6 @@ static long
 nopen_at(struct rd_state *out_rds, size_t pos, wchar_t const *open,
          wchar_t const *close)
 {
-	wchar_t const *src = mf->buf->conts;
-	
 	struct rd_state rds;
 	memset(&rds, 0, sizeof(rds));
 	rds.in_rstr_cmp = malloc(1);
@@ -169,8 +169,9 @@ nopen_at(struct rd_state *out_rds, size_t pos, wchar_t const *open,
 			continue;
 		
 		bool in = rds.in_rstr || rds.in_str || rds.in_ch || rds.in_blk_cmt || rds.in_ln_cmt;
-		nopen += !in && wcschr(open, src[i]);
-		nopen -= !in && wcschr(close, src[i]);
+		wchar_t wch = buf_get_wch(mf->buf, i);
+		nopen += !in && wcschr(open, wch);
+		nopen -= !in && wcschr(close, wch);
 	}
 	
 	free(rds.in_rstr_cmp);
@@ -183,27 +184,26 @@ nopen_at(struct rd_state *out_rds, size_t pos, wchar_t const *open,
 static int
 comp_next_state(size_t *off, size_t limit, struct rd_state *rds)
 {
-	wchar_t const *src = mf->buf->conts;
-	
 	if (!rds->in_rstr
 	    && !rds->in_str
 	    && !rds->in_ch
 	    && !rds->in_blk_cmt
 	    && !rds->in_ln_cmt
 	    && *off + 1 < limit
-	    && src[*off] == L'r'
-	    && wcschr(L"#\"", src[*off + 1])) {
+	    && buf_get_wch(mf->buf, *off) == L'r'
+	    && wcschr(L"#\"", buf_get_wch(mf->buf, *off + 1))) {
 		size_t i = *off + 1;
-		while (i < limit && src[i] == L'#')
+		while (i < limit && buf_get_wch(mf->buf, i) == L'#')
 			++i;
 		
-		if (i >= limit || src[i] != L'"')
+		if (i >= limit || buf_get_wch(mf->buf, i) != L'"')
 			return CNS_CONTINUE;
 		
 		i += i < limit;
 		rds->in_rstr_cmp_len = i - *off - 1;
-		rds->in_rstr_cmp = realloc(rds->in_rstr_cmp, sizeof(wchar_t) * rds->in_rstr_cmp_len);
+		rds->in_rstr_cmp = realloc(rds->in_rstr_cmp, sizeof(wchar_t) * (rds->in_rstr_cmp_len + 1));
 		rds->in_rstr_cmp[0] = L'"';
+		rds->in_rstr_cmp[rds->in_rstr_cmp_len] = 0;
 		
 		for (unsigned j = 1; j < rds->in_rstr_cmp_len; ++j)
 			rds->in_rstr_cmp[j] = L'#';
@@ -213,49 +213,51 @@ comp_next_state(size_t *off, size_t limit, struct rd_state *rds)
 	           && !rds->in_ch
 	           && !rds->in_blk_cmt
 	           && !rds->in_ln_cmt
-	           && src[*off] == L'"') {
+	           && buf_get_wch(mf->buf, *off) == L'"') {
 		rds->in_str = !rds->in_str;
 	} else if (!rds->in_rstr
 	           && !rds->in_str
 	           && !rds->in_blk_cmt
 	           && !rds->in_ln_cmt
-	           && src[*off] == L'\'') {
+	           && buf_get_wch(mf->buf, *off) == L'\'') {
 		rds->in_ch = !rds->in_ch;
 		if (rds->in_ch) {
-			rds->in_ch_esc = *off + 1 < mf->buf->size && src[*off + 1] == L'\\';
+			rds->in_ch_esc = *off + 1 < mf->buf->size;
+			rds->in_ch_esc += buf_get_wch(mf->buf, *off + 1) == L'\\';
 			rds->in_ch_nch = 0;
 		}
 	} else if (rds->in_ch && !rds->in_ch_esc && rds->in_ch_nch > 1)
 		rds->in_ch = false;
 	else if (rds->in_rstr
 	         && *off + rds->in_rstr_cmp_len < limit
-	         && !wcsncmp(&src[*off], rds->in_rstr_cmp, rds->in_rstr_cmp_len)) {
+	         && !wcscmp(buf_get_wstr(mf->buf, *off, rds->in_rstr_cmp_len), rds->in_rstr_cmp)) {
 		rds->in_rstr = false;
 		*off += rds->in_rstr_cmp_len;
-	} else if ((rds->in_str || rds->in_ch) && src[*off] == L'\\')
+	} else if ((rds->in_str || rds->in_ch)
+	           && buf_get_wch(mf->buf, *off) == L'\\') {
 		++*off;
-	else if (!rds->in_rstr
-	         && !rds->in_str
-	         && !rds->in_ch
-	         && !rds->in_blk_cmt
-	         && *off + 1 < limit
-	         && !wcsncmp(&src[*off], L"//", 2)) {
+	} else if (!rds->in_rstr
+	           && !rds->in_str
+	           && !rds->in_ch
+	           && !rds->in_blk_cmt
+	           && *off + 1 < limit
+	           && !wcscmp(buf_get_wstr(mf->buf, *off, 2), L"//")) {
 		++*off;
 		rds->in_ln_cmt = true;
-	} else if (rds->in_ln_cmt && src[*off] == L'\n')
+	} else if (rds->in_ln_cmt && buf_get_wch(mf->buf, *off) == L'\n')
 		rds->in_ln_cmt = false;
 	else if (!rds->in_rstr
 	         && !rds->in_str
 	         && !rds->in_ch
 	         && !rds->in_ln_cmt
 	         && *off + 1 < limit
-	         && !wcsncmp(&src[*off], L"/*", 2)) {
+	         && !wcscmp(buf_get_wstr(mf->buf, *off, 2), L"/*")) {
 		++*off;
 		rds->in_blk_cmt = true;
 		++rds->in_blk_cmt_ncmt;
 	} else if (rds->in_blk_cmt
 	           && *off + 1 < limit
-	           && !wcsncmp(&src[*off], L"*/", 2)) {
+	           && !wcscmp(buf_get_wstr(mf->buf, *off, 2), L"*/")) {
 		++*off;
 		if (--rds->in_blk_cmt_ncmt == 0)
 			rds->in_blk_cmt = false;
