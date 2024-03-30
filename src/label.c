@@ -17,16 +17,38 @@
 
 static void draw_box(wchar_t const *name, wchar_t const *msg, size_t off, struct label_bounds const *bounds);
 
-struct label_bounds
-label_rebound(struct label_bounds const *bounds, unsigned anchor_l,
-              unsigned anchor_r, unsigned anchor_t)
+int
+label_rebound(struct label_bounds *bounds, unsigned anchor_l, unsigned anchor_r,
+              unsigned anchor_t)
 {
 	struct winsize ws;
 	ioctl(0, TIOCGWINSZ, &ws);
 	
-	// TODO: implement label bounds recalculation.
+	struct label_bounds new = {
+		.sr = bounds->sr,
+		.sc = bounds->sc,
+	};
 	
-	return *bounds;
+	// left-hand anchoring is preferred.
+	if (anchor_l + bounds->sc <= ws.ws_col)
+		new.pc = anchor_l;
+	else if (anchor_r <= ws.ws_col + bounds->sc)
+		new.pc = MAX((long)anchor_r - (long)bounds->sc + 1, 0);
+	else {
+		// could not get valid position with either horizontal anchor.
+		return 1;
+	}
+	
+	new.pr = anchor_t;
+	while (new.pr > 0 && new.pr + bounds->sr > ws.ws_row)
+		--new.pr;
+	
+	// could not get valid position with vertical anchor.
+	if (new.pr + bounds->sr > ws.ws_row)
+		return 1;
+	
+	*bounds = new;
+	return 0;
 }
 
 int

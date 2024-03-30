@@ -71,10 +71,10 @@
 	L"(The greeter logo seen above was generated with the use of Figlet)\n"
 
 // specific keybind options.
-#define CONF_READ_MAN_TITLE L"*man*"
+#define CONF_READ_MAN_TITLE L"*manpage viewer*"
 #define CONF_READ_MAN_CMD "man -E ascii -P cat %w 2> /dev/null"
 #define CONF_READ_MAN_SR 20
-#define CONF_READ_MAN_SC 60
+#define CONF_READ_MAN_SC 85
 
 struct highlight {
 	char const *local_mode;

@@ -995,7 +995,11 @@ bind_read_man_word(void)
 		.sr = CONF_READ_MAN_SR,
 		.sc = CONF_READ_MAN_SC,
 	};
-	bounds = label_rebound(&bounds, csrc + 1, MAX(0, (long)csrc - 1), csrr);
+	if (label_rebound(&bounds, csrc + 1, MAX(0, (long)csrc - 1), csrr)) {
+		prompt_show(L"could not find valid anchoring for label!");
+		editor_redraw();
+		return;
+	}
 	
 	// manpages generally have alphanumeric chars, underscores, hyphens, and
 	// periods in their names; so only those are supported here.
