@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <wctype.h>
 
 #include <dirent.h>
 #include <sys/ioctl.h>
@@ -154,22 +155,29 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 	if (path_bytes > PATH_MAX)
 		return;
 	
-	char dir[PATH_MAX];
+	char name[PATH_MAX] = {0}, dir[PATH_MAX] = {0};
 	strncpy(dir, path, PATH_MAX);
 	char *first_slash = strchr(dir, '/'), *last_slash = strrchr(dir, '/');
+	
+	char *first_ch = dir;
+	while (*first_ch && iswspace(*first_ch))
+		++first_ch;
 	
 	if (!last_slash) {
 		dir[0] = '.';
 		dir[1] = 0;
-	} else if (first_slash && first_slash == last_slash)
+		strncpy(name, path, PATH_MAX);
+	} else if (first_ch
+	           && first_ch == first_slash
+	           && first_slash == last_slash) {
+		strncpy(name, last_slash + 1, PATH_MAX);
 		*(last_slash + 1) = 0;
-	else
+	} else {
+		strncpy(name, last_slash + 1, PATH_MAX);
 		*last_slash = 0;
+	}
 	
-	size_t dir_len = strlen(dir);
-	
-	char const *name = last_slash ? last_slash + 1 : path;
-	size_t name_len = strlen(name);
+	size_t dir_len = strlen(dir), name_len = strlen(name);
 	
 	DIR *dir_p = opendir(dir);
 	if (!dir_p)
@@ -188,7 +196,7 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 		strcpy(new_path, dir);
 		
 		// only add '/' if not root, otherwise you'd get "//...".
-		if (!first_slash || first_slash != last_slash)
+		if (first_ch && first_ch != last_slash)
 			strcat(new_path, "/");
 		
 		strcat(new_path, dir_ent->d_name);

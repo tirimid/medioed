@@ -67,7 +67,7 @@ void buf_push_hist_brk(struct buf *b);
 void buf_pos(struct buf const *b, size_t pos, unsigned *out_r, unsigned *out_c);
 wchar_t buf_get_wch(struct buf const *b, size_t ind);
 
-// will read `n` character PLUS the null terminator.
+// will read `n` characters PLUS the null terminator.
 // always allocate +1 wide char of memory in `dst` relative to `n`.
 wchar_t *buf_get_wstr(struct buf const *b, wchar_t *dst, size_t ind, size_t n);
 

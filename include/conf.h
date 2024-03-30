@@ -64,8 +64,9 @@
 	L"machines as well.\n" \
 	L"\n" \
 	L"Additional resources:\n" \
-	L"\tSource code    https://github.com/tirimid/medioed\n" \
-	L"\tDocumentation  https://tirimid.net/software/medioed\n" \
+	L"\n" \
+	L"* Source code: https://github.com/tirimid/medioed\n" \
+	L"* Documentation: https://tirimid.net/software/medioed.html\n" \
 	L"\n" \
 	L"(The greeter logo seen above was generated with the use of Figlet)\n"
 
