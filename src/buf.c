@@ -259,12 +259,8 @@ buf_get_wch(struct buf const *b, size_t ind)
 wchar_t *
 buf_get_wstr(struct buf const *b, wchar_t *dst, size_t ind, size_t n)
 {
-	if (n == 0 || ind + n > b->size)
-		return NULL;
-	
-	wcsncpy(dst, &b->conts_[ind], n);
-	dst[n] = 0;
-	
+	wcsncpy(dst, &b->conts_[ind], n - 1);
+	dst[n - 1] = 0;
 	return dst;
 }
 

@@ -37,7 +37,7 @@ hl_md_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
 			if (!hl_block(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (i + 2 < buf->size
-		           && !wcscmp(buf_get_wstr(buf, cmp_buf, i, 3), L"```")) {
+		           && !wcscmp(buf_get_wstr(buf, cmp_buf, i, 4), L"```")) {
 			if (!hl_code_block(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (wcschr(L"*-", buf_get_wch(buf, i))) {
@@ -68,7 +68,7 @@ hl_code_block(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 		if (buf_get_wch(buf, j) == L'\\') {
 			++j;
 			continue;
-		} else if (!wcscmp(buf_get_wstr(buf, cmp_buf, j, 3), L"```")) {
+		} else if (!wcscmp(buf_get_wstr(buf, cmp_buf, j, 4), L"```")) {
 			if (first_ln_ch(buf, j) != j)
 				continue;
 			

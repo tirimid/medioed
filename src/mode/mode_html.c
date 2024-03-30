@@ -89,7 +89,7 @@ open_diff(size_t ln, size_t ln_end)
 		} else if (buf_get_wch(mf->buf, i) == L'<')
 			++diff;
 		else if (i + 1 < ln_end
-		         && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, i , 2), L"/>")) {
+		         && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, i , 3), L"/>")) {
 			--diff;
 		}
 	}
@@ -153,7 +153,7 @@ bind_new_line(void)
 	wchar_t cmp_buf[3];
 	if (auto_indent
 	    && mf->csr > 0
-	    && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, mf->csr - 1, 2), L"><")) {
+	    && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, mf->csr - 1, 3), L"><")) {
 		buf_write_wstr(mf->buf, mf->csr, L"\n\n");
 		mf->csr += 2;
 		bind_indent();

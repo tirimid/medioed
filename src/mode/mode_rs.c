@@ -123,7 +123,7 @@ bind_indent(void)
 				continue;
 			
 			wchar_t cmp[64];
-			buf_get_wstr(mf->buf, cmp, last_ch - len + 1, len);
+			buf_get_wstr(mf->buf, cmp, last_ch - len + 1, len + 1);
 			if (wcscmp(no_indent_kw[i], cmp))
 				continue;
 			
@@ -139,9 +139,9 @@ bind_indent(void)
 		    && !wcschr(L"([{};,", buf_get_wch(mf->buf, prev_last_ch))
 		    && !wcschr(L")]}", buf_get_wch(mf->buf, first_ch))
 		    && !wcschr(L"#", buf_get_wch(mf->buf, prev_first_ch))
-		    && wcscmp(L"//", buf_get_wstr(mf->buf, cmp_buf, prev_first_ch, 2))
-		    && wcscmp(L"//", buf_get_wstr(mf->buf, cmp_buf, first_ch, 2))
-		    && (prev_last_ch == 0 || wcscmp(L"*/", buf_get_wstr(mf->buf, cmp_buf, prev_last_ch - 1, 2)))
+		    && wcscmp(L"//", buf_get_wstr(mf->buf, cmp_buf, prev_first_ch, 3))
+		    && wcscmp(L"//", buf_get_wstr(mf->buf, cmp_buf, first_ch, 3))
+		    && (prev_last_ch == 0 || wcscmp(L"*/", buf_get_wstr(mf->buf, cmp_buf, prev_last_ch - 1, 3)))
 		    && !no_indent) {
 			++ntab;
 		}
@@ -242,7 +242,7 @@ comp_next_state(size_t *off, size_t limit, struct rd_state *rds)
 		rds->in_ch = false;
 	else if (rds->in_rstr
 	         && *off + rds->in_rstr_cmp_len < limit
-	         && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, rds->in_rstr_cmp_len), rds->in_rstr_cmp)) {
+	         && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, rds->in_rstr_cmp_len + 1), rds->in_rstr_cmp)) {
 		rds->in_rstr = false;
 		*off += rds->in_rstr_cmp_len;
 	} else if ((rds->in_str || rds->in_ch)
@@ -253,7 +253,7 @@ comp_next_state(size_t *off, size_t limit, struct rd_state *rds)
 	           && !rds->in_ch
 	           && !rds->in_blk_cmt
 	           && *off + 1 < limit
-	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, 2), L"//")) {
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, 3), L"//")) {
 		++*off;
 		rds->in_ln_cmt = true;
 	} else if (rds->in_ln_cmt && buf_get_wch(mf->buf, *off) == L'\n')
@@ -263,13 +263,13 @@ comp_next_state(size_t *off, size_t limit, struct rd_state *rds)
 	         && !rds->in_ch
 	         && !rds->in_ln_cmt
 	         && *off + 1 < limit
-	         && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, 2), L"/*")) {
+	         && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, 3), L"/*")) {
 		++*off;
 		rds->in_blk_cmt = true;
 		++rds->in_blk_cmt_ncmt;
 	} else if (rds->in_blk_cmt
 	           && *off + 1 < limit
-	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, 2), L"*/")) {
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, 3), L"*/")) {
 		++*off;
 		if (--rds->in_blk_cmt_ncmt == 0)
 			rds->in_blk_cmt = false;

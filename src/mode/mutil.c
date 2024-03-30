@@ -332,7 +332,7 @@ bind_del_back_ch(void)
 		    && mf->buf->size > 1
 		    && mf->csr < mf->buf->size - 1) {
 			wchar_t cmp_buf[3];
-			buf_get_wstr(mf->buf, cmp_buf, mf->csr, 2);
+			buf_get_wstr(mf->buf, cmp_buf, mf->csr, 3);
 			
 			if (!wcscmp(cmp_buf, L"()") && (pair_flags & PF_PAREN)
 			    || !wcscmp(cmp_buf, L"[]") && (pair_flags & PF_BRACKET)

@@ -764,7 +764,7 @@ bind_kill(void)
 		++ln_end;
 	
 	clipbuf = malloc((ln_end - f->csr + 1) * sizeof(wchar_t));
-	buf_get_wstr(f->buf, clipbuf, f->csr, ln_end - f->csr);
+	buf_get_wstr(f->buf, clipbuf, f->csr, ln_end - f->csr + 1);
 	
 	buf_erase(f->buf, f->csr, ln_end);
 }
@@ -842,7 +842,7 @@ bind_copy(void)
 		++ln_end;
 	
 	clipbuf = malloc((ln_end - ln + 1) * sizeof(wchar_t));
-	buf_get_wstr(f->buf, clipbuf, ln, ln_end - ln);
+	buf_get_wstr(f->buf, clipbuf, ln, ln_end - ln + 1);
 }
 
 static void
@@ -901,7 +901,7 @@ ask_again:;
 	}
 	
 	clipbuf = malloc((reg_ub - reg_lb + 1) * sizeof(wchar_t));
-	buf_get_wstr(f->buf, clipbuf, reg_lb, reg_ub - reg_lb);
+	buf_get_wstr(f->buf, clipbuf, reg_lb, reg_ub - reg_lb + 1);
 }
 
 static void
@@ -923,15 +923,15 @@ ask_again:;
 	size_t search_pos, needle_len = wcslen(needle);
 	wchar_t *cmp_buf = malloc(sizeof(wchar_t) * (needle_len + 1));
 	struct frame *f = &frames.data[cur_frame];
-	for (search_pos = f->csr + 1; search_pos < f->buf->size; ++search_pos) {
-		if (!wcscmp(buf_get_wstr(f->buf, cmp_buf, search_pos, needle_len), needle))
+	for (search_pos = f->csr + 1; search_pos + needle_len <= f->buf->size; ++search_pos) {
+		if (!wcscmp(buf_get_wstr(f->buf, cmp_buf, search_pos, needle_len + 1), needle))
 			break;
 	}
 	
 	free(cmp_buf);
 	free(needle);
 	
-	if (search_pos == f->buf->size) {
+	if (search_pos + needle_len > f->buf->size) {
 		prompt_show(L"did not find needle in haystack!");
 		editor_redraw();
 		return;

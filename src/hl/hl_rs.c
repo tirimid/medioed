@@ -184,7 +184,7 @@ hl_rstring(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 		// TODO: make this not crash.
 		wchar_t cmp[64];
 		
-		if (!wcscmp(buf_get_wstr(buf, cmp, j, 1 + nhash), search)) {
+		if (!wcscmp(buf_get_wstr(buf, cmp, j, 2 + nhash), search)) {
 			*out_lb = *i;
 			*out_ub = j + nhash + 1;
 			*out_fg = A_STRING_FG;
@@ -248,7 +248,7 @@ hl_blk_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	size_t j = *i + 2;
 	while (j + 1 < buf->size) {
 		wchar_t cmp_buf[3];
-		buf_get_wstr(buf, cmp_buf, j, 2);
+		buf_get_wstr(buf, cmp_buf, j, 3);
 		
 		if (!wcscmp(cmp_buf, L"*/")) {
 			--nopen;
@@ -338,7 +338,7 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 		
 		wchar_t cmp_buf[4];
 		if (k + 2 < buf->size
-		    && !wcscmp(buf_get_wstr(buf, cmp_buf, k, 3), L"::<")) {
+		    && !wcscmp(buf_get_wstr(buf, cmp_buf, k, 4), L"::<")) {
 			k += 3;
 			unsigned nopen = 1;
 			while (k < buf->size && nopen > 0) {
@@ -355,8 +355,9 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	
 	for (size_t kw = 0; kw < ARRAY_SIZE(keywords); ++kw) {
 		wchar_t cmp[64]; // read rationale for size 64 in C++ highlight.
+		buf_get_wstr(buf, cmp, *i, j - *i + 1);
 		
-		if (!wcscmp(buf_get_wstr(buf, cmp, *i, j - *i), keywords[kw])) {
+		if (!wcscmp(keywords[kw], cmp)) {
 			wt = WT_KEYWORD;
 			break;
 		}
