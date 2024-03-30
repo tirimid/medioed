@@ -204,8 +204,9 @@ hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 		while (j < buf->size && buf_get_wch(buf, j) != L'\n')
 			++j;
 	} else {
+		wchar_t cmp[3];
 		while (j + 1 < buf->size
-		       && wcscmp(buf_get_wstr(buf, j, 2), L"*/")) {
+		       && wcscmp(buf_get_wstr(buf, cmp, j, 2), L"*/")) {
 			++j;
 		}
 	}
@@ -263,7 +264,9 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	}
 	
 	for (size_t kw = 0; kw < ARRAY_SIZE(keywords); ++kw) {
-		if (!wcscmp(keywords[kw], buf_get_wstr(buf, *i, j - *i))) {
+		wchar_t cmp[64]; // read rationale for size 64 in C++ highlight.
+		
+		if (!wcscmp(keywords[kw], buf_get_wstr(buf, cmp, *i, j - *i))) {
 			wt = WT_KEYWORD;
 			break;
 		}

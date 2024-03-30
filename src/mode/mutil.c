@@ -331,14 +331,15 @@ bind_del_back_ch(void)
 		if (opt_pairing
 		    && mf->buf->size > 1
 		    && mf->csr < mf->buf->size - 1) {
-			wchar_t const *cmp = buf_get_wstr(mf->buf,mf->csr, 2);
+			wchar_t cmp_buf[3];
+			buf_get_wstr(mf->buf, cmp_buf, mf->csr, 2);
 			
-			if (!wcscmp(cmp, L"()") && (pair_flags & PF_PAREN)
-			    || !wcscmp(cmp, L"[]") && (pair_flags & PF_BRACKET)
-			    || !wcscmp(cmp, L"{}") && (pair_flags & PF_BRACE)
-			    || !wcscmp(cmp, L"<>") && (pair_flags & PF_ANGLE)
-			    || !wcscmp(cmp, L"\"\"") && (pair_flags & PF_DQUOTE)
-			    || !wcscmp(cmp, L"''") && (pair_flags & PF_SQUOTE)) {
+			if (!wcscmp(cmp_buf, L"()") && (pair_flags & PF_PAREN)
+			    || !wcscmp(cmp_buf, L"[]") && (pair_flags & PF_BRACKET)
+			    || !wcscmp(cmp_buf, L"{}") && (pair_flags & PF_BRACE)
+			    || !wcscmp(cmp_buf, L"<>") && (pair_flags & PF_ANGLE)
+			    || !wcscmp(cmp_buf, L"\"\"") && (pair_flags & PF_DQUOTE)
+			    || !wcscmp(cmp_buf, L"''") && (pair_flags & PF_SQUOTE)) {
 				nch = 2;
 			}
 		}

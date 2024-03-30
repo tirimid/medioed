@@ -178,7 +178,13 @@ hl_rstring(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 		search[i] = L'#';
 	
 	while (j < buf->size) {
-		if (!wcscmp(buf_get_wstr(buf, j, 1 + nhash), search)) {
+		// probably segfault if 64 or more hashes are used in a raw
+		// string.
+		// this is a non-issue probably not worth fully fixing.
+		// TODO: make this not crash.
+		wchar_t cmp[64];
+		
+		if (!wcscmp(buf_get_wstr(buf, cmp, j, 1 + nhash), search)) {
 			*out_lb = *i;
 			*out_ub = j + nhash + 1;
 			*out_fg = A_STRING_FG;
@@ -241,15 +247,17 @@ hl_blk_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	unsigned nopen = 1;
 	size_t j = *i + 2;
 	while (j + 1 < buf->size) {
-		wchar_t const *cmp = buf_get_wstr(buf, j, 2);
-		if (!wcscmp(cmp, L"*/")) {
+		wchar_t cmp_buf[3];
+		buf_get_wstr(buf, cmp_buf, j, 2);
+		
+		if (!wcscmp(cmp_buf, L"*/")) {
 			--nopen;
 			++j;
-		} else if (!wcscmp(cmp, L"/*")) {
+		} else if (!wcscmp(cmp_buf, L"/*")) {
 			++nopen;
 			++j;
 		}
-
+		
 		if (nopen == 0) {
 			*out_lb = *i;
 			*out_ub = j + 1;
@@ -328,8 +336,9 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 		// highlight handling, but noone really ever does that in Rust,
 		// so it is not handled.
 		
+		wchar_t cmp_buf[4];
 		if (k + 2 < buf->size
-		    && !wcscmp(buf_get_wstr(buf, k, 3), L"::<")) {
+		    && !wcscmp(buf_get_wstr(buf, cmp_buf, k, 3), L"::<")) {
 			k += 3;
 			unsigned nopen = 1;
 			while (k < buf->size && nopen > 0) {
@@ -345,7 +354,9 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	}
 	
 	for (size_t kw = 0; kw < ARRAY_SIZE(keywords); ++kw) {
-		if (!wcscmp(buf_get_wstr(buf, *i, j - *i), keywords[kw])) {
+		wchar_t cmp[64]; // read rationale for size 64 in C++ highlight.
+		
+		if (!wcscmp(buf_get_wstr(buf, cmp, *i, j - *i), keywords[kw])) {
 			wt = WT_KEYWORD;
 			break;
 		}

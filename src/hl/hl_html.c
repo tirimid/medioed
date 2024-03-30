@@ -21,8 +21,10 @@ hl_html_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
              uint8_t *out_fg, uint8_t *out_bg)
 {
 	for (size_t i = off; i < buf->size; ++i) {
+		wchar_t cmp[5];
+		
 		if (i + 3 < buf->size
-		    && !wcscmp(buf_get_wstr(buf, i, 4), L"<!--")) {
+		    && !wcscmp(buf_get_wstr(buf, cmp, i, 4), L"<!--")) {
 			if (!hl_comment(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (buf_get_wch(buf, i) == L'<') {
@@ -81,7 +83,8 @@ hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
            uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 4;
-	while (j < buf->size && wcscmp(buf_get_wstr(buf, j, 3), L"-->"))
+	wchar_t cmp[4];
+	while (j < buf->size && wcscmp(buf_get_wstr(buf, cmp, j, 3), L"-->"))
 		++j;
 	
 	if (j == buf->size) {

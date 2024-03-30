@@ -77,7 +77,6 @@ int
 editor_init(int argc, char const *argv[])
 {
 	keybd_init();
-	buf_sys_init();
 	
 	frames = vec_frame_create();
 	p_bufs = vec_p_buf_create();
@@ -185,7 +184,6 @@ editor_quit(void)
 	vec_frame_destroy(&frames);
 	vec_p_buf_destroy(&p_bufs);
 	
-	buf_sys_quit();
 	keybd_quit();
 }
 
@@ -765,10 +763,8 @@ bind_kill(void)
 	while (ln_end < f->buf->size && buf_get_wch(f->buf, ln_end) != L'\n')
 		++ln_end;
 	
-	size_t cp_size = (ln_end - f->csr) * sizeof(wchar_t);
-	clipbuf = malloc(cp_size + sizeof(wchar_t));
-	clipbuf[ln_end - f->csr] = 0;
-	memcpy(clipbuf, buf_get_wstr(f->buf, f->csr, ln_end - f->csr), cp_size);
+	clipbuf = malloc((ln_end - f->csr + 1) * sizeof(wchar_t));
+	buf_get_wstr(f->buf, clipbuf, f->csr, ln_end - f->csr);
 	
 	buf_erase(f->buf, f->csr, ln_end);
 }
@@ -845,10 +841,8 @@ bind_copy(void)
 	while (ln_end < f->buf->size && buf_get_wch(f->buf, ln_end) != L'\n')
 		++ln_end;
 	
-	size_t cp_size = (ln_end - ln) * sizeof(wchar_t);
-	clipbuf = malloc(cp_size + sizeof(wchar_t));
-	clipbuf[ln_end - ln] = 0;
-	memcpy(clipbuf, buf_get_wstr(f->buf, ln, ln_end - ln), cp_size);
+	clipbuf = malloc((ln_end - ln + 1) * sizeof(wchar_t));
+	buf_get_wstr(f->buf, clipbuf, ln, ln_end - ln);
 }
 
 static void
@@ -906,10 +900,8 @@ ask_again:;
 		reg_ub += ln_cnt > 0;
 	}
 	
-	size_t cp_size = (reg_ub - reg_lb) * sizeof(wchar_t);
-	clipbuf = malloc(cp_size + sizeof(wchar_t));
-	clipbuf[reg_ub - reg_lb] = 0;
-	memcpy(clipbuf, buf_get_wstr(f->buf, reg_lb, reg_ub - reg_lb), cp_size);
+	clipbuf = malloc((reg_ub - reg_lb + 1) * sizeof(wchar_t));
+	buf_get_wstr(f->buf, clipbuf, reg_lb, reg_ub - reg_lb);
 }
 
 static void
@@ -929,12 +921,14 @@ ask_again:;
 	}
 	
 	size_t search_pos, needle_len = wcslen(needle);
+	wchar_t *cmp_buf = malloc(sizeof(wchar_t) * (needle_len + 1));
 	struct frame *f = &frames.data[cur_frame];
 	for (search_pos = f->csr + 1; search_pos < f->buf->size; ++search_pos) {
-		if (!wcscmp(buf_get_wstr(f->buf, search_pos, needle_len), needle))
+		if (!wcscmp(buf_get_wstr(f->buf, cmp_buf, search_pos, needle_len), needle))
 			break;
 	}
 	
+	free(cmp_buf);
 	free(needle);
 	
 	if (search_pos == f->buf->size) {

@@ -54,9 +54,6 @@ struct buf {
 
 VEC_DEF_PROTO(struct buf *, p_buf)
 
-void buf_sys_init(void);
-void buf_sys_quit(void);
-
 struct buf buf_create(bool writable);
 struct buf buf_from_file(char const *path);
 struct buf buf_from_wstr(wchar_t const *wstr, bool writable);
@@ -70,11 +67,8 @@ void buf_push_hist_brk(struct buf *b);
 void buf_pos(struct buf const *b, size_t pos, unsigned *out_r, unsigned *out_c);
 wchar_t buf_get_wch(struct buf const *b, size_t ind);
 
-// this function is NOT thread-safe.
-// the program is not multi-threaded, so this will cause no issue.
-// calling this function will invalidate any previously returned values, so if
-// you need to compare multiple regions against eachother, you must save the
-// output of each call to its own string.
-wchar_t const *buf_get_wstr(struct buf const *b, size_t ind, size_t n);
+// will read `n` character PLUS the null terminator.
+// always allocate +1 wide char of memory in `dst` relative to `n`.
+wchar_t *buf_get_wstr(struct buf const *b, wchar_t *dst, size_t ind, size_t n);
 
 #endif

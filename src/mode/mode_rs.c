@@ -116,25 +116,32 @@ bind_indent(void)
 		bool no_indent = false;
 		for (size_t i = 0; i < ARRAY_SIZE(no_indent_kw); ++i) {
 			size_t len = wcslen(no_indent_kw[i]);
+			if (len > last_ch)
+				continue;
 			
-			if (len <= last_ch
-			    && !iswalnum(buf_get_wch(mf->buf, last_ch - len))
-			    && !wcscmp(no_indent_kw[i], buf_get_wstr(mf->buf, last_ch - len + 1, len))) {
-				no_indent = true;
-				break;
-			}
+			if (iswalnum(buf_get_wch(mf->buf, last_ch - len)))
+				continue;
+			
+			wchar_t cmp[64];
+			buf_get_wstr(mf->buf, cmp, last_ch - len + 1, len);
+			if (wcscmp(no_indent_kw[i], cmp))
+				continue;
+			
+			no_indent = true;
+			break;
 		}
 		
 		// TODO: add `where` clause handling.
 		
+		wchar_t cmp_buf[3];
 		if (!iswspace(buf_get_wch(mf->buf, prev_last_ch))
 		    && !iswspace(buf_get_wch(mf->buf, first_ch))
 		    && !wcschr(L"([{};,", buf_get_wch(mf->buf, prev_last_ch))
 		    && !wcschr(L")]}", buf_get_wch(mf->buf, first_ch))
 		    && !wcschr(L"#", buf_get_wch(mf->buf, prev_first_ch))
-		    && wcscmp(L"//", buf_get_wstr(mf->buf, prev_first_ch, 2))
-		    && wcscmp(L"//", buf_get_wstr(mf->buf, first_ch, 2))
-		    && (prev_last_ch == 0 || wcscmp(L"*/", buf_get_wstr(mf->buf, prev_last_ch - 1, 2)))
+		    && wcscmp(L"//", buf_get_wstr(mf->buf, cmp_buf, prev_first_ch, 2))
+		    && wcscmp(L"//", buf_get_wstr(mf->buf, cmp_buf, first_ch, 2))
+		    && (prev_last_ch == 0 || wcscmp(L"*/", buf_get_wstr(mf->buf, cmp_buf, prev_last_ch - 1, 2)))
 		    && !no_indent) {
 			++ntab;
 		}
@@ -184,6 +191,11 @@ nopen_at(struct rd_state *out_rds, size_t pos, wchar_t const *open,
 static int
 comp_next_state(size_t *off, size_t limit, struct rd_state *rds)
 {
+	// this will probably segfault for `in_rstr_cmp_len` >= 64.
+	// but, then again, nobody ever writes a 64-level raw string in Rust.
+	// TODO: make this not crash.
+	wchar_t cmp_buf[64];
+	
 	if (!rds->in_rstr
 	    && !rds->in_str
 	    && !rds->in_ch
@@ -230,7 +242,7 @@ comp_next_state(size_t *off, size_t limit, struct rd_state *rds)
 		rds->in_ch = false;
 	else if (rds->in_rstr
 	         && *off + rds->in_rstr_cmp_len < limit
-	         && !wcscmp(buf_get_wstr(mf->buf, *off, rds->in_rstr_cmp_len), rds->in_rstr_cmp)) {
+	         && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, rds->in_rstr_cmp_len), rds->in_rstr_cmp)) {
 		rds->in_rstr = false;
 		*off += rds->in_rstr_cmp_len;
 	} else if ((rds->in_str || rds->in_ch)
@@ -241,7 +253,7 @@ comp_next_state(size_t *off, size_t limit, struct rd_state *rds)
 	           && !rds->in_ch
 	           && !rds->in_blk_cmt
 	           && *off + 1 < limit
-	           && !wcscmp(buf_get_wstr(mf->buf, *off, 2), L"//")) {
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, 2), L"//")) {
 		++*off;
 		rds->in_ln_cmt = true;
 	} else if (rds->in_ln_cmt && buf_get_wch(mf->buf, *off) == L'\n')
@@ -251,13 +263,13 @@ comp_next_state(size_t *off, size_t limit, struct rd_state *rds)
 	         && !rds->in_ch
 	         && !rds->in_ln_cmt
 	         && *off + 1 < limit
-	         && !wcscmp(buf_get_wstr(mf->buf, *off, 2), L"/*")) {
+	         && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, 2), L"/*")) {
 		++*off;
 		rds->in_blk_cmt = true;
 		++rds->in_blk_cmt_ncmt;
 	} else if (rds->in_blk_cmt
 	           && *off + 1 < limit
-	           && !wcscmp(buf_get_wstr(mf->buf, *off, 2), L"*/")) {
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, *off, 2), L"*/")) {
 		++*off;
 		if (--rds->in_blk_cmt_ncmt == 0)
 			rds->in_blk_cmt = false;

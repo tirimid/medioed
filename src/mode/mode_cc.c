@@ -106,13 +106,19 @@ bind_indent(void)
 
 		for (size_t i = 0; i < ARRAY_SIZE(indent_kw); ++i) {
 			size_t len = wcslen(indent_kw[i]);
+			if (len > prev_last_ch)
+				continue;
 			
-			if (len <= prev_last_ch
-			    && !iswalnum(buf_get_wch(mf->buf, prev_last_ch - len))
-			    && !wcscmp(indent_kw[i], buf_get_wstr(mf->buf, prev_last_ch - len + 1, len))) {
-				++ntab;
-				break;
-			}
+			if (iswalnum(buf_get_wch(mf->buf, prev_last_ch - len)))
+				continue;
+			
+			wchar_t cmp[64];
+			buf_get_wstr(mf->buf, cmp, prev_last_ch - len + 1, len);
+			if (wcscmp(indent_kw[i], cmp))
+				continue;
+			
+			++ntab;
+			break;
 		}
 		
 		unsigned prev_ntab = 0, off = 0;
@@ -154,6 +160,7 @@ comp_tabs(size_t first_ch, size_t last_sig_ch)
 	
 	for (size_t i = 0; i < first_ch; ++i) {
 		wchar_t wch = buf_get_wch(mf->buf, i);
+		wchar_t cmp_buf[64];
 		
 		if (comp_next_state(0, &i, &rds) == CNS_CONTINUE)
 			continue;
@@ -182,7 +189,7 @@ comp_tabs(size_t first_ch, size_t last_sig_ch)
 			} else
 				ntab -= ntab > 0;
 		} else if (i + 1 < mf->buf->size
-		           && !wcscmp(buf_get_wstr(mf->buf, i, 2), L"::")) {
+		           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, i, 2), L"::")) {
 			++i;
 		} else if (wch == L':') {
 			stk_unsigned_push(&pause_stk_open, &ntab);
@@ -199,7 +206,8 @@ comp_tabs(size_t first_ch, size_t last_sig_ch)
 				continue;
 			}
 			
-			if (!wcscmp(pause_kw[j], buf_get_wstr(mf->buf, i, len))) {
+			buf_get_wstr(mf->buf, cmp_buf, i, len);
+			if (!wcscmp(pause_kw[j], cmp_buf)) {
 				stk_unsigned_push(&pause_stk_open, &ntab);
 				stk_unsigned_push(&pause_stk_close, &ntab);
 				i += len - 1;
@@ -296,6 +304,7 @@ static int
 comp_next_state(size_t pos, size_t *off, struct rd_state *rds)
 {
 	size_t wch = buf_get_wch(mf->buf, pos + *off);
+	wchar_t cmp_buf[20]; // max possible read len (19) plus 1.
 	
 	if (wch == L'\\'
 	    && (rds->in_str || rds->in_ch)
@@ -306,15 +315,15 @@ comp_next_state(size_t pos, size_t *off, struct rd_state *rds)
 			rds->in_str = rds->in_ch = false;
 		return CNS_CONTINUE;
 	} else if (pos + *off + 2 < mf->buf->size
-	           && !wcscmp(buf_get_wstr(mf->buf, pos + *off, 2), L"R\"")
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, pos + *off, 2), L"R\"")
 	           || pos + *off + 3 < mf->buf->size
-	           && !wcscmp(buf_get_wstr(mf->buf, pos + *off, 3), L"LR\"")
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, pos + *off, 3), L"LR\"")
 	           || pos + *off + 4 < mf->buf->size
-	           && !wcscmp(buf_get_wstr(mf->buf, pos + *off, 4), L"u8R\"")
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, pos + *off, 4), L"u8R\"")
 	           || pos + *off + 3 < mf->buf->size
-	           && !wcscmp(buf_get_wstr(mf->buf, pos + *off, 3), L"uR\"")
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, pos + *off, 3), L"uR\"")
 	           || pos + *off + 3 < mf->buf->size
-	           && !wcscmp(buf_get_wstr(mf->buf, pos + *off, 3), L"UR\"")) {
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, pos + *off, 3), L"UR\"")) {
 		if (rds->in_str
 		    || rds->in_ch
 		    || rds->in_rstr
@@ -347,7 +356,7 @@ comp_next_state(size_t pos, size_t *off, struct rd_state *rds)
 		
 		rds->in_rstr = true;
 	} else if (pos + *off + rds->in_rstr_cmp_len - 1 < mf->buf->size
-	           && !wcscmp(buf_get_wstr(mf->buf, pos + *off, rds->in_rstr_cmp_len), rds->in_rstr_cmp)
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, pos + *off, rds->in_rstr_cmp_len), rds->in_rstr_cmp)
 	           && rds->in_rstr) {
 		*off += rds->in_rstr_cmp_len - 1;
 		rds->in_rstr = false;
@@ -366,7 +375,7 @@ comp_next_state(size_t pos, size_t *off, struct rd_state *rds)
 	} else if (wch == L'\n' && !rds->in_blk_cmt)
 		rds->in_ln_cmt = rds->in_str = rds->in_ch = false;
 	else if (pos + *off + 1 < mf->buf->size
-	         && !wcscmp(buf_get_wstr(mf->buf, pos + *off, 2), L"//")
+	         && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, pos + *off, 2), L"//")
 	         && !rds->in_ch
 	         && !rds->in_str
 	         && !rds->in_rstr
@@ -374,7 +383,7 @@ comp_next_state(size_t pos, size_t *off, struct rd_state *rds)
 		++*off;
 		rds->in_ln_cmt = true;
 	} else if (pos + *off + 1 < mf->buf->size
-	           && !wcscmp(buf_get_wstr(mf->buf, pos + *off, 2), L"/*")
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, pos + *off, 2), L"/*")
 	           && !rds->in_ch
 	           && !rds->in_str
 	           && !rds->in_rstr
@@ -382,7 +391,7 @@ comp_next_state(size_t pos, size_t *off, struct rd_state *rds)
 		++*off;
 		rds->in_blk_cmt = true;
 	} else if (pos + *off + 1 < mf->buf->size
-	           && !wcscmp(buf_get_wstr(mf->buf, pos + *off, 2), L"*/")
+	           && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, pos + *off, 2), L"*/")
 	           && rds->in_blk_cmt) {
 		++*off;
 		rds->in_blk_cmt = false;

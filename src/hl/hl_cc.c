@@ -144,15 +144,17 @@ int
 hl_cc_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
            uint8_t *out_fg, uint8_t *out_bg)
 {
+	wchar_t cmp_buf[20]; // max rstr compare length (19) plus 1.
+	
 	for (size_t i = off; i < buf->size; ++i) {
 		if (buf_get_wch(buf, i) == L'#') {
 			if (!hl_preproc(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (i + 2 < buf->size && !wcscmp(buf_get_wstr(buf, i, 2), L"R\"")
-		           || i + 3 < buf->size && !wcscmp(buf_get_wstr(buf, i, 3), L"LR\"")
-		           || i + 4 < buf->size && !wcscmp(buf_get_wstr(buf, i, 4), L"u8R\"")
-		           || i + 3 < buf->size && !wcscmp(buf_get_wstr(buf, i, 3), L"uR\"")
-		           || i + 3 < buf->size && !wcscmp(buf_get_wstr(buf, i, 3), L"UR\"")) {
+		} else if (i + 2 < buf->size && !wcscmp(buf_get_wstr(buf, cmp_buf, i, 2), L"R\"")
+		           || i + 3 < buf->size && !wcscmp(buf_get_wstr(buf, cmp_buf, i, 3), L"LR\"")
+		           || i + 4 < buf->size && !wcscmp(buf_get_wstr(buf, cmp_buf, i, 4), L"u8R\"")
+		           || i + 3 < buf->size && !wcscmp(buf_get_wstr(buf, cmp_buf, i, 3), L"uR\"")
+		           || i + 3 < buf->size && !wcscmp(buf_get_wstr(buf, cmp_buf, i, 3), L"UR\"")) {
 			if (!hl_rstring(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		} else if (buf_get_wch(buf, i) == L'"') {
@@ -294,8 +296,11 @@ hl_rstring(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	term_seq[0] = L')';
 	term_seq[d_char_seq_len + 1] = L'"';
 	
-	while (j + d_char_seq_len + 2 < buf->size
-	       && wcscmp(buf_get_wstr(buf, j, d_char_seq_len + 2), term_seq)) {
+	while (j + d_char_seq_len + 2 < buf->size) {
+		wchar_t cmp_buf[19];
+		buf_get_wstr(buf, cmp_buf, j, d_char_seq_len + 2);
+		if (!wcscmp(cmp_buf, term_seq))
+			break;
 		++j;
 	}
 	
@@ -319,8 +324,9 @@ hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 		while (j < buf->size && buf_get_wch(buf, j) != L'\n')
 			++j;
 	} else {
+		wchar_t cmp[3];
 		while (j + 1 < buf->size
-		       && wcscmp(buf_get_wstr(buf, j, 2), L"*/")) {
+		       && wcscmp(buf_get_wstr(buf, cmp, j, 2), L"*/")) {
 			++j;
 		}
 	}
@@ -395,7 +401,12 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	}
 	
 	for (size_t kw = 0; kw < ARRAY_SIZE(keywords); ++kw) {
-		if (!wcscmp(keywords[kw], buf_get_wstr(buf, *i, j - *i))) {
+		// no need for exact size match.
+		// maybe in C++26 they'll add a 64-character long keyword, at
+		// which point this will need to be increased.
+		wchar_t cmp[64];
+		
+		if (!wcscmp(keywords[kw], buf_get_wstr(buf, cmp, *i, j - *i))) {
 			wt = WT_KEYWORD;
 			break;
 		}

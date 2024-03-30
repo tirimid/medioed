@@ -21,24 +21,6 @@ extern bool flag_r;
 
 static void push_hist(struct buf *b, enum buf_op_type type, wchar_t const *data, size_t lb, size_t ub);
 
-// used for returning `buf_get_wstr()`.
-// this is a horribly ugly hack that ought to eventually be removed.
-// TODO: REMOVE THIS UTTER GARBAGE AS SOON AS POSSIBLE.
-static wchar_t *wstr_sv = NULL;
-static size_t wstr_sv_len = 0;
-
-void
-buf_sys_init(void)
-{
-	wstr_sv = malloc(1);
-}
-
-void
-buf_sys_quit(void)
-{
-	free(wstr_sv);
-}
-
 struct buf
 buf_create(bool writable)
 {
@@ -274,21 +256,16 @@ buf_get_wch(struct buf const *b, size_t ind)
 	return ind >= b->size ? 0 : b->conts_[ind];
 }
 
-wchar_t const *
-buf_get_wstr(struct buf const *b, size_t ind, size_t n)
+wchar_t *
+buf_get_wstr(struct buf const *b, wchar_t *dst, size_t ind, size_t n)
 {
 	if (n == 0 || ind + n > b->size)
 		return NULL;
 	
-	if (n > wstr_sv_len) {
-		wstr_sv = realloc(wstr_sv, sizeof(wchar_t) * (n + 1));
-		wstr_sv_len = n;
-	}
+	wcsncpy(dst, &b->conts_[ind], n);
+	dst[n] = 0;
 	
-	wcsncpy(wstr_sv, &b->conts_[ind], n);
-	wstr_sv[n] = 0;
-	
-	return wstr_sv;
+	return dst;
 }
 
 static void
