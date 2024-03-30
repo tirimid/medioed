@@ -13,6 +13,7 @@ editor that I personally enjoy using.
 Software / system dependencies are:
 
 * A shell environment (for program execution)
+* Man (for manpage viewer command in editor, optional)
 * mincbuild (for build, optional)
 * Make (for build, optional)
 

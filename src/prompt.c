@@ -14,7 +14,7 @@
 #include "keybd.h"
 #include "util.h"
 
-#define BIND_CANCEL K_CTL('g')
+#define BIND_QUIT K_CTL('g')
 #define BIND_NAV_FWD K_CTL('f')
 #define BIND_NAV_BACK K_CTL('b')
 #define BIND_DEL K_BACKSPC
@@ -30,7 +30,7 @@ prompt_show(wchar_t const *msg)
 	
 	for (;;) {
 		wint_t k = keybd_await_key_nb();
-		if (k == WEOF || k == L'q' || k == L'Q')
+		if (k == WEOF || k == BIND_QUIT)
 			break;
 	}
 }
@@ -62,26 +62,33 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, size_t *))
 	wint_t k;
 	while ((k = keybd_await_key_nb()) != K_RET) {
 		// gather response.
-		if (k == BIND_CANCEL || k == WEOF) {
+		switch (k) {
+		case WEOF:
+		case BIND_QUIT:
 			free(resp);
 			return NULL;
-		} else if (k == BIND_NAV_FWD)
+		case BIND_NAV_FWD:
 			csr += csr < resp_len;
-		else if (k == BIND_NAV_BACK)
+			break;
+		case BIND_NAV_BACK:
 			csr -= csr > 0;
-		else if (k == BIND_DEL) {
+			break;
+		case BIND_DEL:
 			if (csr > 0) {
 				memmove(resp + csr - 1, resp + csr, sizeof(wchar_t) * (resp_len - csr));
 				--resp_len;
 				--csr;
 			}
-		} else if (k == BIND_COMPLETE) {
+			break;
+		case BIND_COMPLETE:
 			if (comp)
 				comp(&resp, &resp_len, &csr);
-		} else {
+			break;
+		default:
 			resp = realloc(resp, sizeof(wchar_t) * (++resp_len + 1));
 			memmove(resp + csr + 1, resp + csr, sizeof(wchar_t) * (resp_len - csr));
 			resp[csr++] = k;
+			break;
 		}
 
 		// interactively render response.
@@ -185,7 +192,7 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 	
 	struct dirent *dir_ent;
 	while (dir_ent = readdir(dir_p)) {
-		if (strncmp_case_insen(name, dir_ent->d_name, name_len)
+		if (strncasecmp(name, dir_ent->d_name, name_len)
 		    || dir_ent->d_type != DT_DIR && dir_ent->d_type != DT_REG
 		    || !strcmp(".", dir_ent->d_name)
 		    || !strcmp("..", dir_ent->d_name)) {

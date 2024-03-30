@@ -19,6 +19,7 @@
 #include "draw.h"
 #include "frame.h"
 #include "keybd.h"
+#include "label.h"
 #include "prompt.h"
 
 extern bool flag_c;
@@ -61,6 +62,7 @@ static void bind_find_lit(void);
 static void bind_mac_begin(void);
 static void bind_mac_end(void);
 static void bind_toggle_mono(void);
+static void bind_read_man_word(void);
 static void reset_binds(void);
 static void set_global_mode(void);
 static void sigwinch_handler(int arg);
@@ -72,6 +74,7 @@ static struct vec_frame frames;
 static struct vec_p_buf p_bufs;
 static wchar_t *clipbuf = NULL;
 static bool mono = false;
+static bool ignore_sigwinch = false; // used for man reader hack.
 
 int
 editor_init(int argc, char const *argv[])
@@ -417,19 +420,20 @@ bind_open_file(void)
 		prompt_show(L"could not open file!");
 		editor_redraw();
 		free(path);
+		free(wpath);
 		return;
 	}
-
+	
 	struct buf buf = buf_from_file(path);
 	struct frame frame = frame_create(wpath, add_buf(&buf));
 	add_frame(&frame);
-
+	
 	cur_frame = frames.size - 1;
 	reset_binds();
 	set_global_mode();
 	arrange_frames();
 	editor_redraw();
-
+	
 	free(path);
 	free(wpath);
 }
@@ -975,6 +979,168 @@ bind_toggle_mono(void)
 }
 
 static void
+bind_read_man_word(void)
+{
+	struct frame *f = &frames.data[cur_frame];
+	
+	// get label render parameters.
+	unsigned csrr, csrc;
+	frame_pos(f, f->csr, &csrr, &csrc);
+	csrr += f->pr;
+	csrc += f->pc;
+	
+	struct label_bounds bounds = {
+		.pr = csrr,
+		.pc = csrc + 1,
+		.sr = CONF_READ_MAN_SR,
+		.sc = CONF_READ_MAN_SC,
+	};
+	bounds = label_rebound(&bounds, csrc + 1, MAX(0, (long)csrc - 1), csrr);
+	
+	// manpages generally have alphanumeric chars, underscores, hyphens, and
+	// periods in their names; so only those are supported here.
+	
+	if (f->csr >= f->buf->size) {
+		prompt_show(L"cannot get manpage for null name!");
+		editor_redraw();
+		return;
+	}
+	
+	wchar_t wch = buf_get_wch(f->buf, f->csr);
+	if (!iswalnum(wch) && !wcschr(L"_-.", wch)) {
+		prompt_show(L"cannot get manpage for unsupported name!");
+		editor_redraw();
+		return;
+	}
+	
+	// get currently hovered word.
+	size_t word_start = f->csr;
+	while (word_start > 0) {
+		wchar_t wch = buf_get_wch(f->buf, word_start - 1);
+		if (!iswalnum(wch) && !wcschr(L"_-.", wch))
+			break;
+		--word_start;
+	}
+	
+	size_t word_len = 1;
+	while (word_start + word_len < f->buf->size) {
+		wchar_t wch = buf_get_wch(f->buf, word_start + word_len);
+		if (!iswalnum(wch) && !wcschr(L"_-.", wch))
+			break;
+		++word_len;
+	}
+	
+	size_t wword_size = sizeof(wchar_t) * (word_len + 1);
+	wchar_t *wword = malloc(wword_size);
+	buf_get_wstr(f->buf, wword, word_start, word_len + 1);
+	
+	char *word = malloc(wword_size);
+	wcstombs(word, wword, wword_size);
+	free(wword);
+	
+	// format word into command.
+	char *cmd = malloc(2);
+	size_t cmd_len = 0, cmd_cap = 1;
+	size_t cmd_fmt_len = strlen(CONF_READ_MAN_CMD);
+	
+	for (size_t i = 0; i < cmd_fmt_len; ++i) {
+		if (CONF_READ_MAN_CMD[i] != '%') {
+			if (++cmd_len > cmd_cap) {
+				cmd_cap *= 2;
+				cmd = realloc(cmd, cmd_cap + 1);
+			}
+			cmd[cmd_len - 1] = CONF_READ_MAN_CMD[i];
+			continue;
+		}
+		
+		switch (CONF_READ_MAN_CMD[i + 1]) {
+		case 0:
+		case '%':
+			if (++cmd_len > cmd_cap) {
+				cmd_cap *= 2;
+				cmd = realloc(cmd, cmd_cap + 1);
+			}
+			cmd[cmd_len - 1] = '%';
+			break;
+		case 'w':
+			for (size_t j = 0; j < word_len; ++j) {
+				if (++cmd_len > cmd_cap) {
+					cmd_cap *= 2;
+					cmd = realloc(cmd, cmd_cap + 1);
+				}
+				cmd[cmd_len - 1] = word[j];
+			}
+			break;
+		default:
+			break;
+		}
+		
+		++i; // skip format code.
+	}
+	cmd[cmd_len] = 0;
+	free(word);
+	
+	// read man pipe into message buffer.
+	// terminal size is temporarily set to fit the label bounds in order to
+	// trick man into generating output of a suitable size and spacing.
+	// used temporary `winsize` has two extra columns to make man output
+	// text without right-hand padding, which would be wasted space here.
+	struct winsize sv_ws;
+	ioctl(0, TIOCGWINSZ, &sv_ws);
+	
+	struct winsize tmp_ws = {
+		.ws_row = bounds.sr,
+		.ws_col = bounds.sc + 2,
+	};
+	ignore_sigwinch = true;
+	ioctl(0, TIOCSWINSZ, &tmp_ws);
+	
+	FILE *man_fp = popen(cmd, "r");
+	free(cmd);
+	
+	if (!man_fp) {
+		ioctl(0, TIOCSWINSZ, &sv_ws);
+		ignore_sigwinch = false;
+		prompt_show(L"failed to open pipe to man!");
+		editor_redraw();
+		return;
+	}
+	
+	// this should maybe eventually be changed.
+	wchar_t *msg = malloc(sizeof(wchar_t));
+	size_t msg_size = 0, msg_cap = 1;
+	int ch;
+	while ((ch = fgetc(man_fp)) != EOF) {
+		if (++msg_size > msg_cap) {
+			msg_cap *= 2;
+			msg = realloc(msg, sizeof(wchar_t) * (msg_cap + 1));
+		}
+		msg[msg_size - 1] = ch;
+	}
+	msg[msg_size] = 0;
+	ioctl(0, TIOCSWINSZ, &sv_ws);
+	ignore_sigwinch = false;
+	
+	if (pclose(man_fp)) {
+		prompt_show(L"man exited with error!");
+		editor_redraw();
+		free(msg);
+		return;
+	}
+	
+	// draw label with message.
+	if (label_show(CONF_READ_MAN_TITLE, msg, &bounds)) {
+		prompt_show(L"failed to show label!");
+		editor_redraw();
+		free(msg);
+		return;
+	}
+	
+	free(msg);
+	editor_redraw();
+}
+
+static void
 reset_binds(void)
 {
 	// quit and reinit to reset current keybind buffer and bind information.
@@ -1016,6 +1182,7 @@ reset_binds(void)
 	keybd_bind(conf_bind_mac_begin, bind_mac_begin);
 	keybd_bind(conf_bind_mac_end, bind_mac_end);
 	keybd_bind(conf_bind_toggle_mono, bind_toggle_mono);
+	keybd_bind(conf_bind_read_man_word, bind_read_man_word);
 	
 	keybd_organize();
 }
@@ -1043,6 +1210,9 @@ set_global_mode(void)
 static void
 sigwinch_handler(int arg)
 {
+	if (ignore_sigwinch)
+		return;
+	
 	old_sigwinch_handler(arg);
 	arrange_frames();
 	editor_redraw();

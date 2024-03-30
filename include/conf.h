@@ -70,6 +70,12 @@
 	L"\n" \
 	L"(The greeter logo seen above was generated with the use of Figlet)\n"
 
+// specific keybind options.
+#define CONF_READ_MAN_TITLE L"*man*"
+#define CONF_READ_MAN_CMD "man -E ascii -P cat %w 2> /dev/null"
+#define CONF_READ_MAN_SR 20
+#define CONF_READ_MAN_SC 60
+
 struct highlight {
 	char const *local_mode;
 	int (*find)(struct buf const *, size_t, size_t *, size_t *, uint8_t *, uint8_t *);
@@ -121,6 +127,7 @@ extern int const conf_bind_find_lit[];
 extern int const conf_bind_mac_begin[];
 extern int const conf_bind_mac_end[];
 extern int const conf_bind_toggle_mono[];
+extern int const conf_bind_read_man_word[];
 
 extern struct highlight const conf_htab[];
 extern size_t const conf_htab_size;

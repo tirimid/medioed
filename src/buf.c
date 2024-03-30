@@ -47,7 +47,7 @@ buf_from_file(char const *path)
 		free(msg);
 		return buf_create(false);
 	}
-
+	
 	struct buf b = buf_create(true);
 	b.flags = BF_WRITABLE | BF_NO_HIST;
 	b.src_type = BST_FILE;
@@ -109,7 +109,7 @@ buf_save(struct buf *b)
 	FILE *fp = fopen(b->src, "wb");
 	if (!fp)
 		return 1;
-
+	
 	for (size_t i = 0; i < b->size; ++i) {
 		wchar_t wcs[] = {b->conts_[i], 0};
 		char mbs[sizeof(wchar_t) + 1] = {0};
