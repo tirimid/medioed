@@ -128,6 +128,7 @@ extern int const conf_bind_mac_begin[];
 extern int const conf_bind_mac_end[];
 extern int const conf_bind_toggle_mono[];
 extern int const conf_bind_read_man_word[];
+extern int const conf_bind_file_exp[];
 
 extern struct highlight const conf_htab[];
 extern size_t const conf_htab_size;

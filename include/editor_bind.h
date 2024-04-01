@@ -1,0 +1,42 @@
+#ifndef EDITOR_BIND_H
+#define EDITOR_BIND_H
+
+void editor_bind_quit(void);
+void editor_bind_chg_frame_fwd(void);
+void editor_bind_chg_frame_back(void);
+void editor_bind_focus_frame(void);
+void editor_bind_kill_frame(void);
+void editor_bind_open_file(void);
+void editor_bind_save_file(void);
+void editor_bind_nav_fwd_ch(void);
+void editor_bind_nav_fwd_word(void);
+void editor_bind_nav_fwd_page(void);
+void editor_bind_nav_back_ch(void);
+void editor_bind_nav_back_word(void);
+void editor_bind_nav_back_page(void);
+void editor_bind_nav_down(void);
+void editor_bind_nav_up(void);
+void editor_bind_nav_ln_start(void);
+void editor_bind_nav_ln_end(void);
+void editor_bind_nav_goto(void);
+void editor_bind_del_fwd_ch(void);
+void editor_bind_del_back_ch(void);
+void editor_bind_del_back_word(void);
+void editor_bind_chg_mode_global(void);
+void editor_bind_chg_mode_local(void);
+void editor_bind_create_scrap(void);
+void editor_bind_new_line(void);
+void editor_bind_focus(void);
+void editor_bind_kill(void);
+void editor_bind_paste(void);
+void editor_bind_undo(void);
+void editor_bind_copy(void);
+void editor_bind_ncopy(void);
+void editor_bind_find_lit(void);
+void editor_bind_mac_begin(void);
+void editor_bind_mac_end(void);
+void editor_bind_toggle_mono(void);
+void editor_bind_read_man_word(void);
+void editor_bind_file_exp(void);
+
+#endif
