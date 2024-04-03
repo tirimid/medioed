@@ -14,6 +14,7 @@
 #include "keybd.h"
 #include "util.h"
 
+#define BIND_RET K_RET
 #define BIND_QUIT K_CTL('g')
 #define BIND_NAV_FWD K_CTL('f')
 #define BIND_NAV_BACK K_CTL('b')
@@ -60,7 +61,7 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, size_t *))
 	size_t csr = 0, draw_start = 0;
 
 	wint_t k;
-	while ((k = keybd_await_key_nb()) != K_RET) {
+	while ((k = keybd_await_key_nb()) != BIND_RET) {
 		// gather response.
 		switch (k) {
 		case WEOF:

@@ -46,9 +46,21 @@
 #define CONF_MARK_MOD L"[~*]"
 #define CONF_MARK_MONO L"[M!]"
 
-#define CONF_GREET_NAME L"*greeter*"
+// scrap buffer options.
 #define CONF_SCRAP_NAME L"*scrap*"
 
+// manpage viewer options.
+#define CONF_READ_MAN_TITLE L"*manpage viewer*"
+#define CONF_READ_MAN_CMD "man -E ascii -P cat %w 2> /dev/null"
+#define CONF_READ_MAN_SR 20
+#define CONF_READ_MAN_SC 85
+
+// file explorer options.
+#define CONF_FILE_EXP_NAME L"*file explorer*"
+#define CONF_FILE_EXP_SC 25
+
+// greeter options.
+#define CONF_GREET_NAME L"*greeter*"
 #define CONF_GREET_TEXT \
 	L"                    _ _                _\n" \
 	L" _ __ ___   ___  __| (_) ___   ___  __| |\n" \
@@ -69,12 +81,6 @@
 	L"* Documentation: https://tirimid.net/software/medioed.html\n" \
 	L"\n" \
 	L"(The greeter logo seen above was generated with the use of Figlet)\n"
-
-// specific keybind options.
-#define CONF_READ_MAN_TITLE L"*manpage viewer*"
-#define CONF_READ_MAN_CMD "man -E ascii -P cat %w 2> /dev/null"
-#define CONF_READ_MAN_SR 20
-#define CONF_READ_MAN_SC 85
 
 struct highlight {
 	char const *local_mode;

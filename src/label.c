@@ -65,10 +65,6 @@ label_show(wchar_t const *name, wchar_t const *msg,
 		return 1;
 	}
 	
-	// the bind indicator is not covered like with prompt.
-	// thus, it should be redrawn as to not appear incorrect.
-	editor_redraw();
-	
 	size_t off = 0;
 	for (;;) {
 		draw_box(name, msg, off, bounds);

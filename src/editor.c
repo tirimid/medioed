@@ -116,7 +116,7 @@ editor_quit(void)
 		buf_destroy(editor_p_bufs.data[i]);
 		free(editor_p_bufs.data[i]);
 	}
-
+	
 	vec_frame_destroy(&editor_frames);
 	vec_p_buf_destroy(&editor_p_bufs);
 	
@@ -174,8 +174,10 @@ editor_add_buf(struct buf *b)
 {
 	if (b->src_type == BST_FILE) {
 		for (size_t i = 0; i < editor_p_bufs.size; ++i) {
-			if (editor_p_bufs.data[i]->src_type == BST_FILE
-			    && !strcmp(b->src, editor_p_bufs.data[i]->src)) {
+			if (editor_p_bufs.data[i]->src_type != BST_FILE)
+				continue;
+			
+			if (is_path_same(b->src, editor_p_bufs.data[i]->src)) {
 				buf_destroy(b);
 				return editor_p_bufs.data[i];
 			}

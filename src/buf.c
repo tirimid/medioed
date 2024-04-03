@@ -239,11 +239,13 @@ buf_push_hist_brk(struct buf *b)
 void
 buf_pos(struct buf const *b, size_t pos, unsigned *out_r, unsigned *out_c)
 {
+	pos = MIN(pos, b->size);
+	
 	*out_r = *out_c = 0;
 
-	for (size_t i = 0; i < pos && i < b->size; ++i) {
+	for (size_t i = 0; i < pos; ++i) {
 		++*out_c;
-		if (b->conts_[i] == L'\n') {
+		if (buf_get_wch(b, i) == L'\n') {
 			*out_c = 0;
 			++*out_r;
 		}
@@ -253,7 +255,7 @@ buf_pos(struct buf const *b, size_t pos, unsigned *out_r, unsigned *out_c)
 wchar_t
 buf_get_wch(struct buf const *b, size_t ind)
 {
-	return ind >= b->size ? 0 : b->conts_[ind];
+	return b->conts_[ind];
 }
 
 wchar_t *

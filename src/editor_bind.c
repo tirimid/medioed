@@ -12,6 +12,7 @@
 
 #include "conf.h"
 #include "editor.h"
+#include "file_exp.h"
 #include "frame.h"
 #include "keybd.h"
 #include "label.h"
@@ -862,6 +863,7 @@ editor_bind_read_man_word(void)
 	}
 	
 	// draw label with message.
+	editor_redraw();
 	if (label_show(CONF_READ_MAN_TITLE, msg, &bounds)) {
 		prompt_show(L"failed to show label!");
 		editor_redraw();
@@ -876,5 +878,20 @@ editor_bind_read_man_word(void)
 void
 editor_bind_file_exp(void)
 {
-	// TODO: implement.
+	char open_path[PATH_MAX] = {0};
+	
+	editor_redraw();
+	switch (file_exp_open(open_path, PATH_MAX - 1, ".")) {
+	case FER_SUCCESS:
+		break;
+	case FER_FAIL:
+		prompt_show(L"failed to open file explorer!");
+		editor_redraw();
+		return;
+	case FER_QUIT:
+		editor_redraw();
+		return;
+	}
+	
+	// TODO: open file.
 }

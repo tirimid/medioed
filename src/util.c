@@ -88,3 +88,12 @@ mk_file(char const *path)
 	
 	return 0;
 }
+
+bool
+is_path_same(char const *pa, char const *pb)
+{
+	struct stat sa, sb;
+	if (stat(pa, &sa) || stat(pb, &sb))
+		return false;
+	return sa.st_dev == sb.st_dev && sa.st_ino == sb.st_ino;
+}

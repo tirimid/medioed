@@ -150,16 +150,17 @@ void
 frame_pos(struct frame const *f, size_t pos, unsigned *out_r, unsigned *out_c)
 {
 	unsigned right_edge = f->sc - GUTTER - f->linum_width;
+	pos = MIN(pos, f->buf->size);
 	
 	*out_r = 1;
 	*out_c = 0;
 
-	for (size_t i = f->buf_start; i < pos && i < f->buf->size; ++i) {
-		if (buf_get_wch(f->buf, i) == L'\t')
+	for (size_t i = f->buf_start; i < pos; ++i) {
+		wchar_t wch = buf_get_wch(f->buf, i);
+		
+		if (wch == L'\t')
 			*out_c += CONF_TAB_SIZE - *out_c % CONF_TAB_SIZE - 1;
-
-		if (buf_get_wch(f->buf, i) == L'\n'
-		    || *out_c >= right_edge - 1) {
+		else if (wch == L'\n' || *out_c >= right_edge - 1) {
 			*out_c = 0;
 			++*out_r;
 			continue;

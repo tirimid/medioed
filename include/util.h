@@ -1,6 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -141,5 +142,6 @@ STK_DEF_PROTO(unsigned, unsigned)
 char const *file_ext(char const *path);
 int mk_dir_rec(char const *dir);
 int mk_file(char const *path);
+bool is_path_same(char const *pa, char const *pb);
 
 #endif
