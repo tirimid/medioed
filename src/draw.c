@@ -17,7 +17,7 @@ struct cell {
 
 static void sigwinch_handler(int arg);
 
-static struct cell **cells;
+static struct cell *cells;
 static struct winsize ws;
 
 void
@@ -27,9 +27,7 @@ draw_init(void)
 
 	ioctl(0, TIOCGWINSZ, &ws);
 	
-	cells = malloc(sizeof(struct cell *) * ws.ws_row);
-	for (size_t i = 0; i < ws.ws_row; ++i)
-		cells[i] = malloc(sizeof(struct cell) * ws.ws_col);
+	cells = malloc(sizeof(struct cell) * ws.ws_row * ws.ws_col);
 
 	struct sigaction sa;
 	sigaction(SIGWINCH, NULL, &sa);
@@ -40,10 +38,7 @@ draw_init(void)
 void
 draw_quit(void)
 {
-	for (size_t i = 0; i < ws.ws_row; ++i)
-		free(cells[i]);
 	free(cells);
-	
 	fputws(L"\033[?25h\033[0m", stdout);
 }
 
@@ -59,7 +54,7 @@ draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch,
 {
 	for (size_t i = pr; i < pr + sr; ++i) {
 		for (size_t j = pc; j < pc + sc; ++j) {
-			cells[i][j] = (struct cell){
+			cells[ws.ws_col * i + j] = (struct cell){
 				.wch = wch,
 				.fg = fg,
 				.bg = bg,
@@ -71,15 +66,17 @@ draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch,
 void
 draw_put_wch(unsigned r, unsigned c, wchar_t wch)
 {
-	cells[r][c].wch = wch;
+	cells[ws.ws_col * r + c].wch = wch;
 }
 
 void
 draw_put_wstr(unsigned r, unsigned c, wchar_t const *wstr)
 {
 	for (wchar_t const *wc = wstr; *wc; ++wc) {
-		if (*wc != L'\n')
-			cells[r][c++].wch = *wc;
+		if (*wc != L'\n') {
+			cells[ws.ws_col * r + c].wch = *wc;
+			++c;
+		}
 
 		if (c >= ws.ws_col || *wc == L'\n') {
 			c = 0;
@@ -98,8 +95,8 @@ draw_put_attr(unsigned r, unsigned c, uint8_t fg, uint8_t bg, unsigned n)
 		return;
 	
 	for (unsigned i = 0; i < n; ++i) {
-		cells[r][c].fg = fg;
-		cells[r][c].bg = bg;
+		cells[ws.ws_col * r + c].fg = fg;
+		cells[ws.ws_col * r + c].bg = bg;
 
 		if (++c >= ws.ws_col) {
 			c = 0;
@@ -120,13 +117,13 @@ draw_refresh(void)
 	
 	for (size_t i = 0; i < ws.ws_row; ++i) {
 		for (size_t j = 0; j < ws.ws_col; ++j) {
-			uint8_t cur_fg = cells[i][j].fg;
-			uint8_t cur_bg = cells[i][j].bg;
+			uint8_t cur_fg = cells[ws.ws_col * i + j].fg;
+			uint8_t cur_bg = cells[ws.ws_col * i + j].bg;
 			
 			if (cur_fg != prev_fg || cur_bg != prev_bg)
 				wprintf(L"\033[38;5;%um\033[48;5;%um", cur_fg, cur_bg);
 			
-			fputwc(cells[i][j].wch, stdout);
+			fputwc(cells[ws.ws_col * i + j].wch, stdout);
 			
 			prev_fg = cur_fg;
 			prev_bg = cur_bg;
@@ -139,15 +136,5 @@ sigwinch_handler(int arg)
 {
 	struct winsize old_ws = ws;
 	ioctl(0, TIOCGWINSZ, &ws);
-
-	if (ws.ws_row > old_ws.ws_row) {
-		cells = realloc(cells, sizeof(struct cell *) * ws.ws_row);
-		for (size_t i = old_ws.ws_row; i < ws.ws_row; ++i)
-			cells[i] = malloc(sizeof(struct cell) * ws.ws_col);
-	}
-
-	if (ws.ws_col > old_ws.ws_col) {
-		for (size_t i = 0; i < old_ws.ws_row; ++i)
-			cells[i] = realloc(cells[i], sizeof(struct cell) * ws.ws_col);
-	}
+	cells = realloc(cells, sizeof(struct cell) * ws.ws_row * ws.ws_col);
 }
