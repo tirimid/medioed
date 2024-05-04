@@ -29,7 +29,8 @@
 #define K_TAB 9
 
 #define VEC_DEF_PROTO_EX(t, name, acc_level) \
-	struct vec_##name { \
+	struct vec_##name \
+	{ \
 		t *data; \
 		size_t size, cap; \
 	}; \
@@ -43,7 +44,8 @@
 	acc_level struct vec_##name \
 	vec_##name##_create(void) \
 	{ \
-		return (struct vec_##name){ \
+		return (struct vec_##name) \
+		{ \
 			.data = malloc(sizeof(t)), \
 			.size = 0, \
 			.cap = 1, \
@@ -57,7 +59,8 @@
 	acc_level void \
 	vec_##name##_add(struct vec_##name *v, t *new) \
 	{ \
-		if (v->size >= v->cap) { \
+		if (v->size >= v->cap) \
+		{ \
 			v->cap *= 2; \
 			v->data = realloc(v->data, sizeof(t) * v->cap); \
 		} \
@@ -78,66 +81,10 @@
 		v->data[b] = tmp; \
 	}
 
-#define STK_DEF_PROTO_EX(t, name, acc_level) \
-	struct stk_##name { \
-		t *data; \
-		size_t size, cap; \
-	}; \
-	acc_level struct stk_##name stk_##name##_create(void); \
-	acc_level void stk_##name##_destroy(struct stk_##name *s); \
-	acc_level void stk_##name##_push(struct stk_##name *s, t *new); \
-	acc_level t *stk_##name##_pop(struct stk_##name *s); \
-	acc_level t const *stk_##name##_peek(struct stk_##name const *s);
-
-#define STK_DEF_IMPL_EX(t, name, acc_level) \
-	acc_level struct stk_##name \
-	stk_##name##_create(void) \
-	{ \
-		return (struct stk_##name){ \
-			.data = malloc(sizeof(t)), \
-			.size = 0, \
-			.cap = 1, \
-		}; \
-	} \
-	acc_level void \
-	stk_##name##_destroy(struct stk_##name *s) \
-	{ \
-		free(s->data); \
-	} \
-	acc_level void \
-	stk_##name##_push(struct stk_##name *s, t *new) \
-	{ \
-		if (s->size >= s->cap) { \
-			s->cap *= 2; \
-			s->data = realloc(s->data, sizeof(t) * s->cap); \
-		} \
-		s->data[s->size++] = *new; \
-	} \
-	acc_level t * \
-	stk_##name##_pop(struct stk_##name *s) \
-	{ \
-		if (!s->size) \
-			return NULL; \
-		t *item = malloc(sizeof(t)); \
-		memcpy(item, &s->data[--s->size], sizeof(t)); \
-		return item; \
-	} \
-	acc_level t const * \
-	stk_##name##_peek(struct stk_##name const *s) \
-	{ \
-		return !s->size ? NULL : &s->data[s->size - 1]; \
-	}
-
 #define VEC_DEF_PROTO(t, name) VEC_DEF_PROTO_EX(t, name, NOTHING)
 #define VEC_DEF_IMPL(t, name) VEC_DEF_IMPL_EX(t, name, NOTHING)
 #define VEC_DEF_PROTO_STATIC(t, name) VEC_DEF_PROTO_EX(t, name, static)
 #define VEC_DEF_IMPL_STATIC(t, name) VEC_DEF_IMPL_EX(t, name, static)
-#define STK_DEF_PROTO(t, name) STK_DEF_PROTO_EX(t, name, NOTHING)
-#define STK_DEF_IMPL(t, name) STK_DEF_IMPL_EX(t, name, NOTHING)
-#define STK_DEF_PROTO_STATIC(t, name) STK_DEF_PROTO_EX(t, name, static)
-#define STK_DEF_IMPL_STATIC(t, name) STK_DEF_IMPL_EX(t, name, static)
-
-STK_DEF_PROTO(unsigned, unsigned)
 
 char const *file_ext(char const *path);
 int mk_dir_rec(char const *dir);

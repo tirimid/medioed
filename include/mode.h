@@ -5,7 +5,8 @@
 
 #include "frame.h"
 
-struct mode {
+struct mode
+{
 	char const *name;
 	void (*init)(struct frame *), (*quit)(void);
 	void (*update)(void);

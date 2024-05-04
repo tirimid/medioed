@@ -9,20 +9,13 @@
 #include "hl/hl_cc.h"
 #include "hl/hl_cs.h"
 #include "hl/hl_html.h"
-#include "hl/hl_lua.h"
 #include "hl/hl_md.h"
 #include "hl/hl_rs.h"
 #include "hl/hl_s.h"
-#include "hl/hl_sh.h"
-#include "mode/mode_c.h"
-#include "mode/mode_cc.h"
-#include "mode/mode_cs.h"
+#include "mode/mode_clike.h"
 #include "mode/mode_html.h"
-#include "mode/mode_lua.h"
-#include "mode/mode_md.h"
-#include "mode/mode_rs.h"
+#include "mode/mode_null.h"
 #include "mode/mode_s.h"
-#include "mode/mode_sh.h"
 #include "util.h"
 
 // binds.
@@ -76,7 +69,8 @@ static char const *ext_s[] = {"s", "S", NULL};
 static char const *ext_sh[] = {"sh", NULL};
 
 // highlight table.
-struct highlight const conf_htab[] = {
+struct highlight const conf_htab[] =
+{
 	{
 		.local_mode = "c",
 		.find = hl_c_find,
@@ -94,10 +88,6 @@ struct highlight const conf_htab[] = {
 		.find = hl_html_find,
 	},
 	{
-		.local_mode = "lua",
-		.find = hl_lua_find,
-	},
-	{
 		.local_mode = "md",
 		.find = hl_md_find,
 	},
@@ -109,15 +99,12 @@ struct highlight const conf_htab[] = {
 		.local_mode = "s",
 		.find = hl_s_find,
 	},
-	{
-		.local_mode = "sh",
-		.find = hl_sh_find,
-	},
 };
 size_t const conf_htab_size = ARRAY_SIZE(conf_htab);
 
 // margin table.
-struct margin const conf_mtab[] = {
+struct margin const conf_mtab[] =
+{
 	{
 		.col = 80,
 		.wch = L'|',
@@ -134,27 +121,14 @@ struct margin const conf_mtab[] = {
 size_t const conf_mtab_size = ARRAY_SIZE(conf_mtab);
 
 // language mode table.
-struct mode const conf_lmtab[] = {
+struct mode const conf_lmtab[] =
+{
 	{
-		.name = "c",
-		.init = mode_c_init,
-		.quit = mode_c_quit,
-		.update = mode_c_update,
-		.keypress = mode_c_keypress,
-	},
-	{
-		.name = "cc",
-		.init = mode_cc_init,
-		.quit = mode_cc_quit,
-		.update = mode_cc_update,
-		.keypress = mode_cc_keypress,
-	},
-	{
-		.name = "cs",
-		.init = mode_cs_init,
-		.quit = mode_cs_quit,
-		.update = mode_cs_update,
-		.keypress = mode_cs_keypress,
+		.name = "clike",
+		.init = mode_clike_init,
+		.quit = mode_clike_quit,
+		.update = mode_clike_update,
+		.keypress = mode_clike_keypress,
 	},
 	{
 		.name = "html",
@@ -164,25 +138,11 @@ struct mode const conf_lmtab[] = {
 		.keypress = mode_html_keypress,
 	},
 	{
-		.name = "lua",
-		.init = mode_lua_init,
-		.quit = mode_lua_quit,
-		.update = mode_lua_update,
-		.keypress = mode_lua_keypress,
-	},
-	{
 		.name = "md",
-		.init = mode_md_init,
-		.quit = mode_md_quit,
-		.update = mode_md_update,
-		.keypress = mode_md_keypress,
-	},
-	{
-		.name = "rs",
-		.init = mode_rs_init,
-		.quit = mode_rs_quit,
-		.update = mode_rs_update,
-		.keypress = mode_rs_keypress,
+		.init = mode_null_init,
+		.quit = mode_null_quit,
+		.update = mode_null_update,
+		.keypress = mode_null_keypress,
 	},
 	{
 		.name = "s",
@@ -191,53 +151,56 @@ struct mode const conf_lmtab[] = {
 		.update = mode_s_update,
 		.keypress = mode_s_keypress,
 	},
-	{
-		.name = "sh",
-		.init = mode_sh_init,
-		.quit = mode_sh_quit,
-		.update = mode_sh_update,
-		.keypress = mode_sh_keypress,
-	},
 };
 size_t const conf_lmtab_size = ARRAY_SIZE(conf_lmtab);
 
 // mode extension table.
-struct mode_ext const conf_metab[] = {
+struct mode_ext const conf_metab[] =
+{
 	{
 		.exts = ext_c,
-		.mode = "c",
+		.localmode = "c",
+		.globalmode = "clike",
 	},
 	{
 		.exts = ext_cc,
-		.mode = "cc",
+		.localmode = "cc",
+		.globalmode = "clike",
 	},
 	{
 		.exts = ext_cs,
-		.mode = "cs",
+		.localmode = "cs",
+		.globalmode = "clike",
 	},
 	{
 		.exts = ext_html,
-		.mode = "html",
+		.localmode = "html",
+		.globalmode = "html",
 	},
 	{
 		.exts = ext_lua,
-		.mode = "lua",
+		.localmode = "lua",
+		.globalmode = "lua",
 	},
 	{
 		.exts = ext_md,
-		.mode = "md",
+		.localmode = "md",
+		.globalmode = "md",
 	},
 	{
 		.exts = ext_rs,
-		.mode = "rs",
+		.localmode = "rs",
+		.globalmode = "clike",
 	},
 	{
 		.exts = ext_s,
-		.mode = "s",
+		.localmode = "s",
+		.globalmode = "s",
 	},
 	{
 		.exts = ext_sh,
-		.mode = "sh",
+		.localmode = "sh",
+		.globalmode = "sh",
 	},
 };
 size_t const conf_metab_size = ARRAY_SIZE(conf_metab);

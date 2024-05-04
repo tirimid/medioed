@@ -8,12 +8,14 @@
 #include "buf.h"
 #include "util.h"
 
-enum frame_draw_flag {
+enum frame_draw_flag
+{
 	FDF_ACTIVE = 0x1,
 	FDF_MONO = 0x2,
 };
 
-struct frame {
+struct frame
+{
 	wchar_t *name;
 	unsigned pr, pc;
 	unsigned sr, sc;

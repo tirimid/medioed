@@ -29,7 +29,8 @@ prompt_show(wchar_t const *msg)
 	draw_box(msg);
 	draw_refresh();
 	
-	for (;;) {
+	for (;;)
+	{
 		wint_t k = keybd_await_key_nb();
 		if (k == WEOF || k == BIND_QUIT)
 			break;
@@ -46,7 +47,8 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, size_t *))
 
 	// determine where the response should be rendered.
 	unsigned render_row = ws.ws_row - 1, render_col = 0;
-	for (wchar_t const *c = msg; *c; ++c) {
+	for (wchar_t const *c = msg; *c; ++c)
+	{
 		if (*c == L'\n' || ++render_col > ws.ws_col)
 			render_col = 0;
 	}
@@ -61,9 +63,11 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, size_t *))
 	size_t csr = 0, draw_start = 0;
 
 	wint_t k;
-	while ((k = keybd_await_key_nb()) != BIND_RET) {
+	while ((k = keybd_await_key_nb()) != BIND_RET)
+	{
 		// gather response.
-		switch (k) {
+		switch (k)
+		{
 		case WEOF:
 		case BIND_QUIT:
 			free(resp);
@@ -75,7 +79,8 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, size_t *))
 			csr -= csr > 0;
 			break;
 		case BIND_DEL:
-			if (csr > 0) {
+			if (csr > 0)
+			{
 				memmove(resp + csr - 1, resp + csr, sizeof(wchar_t) * (resp_len - csr));
 				--resp_len;
 				--csr;
@@ -120,20 +125,26 @@ prompt_yes_no(wchar_t const *msg, bool deflt)
 	
 ask_again:;
 	wchar_t *resp = prompt_ask(full_msg, NULL);
-	if (!resp) {
+	if (!resp)
+	{
 		free(full_msg);
 		return -1;
 	}
 	
-	if (!wcscmp(resp, L"y") || deflt && !*resp) {
+	if (!wcscmp(resp, L"y") || deflt && !*resp)
+	{
 		free(resp);
 		free(full_msg);
 		return 1;
-	} else if (!wcscmp(resp, L"n") || !deflt && !*resp) {
+	}
+	else if (!wcscmp(resp, L"n") || !deflt && !*resp)
+	{
 		free(resp);
 		free(full_msg);
 		return 0;
-	} else {
+	}
+	else
+	{
 		free(resp);
 		prompt_show(L"expected either 'y' or 'n'!");
 		goto ask_again;
@@ -151,7 +162,8 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 	char path[PATH_MAX + 16] = {0};
 	
 	size_t path_bytes = 0, path_len = 0;
-	while (path_len < *rlen && path_bytes < PATH_MAX) {
+	while (path_len < *rlen && path_bytes < PATH_MAX)
+	{
 		int nbytes = wctomb(&path[path_bytes], (*resp)[path_len]);
 		if (nbytes == -1)
 			return;
@@ -171,16 +183,21 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 	while (*first_ch && iswspace(*first_ch))
 		++first_ch;
 	
-	if (!last_slash) {
+	if (!last_slash)
+	{
 		dir[0] = '.';
 		dir[1] = 0;
 		strncpy(name, path, PATH_MAX);
-	} else if (first_ch
-	           && first_ch == first_slash
-	           && first_slash == last_slash) {
+	}
+	else if (first_ch
+	         && first_ch == first_slash
+	         && first_slash == last_slash)
+	{
 		strncpy(name, last_slash + 1, PATH_MAX);
 		*(last_slash + 1) = 0;
-	} else {
+	}
+	else
+	{
 		strncpy(name, last_slash + 1, PATH_MAX);
 		*last_slash = 0;
 	}
@@ -192,11 +209,13 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 		return;
 	
 	struct dirent *dir_ent;
-	while (dir_ent = readdir(dir_p)) {
+	while (dir_ent = readdir(dir_p))
+	{
 		if (strncasecmp(name, dir_ent->d_name, name_len)
 		    || dir_ent->d_type != DT_DIR && dir_ent->d_type != DT_REG
 		    || !strcmp(".", dir_ent->d_name)
-		    || !strcmp("..", dir_ent->d_name)) {
+		    || !strcmp("..", dir_ent->d_name))
+		{
 			continue;
 		}
 		
@@ -221,10 +240,12 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 		// this assumes path name will be valid when read as multibyte
 		// string in locale.
 		size_t new_path_len = 0, new_path_bytes_read = 0;
-		while (new_path_bytes_read < new_path_bytes) {
+		while (new_path_bytes_read < new_path_bytes)
+		{
 			wchar_t wch;
 			size_t nbytes = mbstowcs(&wch, &new_path[new_path_bytes_read], 1);
-			if (nbytes == (size_t)-1) {
+			if (nbytes == (size_t)-1)
+			{
 				closedir(dir_p);
 				return;
 			}
@@ -251,8 +272,10 @@ draw_box(wchar_t const *text)
 	ioctl(0, TIOCGWINSZ, &ws);
 
 	size_t text_rows = 1, line_width = 0;
-	for (wchar_t const *c = text; *c; ++c) {
-		if (++line_width >= ws.ws_col || *c == L'\n') {
+	for (wchar_t const *c = text; *c; ++c)
+	{
+		if (++line_width >= ws.ws_col || *c == L'\n')
+		{
 			line_width = 0;
 			++text_rows;
 		}

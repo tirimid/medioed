@@ -20,15 +20,18 @@ mode_set(char const *name, struct frame *f)
 {
 	struct mode const *old_mode = mode_get();
 	
-	if (!name) {
+	if (!name)
+	{
 		if (old_mode)
 			old_mode->quit();
 		cur_mode = -1;
 		return;
 	}
 
-	for (size_t i = 0; i < conf_lmtab_size; ++i) {
-		if (!strcmp(name, conf_lmtab[i].name)) {
+	for (size_t i = 0; i < conf_lmtab_size; ++i)
+	{
+		if (!strcmp(name, conf_lmtab[i].name))
+		{
 			if (old_mode)
 				old_mode->quit();
 

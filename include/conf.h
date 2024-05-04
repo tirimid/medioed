@@ -9,7 +9,7 @@
 #include "mode.h"
 
 // text layout options.
-#define CONF_TAB_SIZE 8
+#define CONF_TAB_SIZE 6
 #define CONF_GUTTER_LEFT 1
 #define CONF_GUTTER_RIGHT 1
 #define CONF_MNUM 4
@@ -82,20 +82,23 @@
 	L"\n" \
 	L"(The greeter logo seen above was generated with the use of Figlet)\n"
 
-struct highlight {
+struct highlight
+{
 	char const *local_mode;
 	int (*find)(struct buf const *, size_t, size_t *, size_t *, uint8_t *, uint8_t *);
 };
 
-struct margin {
+struct margin
+{
 	unsigned col;
 	wchar_t wch;
 	uint8_t fg, bg;
 };
 
-struct mode_ext {
+struct mode_ext
+{
 	char const **exts;
-	char const *mode;
+	char const *localmode, *globalmode;
 };
 
 extern int const conf_bind_quit[];

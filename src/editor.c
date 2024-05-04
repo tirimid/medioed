@@ -49,14 +49,17 @@ editor_init(int argc, char const *argv[])
 	while (first_arg < argc && *argv[first_arg] == '-')
 		++first_arg;
 
-	if (argc <= first_arg) {
+	if (argc <= first_arg)
+	{
 		struct buf gb = buf_from_wstr(CONF_GREET_TEXT, false);
 		struct frame gf = frame_create(CONF_GREET_NAME, editor_add_buf(&gb));
 		editor_add_frame(&gf);
-	} else
+	}
+	else
 		open_arg_files(argc, first_arg, argv);
 
-	if (editor_frames.size == 0) {
+	if (editor_frames.size == 0)
+	{
 		struct buf b = buf_create(true);
 		struct frame f = frame_create(CONF_SCRAP_NAME, editor_add_buf(&b));
 		editor_add_frame(&f);
@@ -81,9 +84,11 @@ editor_main_loop(void)
 {
 	editor_running = true;
 
-	while (editor_running) {
+	while (editor_running)
+	{
 		// ensure frames sharing buffers are in a valid state.
-		for (size_t i = 0; i < editor_frames.size; ++i) {
+		for (size_t i = 0; i < editor_frames.size; ++i)
+		{
 			struct frame *f = &editor_frames.data[i];
 			f->csr = MIN(f->csr, f->buf->size);
 		}
@@ -93,7 +98,8 @@ editor_main_loop(void)
 		editor_redraw();
 		
 		wint_t k = keybd_await_key();
-		if (k != KEYBD_IGNORE && (wcschr(L"\n\t", k) || iswprint(k))) {
+		if (k != KEYBD_IGNORE && (wcschr(L"\n\t", k) || iswprint(k)))
+		{
 			struct frame *f = &editor_frames.data[editor_cur_frame];
 			
 			buf_write_wch(f->buf, f->csr, k);
@@ -112,7 +118,8 @@ editor_quit(void)
 	for (size_t i = 0; i < editor_frames.size; ++i)
 		frame_destroy(&editor_frames.data[i]);
 
-	for (size_t i = 0; i < editor_p_bufs.size; ++i) {
+	for (size_t i = 0; i < editor_p_bufs.size; ++i)
+	{
 		buf_destroy(editor_p_bufs.data[i]);
 		free(editor_p_bufs.data[i]);
 	}
@@ -126,12 +133,16 @@ editor_quit(void)
 void
 editor_redraw(void)
 {
-	if (editor_mono) {
+	if (editor_mono)
+	{
 		struct frame *f = &editor_frames.data[editor_cur_frame];
 		frame_comp_boundary(f);
 		frame_draw(f, FDF_ACTIVE | FDF_MONO);
-	} else {
-		for (size_t i = 0; i < editor_frames.size; ++i) {
+	}
+	else
+	{
+		for (size_t i = 0; i < editor_frames.size; ++i)
+		{
 			frame_comp_boundary(&editor_frames.data[i]);
 			frame_draw(&editor_frames.data[i], FDF_ACTIVE * (i == editor_cur_frame));
 		}
@@ -140,7 +151,8 @@ editor_redraw(void)
 	// draw current bind status if necessary.
 	size_t len;
 	if (!keybd_is_exec_mac() && keybd_cur_bind(NULL)
-	    || keybd_is_rec_mac() && keybd_cur_mac(NULL)) {
+	    || keybd_is_rec_mac() && keybd_cur_mac(NULL))
+	{
 		int const *src = keybd_is_rec_mac() ? keybd_cur_mac(&len) : keybd_cur_bind(&len);
 		
 		wchar_t dpy[(KEYBD_MAX_DPY_LEN + 1) * KEYBD_MAX_MAC_LEN];
@@ -150,7 +162,8 @@ editor_redraw(void)
 		ioctl(0, TIOCGWINSZ, &ws);
 		
 		size_t draw_start = 0, draw_len = wcslen(dpy);
-		while (draw_len > ws.ws_col) {
+		while (draw_len > ws.ws_col)
+		{
 			wchar_t const *next = wcschr(dpy + draw_start, L' ') + 1;
 			if (!next)
 				break;
@@ -172,12 +185,15 @@ editor_redraw(void)
 struct buf *
 editor_add_buf(struct buf *b)
 {
-	if (b->src_type == BST_FILE) {
-		for (size_t i = 0; i < editor_p_bufs.size; ++i) {
+	if (b->src_type == BST_FILE)
+	{
+		for (size_t i = 0; i < editor_p_bufs.size; ++i)
+		{
 			if (editor_p_bufs.data[i]->src_type != BST_FILE)
 				continue;
 			
-			if (is_path_same(b->src, editor_p_bufs.data[i]->src)) {
+			if (is_path_same(b->src, editor_p_bufs.data[i]->src))
+			{
 				buf_destroy(b);
 				return editor_p_bufs.data[i];
 			}
@@ -194,8 +210,10 @@ editor_add_buf(struct buf *b)
 struct frame *
 editor_add_frame(struct frame *f)
 {
-	for (size_t i = 0; i < editor_frames.size; ++i) {
-		if (editor_frames.data[i].buf == f->buf) {
+	for (size_t i = 0; i < editor_frames.size; ++i)
+	{
+		if (editor_frames.data[i].buf == f->buf)
+		{
 			prompt_show(L"cannot assign multiple frames to one buffer!");
 			editor_redraw();
 			frame_destroy(f);
@@ -216,7 +234,8 @@ editor_arrange_frames(void)
 
 	struct frame *f;
 	
-	if (editor_mono) {
+	if (editor_mono)
+	{
 		f = &editor_frames.data[editor_cur_frame];
 		f->pr = f->pc = 0;
 		f->sr = ws.ws_row;
@@ -229,7 +248,8 @@ editor_arrange_frames(void)
 	f->sr = ws.ws_row;
 	f->sc = editor_frames.size == 1 ? ws.ws_col : CONF_MNUM * ws.ws_col / CONF_MDENOM;
 
-	for (size_t i = 1; i < editor_frames.size; ++i) {
+	for (size_t i = 1; i < editor_frames.size; ++i)
+	{
 		f = &editor_frames.data[i];
 
 		f->sr = ws.ws_row / (editor_frames.size - 1);
@@ -298,10 +318,13 @@ editor_set_global_mode(void)
 		return;
 
 	char const *buf_ext = file_ext(f->buf->src);
-	for (size_t i = 0; i < conf_metab_size; ++i) {
-		for (char const **ext = conf_metab[i].exts; *ext; ++ext) {
-			if (!strcmp(buf_ext, *ext)) {
-				mode_set(conf_metab[i].mode, f);
+	for (size_t i = 0; i < conf_metab_size; ++i)
+	{
+		for (char const **ext = conf_metab[i].exts; *ext; ++ext)
+		{
+			if (!strcmp(buf_ext, *ext))
+			{
+				mode_set(conf_metab[i].globalmode, f);
 				return;
 			}
 		}
@@ -313,16 +336,21 @@ editor_set_global_mode(void)
 static void
 open_arg_files(int argc, int first_arg, char const *argv[])
 {
-	for (int i = first_arg; i < argc; ++i) {
+	for (int i = first_arg; i < argc; ++i)
+	{
 		draw_clear(L' ', CONF_A_GNORM_FG, CONF_A_GNORM_BG);
 		
 		struct stat s;
-		if ((stat(argv[i], &s) || !S_ISREG(s.st_mode)) && !flag_c) {
+		if ((stat(argv[i], &s) || !S_ISREG(s.st_mode)) && !flag_c)
+		{
 			// TODO: show which file failed to open.
 			prompt_show(L"failed to open file!");
 			continue;
-		} else if (stat(argv[i], &s) && flag_c) {
-			if (mk_file(argv[i])) {
+		}
+		else if (stat(argv[i], &s) && flag_c)
+		{
+			if (mk_file(argv[i]))
+			{
 				// TODO: show which file failed to be
 				// created.
 				prompt_show(L"failed to create file!");

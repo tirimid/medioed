@@ -24,7 +24,8 @@ static void push_hist(struct buf *b, enum buf_op_type type, wchar_t const *data,
 struct buf
 buf_create(bool writable)
 {
-	return (struct buf){
+	return (struct buf)
+	{
 		.conts_ = malloc(sizeof(wchar_t)),
 		.size = 0,
 		.cap = 1,
@@ -39,7 +40,8 @@ struct buf
 buf_from_file(char const *path)
 {
 	FILE *fp = fopen(path, "rb");
-	if (!fp) {
+	if (!fp)
+	{
 		size_t msg_len = sizeof(wchar_t) * (strlen(path) + 20);
 		wchar_t *msg = malloc(msg_len);
 		swprintf(msg, msg_len, L"cannot read file: %s!", path);
@@ -58,7 +60,8 @@ buf_from_file(char const *path)
 	while ((wch = fgetwc(fp)) != WEOF)
 		buf_write_wch(&b, b.size, wch);
 	
-	if (errno == EILSEQ) {
+	if (errno == EILSEQ)
+	{
 		size_t msg_len = sizeof(wchar_t) * (strlen(path) + 31);
 		wchar_t *msg = malloc(msg_len);
 		swprintf(msg, msg_len, L"file contains invalid UTF-8: %s!", path);
@@ -69,7 +72,8 @@ buf_from_file(char const *path)
 	fclose(fp);
 	
 	int ea = euidaccess(path, W_OK);
-	if (ea != 0 || flag_r) {
+	if (ea != 0 || flag_r)
+	{
 		size_t msg_len = sizeof(wchar_t) * (strlen(path) + 24);
 		wchar_t *msg = malloc(msg_len);
 		swprintf(msg, msg_len, L"opening file readonly: %s", path);
@@ -110,7 +114,8 @@ buf_save(struct buf *b)
 	if (!fp)
 		return 1;
 	
-	for (size_t i = 0; i < b->size; ++i) {
+	for (size_t i = 0; i < b->size; ++i)
+	{
 		wchar_t wcs[] = {b->conts_[i], 0};
 		char mbs[sizeof(wchar_t) + 1] = {0};
 		wcstombs(mbs, wcs, sizeof(wchar_t) + 1);
@@ -139,7 +144,8 @@ buf_undo(struct buf *b)
 		return 0;
 
 	struct buf_op const *bo = &b->hist.data[b->hist.size - 1];
-	switch (bo->type) {
+	switch (bo->type)
+	{
 	case BOT_WRITE:
 		b->flags |= BF_NO_HIST;
 		buf_erase(b, bo->lb, bo->ub);
@@ -166,7 +172,8 @@ buf_destroy(struct buf *b)
 	if (b->src)
 		free(b->src);
 
-	for (size_t i = 0; i < b->hist.size; ++i) {
+	for (size_t i = 0; i < b->hist.size; ++i)
+	{
 		if (b->hist.data[i].data)
 			free(b->hist.data[i].data);
 	}
@@ -179,7 +186,8 @@ buf_write_wch(struct buf *b, size_t ind, wchar_t wch)
 	if (!(b->flags & BF_WRITABLE))
 		return;
 
-	if (b->size >= b->cap) {
+	if (b->size >= b->cap)
+	{
 		b->cap *= 2;
 		b->conts_ = realloc(b->conts_, sizeof(wchar_t) * b->cap);
 	}
@@ -200,12 +208,14 @@ buf_write_wstr(struct buf *b, size_t ind, wchar_t const *wstr)
 	size_t len = wcslen(wstr);
 	size_t newcap = b->cap;
 	
-	for (size_t i = 1; i <= len; ++i) {
+	for (size_t i = 1; i <= len; ++i)
+	{
 		if (b->size + i > newcap)
 			newcap *= 2;
 	}
 
-	if (b->cap != newcap) {
+	if (b->cap != newcap)
+	{
 		b->cap = newcap;
 		b->conts_ = realloc(b->conts_, sizeof(wchar_t) * b->cap);
 	}
@@ -243,9 +253,11 @@ buf_pos(struct buf const *b, size_t pos, unsigned *out_r, unsigned *out_c)
 	
 	*out_r = *out_c = 0;
 
-	for (size_t i = 0; i < pos; ++i) {
+	for (size_t i = 0; i < pos; ++i)
+	{
 		++*out_c;
-		if (buf_get_wch(b, i) == L'\n') {
+		if (buf_get_wch(b, i) == L'\n')
+		{
 			*out_c = 0;
 			++*out_r;
 		}
@@ -276,7 +288,8 @@ push_hist(struct buf *b, enum buf_op_type type, wchar_t const *data, size_t lb,
 	if (lb >= ub)
 		return;
 	
-	while (b->hist.size >= MAX_HIST_SIZE) {
+	while (b->hist.size >= MAX_HIST_SIZE)
+	{
 		if (b->hist.data[0].data)
 			free(b->hist.data[0].data);
 		vec_buf_op_rm(&b->hist, 0);
@@ -284,12 +297,15 @@ push_hist(struct buf *b, enum buf_op_type type, wchar_t const *data, size_t lb,
 
 	struct buf_op *prev = b->hist.size > 0 ? &b->hist.data[b->hist.size - 1] : NULL;
 
-	switch (type) {
+	switch (type)
+	{
 	case BOT_WRITE:
 		if (prev && prev->type == BOT_WRITE && lb == prev->ub)
 			prev->ub = ub;
-		else {
-			struct buf_op new = {
+		else
+		{
+			struct buf_op new =
+			{
 				.type = BOT_WRITE,
 				.data = NULL,
 				.lb = lb,
@@ -299,7 +315,8 @@ push_hist(struct buf *b, enum buf_op_type type, wchar_t const *data, size_t lb,
 		}
 		break;
 	case BOT_ERASE:
-		if (prev && prev->type == BOT_ERASE && ub == prev->lb) {
+		if (prev && prev->type == BOT_ERASE && ub == prev->lb)
+		{
 			size_t size = sizeof(wchar_t) * (ub - lb);
 			size_t psize = sizeof(wchar_t) * (prev->ub - prev->lb);
 			
@@ -308,8 +325,11 @@ push_hist(struct buf *b, enum buf_op_type type, wchar_t const *data, size_t lb,
 			memcpy(prev->data, data, size);
 			prev->data[prev->ub - lb] = 0;
 			prev->lb = lb;
-		} else {
-			struct buf_op new = {
+		}
+		else
+		{
+			struct buf_op new =
+			{
 				.type = BOT_ERASE,
 				.data = malloc(sizeof(wchar_t) * (ub - lb + 1)),
 				.lb = lb,
@@ -320,8 +340,10 @@ push_hist(struct buf *b, enum buf_op_type type, wchar_t const *data, size_t lb,
 			vec_buf_op_add(&b->hist, &new);
 		}
 		break;
-	case BOT_BRK: {
-		struct buf_op new = {
+	case BOT_BRK:
+	{
+		struct buf_op new =
+		{
 			.type = BOT_BRK,
 			.data = NULL,
 			.lb = 0,

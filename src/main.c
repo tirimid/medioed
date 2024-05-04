@@ -21,7 +21,8 @@ main(int argc, char const *argv[])
 {	
 	int ch;
 	while ((ch = getopt(argc, (char *const *)argv, "cdhr")) != -1) {
-		switch (ch) {
+		switch (ch)
+		{
 		case 'c':
 			flag_c = true;
 			break;
@@ -39,26 +40,30 @@ main(int argc, char const *argv[])
 		}
 	}
 	
-	if (flag_c && flag_r) {
+	if (flag_c && flag_r)
+	{
 		fputs("cannot specify -c and -r at the same time!\n", stderr);
 		return 1;
 	}
 
 	FILE *log_fp = fopen(flag_d ? LOG_FILE : "/dev/null", "w");
-	if (!log_fp) {
+	if (!log_fp)
+	{
 		fputs("cannot open logfile: " LOG_FILE "!\n", stderr);
 		return 1;
 	}
 	stderr = log_fp;
 	
-	if (!setlocale(LC_ALL, LOCALE)) {
+	if (!setlocale(LC_ALL, LOCALE))
+	{
 		fputs("failed on setlocale() to " LOCALE "!\n", stderr);
 		fclose(log_fp);
 		return 1;
 	}
 	
 	struct termios old;
-	if (tcgetattr(STDIN_FILENO, &old)) {
+	if (tcgetattr(STDIN_FILENO, &old))
+	{
 		fputs("failed on tcgetattr() for stdin!\n", stderr);
 		fclose(log_fp);
 		return 1;
@@ -68,7 +73,8 @@ main(int argc, char const *argv[])
 	new.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
 	new.c_iflag &= ~(ICRNL | IXON | ISTRIP);
 	new.c_oflag &= ~OPOST;
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &new)) {
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &new))
+	{
 		fputs("failed on tcsetattr() making stdin raw!\n", stderr);
 		fclose(log_fp);
 		return 1;
@@ -78,7 +84,8 @@ main(int argc, char const *argv[])
 	
 	draw_init();
 	
-	if (editor_init(argc, argv)) {
+	if (editor_init(argc, argv))
+	{
 		fputs("failed on editor_init()!\n", stderr);
 		fclose(log_fp);
 		return 1;
@@ -88,7 +95,8 @@ main(int argc, char const *argv[])
 	
 	draw_quit();
 
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &old)) {
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &old))
+	{
 		fputs("failed on tcsetattr() restoring old stdin!\n", stderr);
 		fclose(log_fp);
 		return 1;

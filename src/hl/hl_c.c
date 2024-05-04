@@ -23,7 +23,8 @@
 
 #define SPECIAL L"+-()[].<>{}!~*&/%=?:|;,"
 
-enum word_type {
+enum word_type
+{
 	WT_MACRO,
 	WT_FUNC,
 	WT_KEYWORD,
@@ -37,7 +38,8 @@ static int hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *
 static int hl_special(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 static int hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 
-static wchar_t const *keywords[] = {
+static wchar_t const *keywords[] =
+{
 	L"auto",
 	L"break",
 	L"case",
@@ -81,26 +83,38 @@ int
 hl_c_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
           uint8_t *out_fg, uint8_t *out_bg)
 {
-	for (size_t i = off; i < buf->size; ++i) {
-		if (buf_get_wch(buf, i) == L'#') {
+	for (size_t i = off; i < buf->size; ++i)
+	{
+		if (buf_get_wch(buf, i) == L'#')
+		{
 			if (!hl_preproc(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (buf_get_wch(buf, i) == L'"') {
+		}
+		else if (buf_get_wch(buf, i) == L'"')
+		{
 			if (!hl_string(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (buf_get_wch(buf, i) == L'\'') {
+		}
+		else if (buf_get_wch(buf, i) == L'\'')
+		{
 			if (!hl_char(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (i + 1 < buf->size
-		           && buf_get_wch(buf, i) == L'/'
-		           && wcschr(L"/*", buf_get_wch(buf, i + 1))) {
+		}
+		else if (i + 1 < buf->size
+		         && buf_get_wch(buf, i) == L'/'
+		         && wcschr(L"/*", buf_get_wch(buf, i + 1)))
+		{
 			if (!hl_comment(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (wcschr(SPECIAL, buf_get_wch(buf, i))) {
+		}
+		else if (wcschr(SPECIAL, buf_get_wch(buf, i)))
+		{
 			if (!hl_special(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (iswalpha(buf_get_wch(buf, i))
-		           || buf_get_wch(buf, i) == L'_') {
+		}
+		else if (iswalpha(buf_get_wch(buf, i))
+		         || buf_get_wch(buf, i) == L'_')
+		{
 			if (!hl_word(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		}
@@ -114,17 +128,21 @@ hl_preproc(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
            uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i;
-	while (j < buf->size) {
+	while (j < buf->size)
+	{
 		++j;
-		if (buf_get_wch(buf, j) == L'\\') {
+		if (buf_get_wch(buf, j) == L'\\')
+		{
 			++j;
 			while (iswspace(buf_get_wch(buf, j))
-			       && buf_get_wch(buf, j) != L'\n') {
+			       && buf_get_wch(buf, j) != L'\n')
+			{
 				++j;
 			}
 			if (buf_get_wch(buf, j) == L'\n')
 				++j;
-		} else if (buf_get_wch(buf, j) == L'\n')
+		}
+		else if (buf_get_wch(buf, j) == L'\n')
 			break;
 	}
 	
@@ -141,12 +159,15 @@ hl_string(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
           uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i;
-	while (j < buf->size) {
+	while (j < buf->size)
+	{
 		++j;
-		if (buf_get_wch(buf, j) == L'\\') {
+		if (buf_get_wch(buf, j) == L'\\')
+		{
 			++j;
 			continue;
-		} else if (wcschr(L"\"\n", buf_get_wch(buf, j)))
+		}
+		else if (wcschr(L"\"\n", buf_get_wch(buf, j)))
 			break;
 	}
 	
@@ -163,27 +184,35 @@ hl_char(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
         uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 1;
-	if (j < buf->size && buf_get_wch(buf, j) == L'\\') {
+	if (j < buf->size && buf_get_wch(buf, j) == L'\\')
+	{
 		++j;
 		
-		if (j < buf->size && wcschr(L"01234567", buf_get_wch(buf, j))) {
+		if (j < buf->size && wcschr(L"01234567", buf_get_wch(buf, j)))
+		{
 			// octal escape sequences.
 			while (j < buf->size
-			       && wcschr(L"01234567", buf_get_wch(buf, j))) {
+			       && wcschr(L"01234567", buf_get_wch(buf, j)))
+			{
 				++j;
 			}
-		} else if (j < buf->size
-		           && wcschr(L"xuU", buf_get_wch(buf, j))) {
+		}
+		else if (j < buf->size
+		         && wcschr(L"xuU", buf_get_wch(buf, j)))
+		{
 			// hexadecimal-based escape seuences.
 			++j;
 			while (j < buf->size && iswxdigit(buf_get_wch(buf, j)))
 				++j;
-		} else
+		}
+		else
 			++j;
-	} else
+	}
+	else
 		++j;
 
-	if (j < buf->size && buf_get_wch(buf, j) == L'\'') {
+	if (j < buf->size && buf_get_wch(buf, j) == L'\'')
+	{
 		*out_lb = *i;
 		*out_ub = j + 1;
 		*out_fg = A_STRING_FG;
@@ -200,17 +229,21 @@ hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
            uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 2;
-	if (buf_get_wch(buf, *i + 1) == L'/') {
+	if (buf_get_wch(buf, *i + 1) == L'/')
+	{
 		while (j < buf->size && buf_get_wch(buf, j) != L'\n')
 			++j;
-	} else {
+	}
+	else
+	{
 		wchar_t cmp[3];
 		while (j + 1 < buf->size
-		       && wcscmp(buf_get_wstr(buf, cmp, j, 3), L"*/")) {
+		       && wcscmp(buf_get_wstr(buf, cmp, j, 3), L"*/"))
+		{
 			++j;
 		}
 	}
-
+	
 	*out_lb = *i;
 	*out_ub = j + 2 * (buf_get_wch(buf, j) == '*');
 	*out_fg = A_COMMENT_FG;
@@ -242,9 +275,11 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	enum word_type wt = WT_MACRO;
 	
 	size_t j = *i;
-	while (j < buf->size) {
+	while (j < buf->size)
+	{
 		if (buf_get_wch(buf, j) != L'_'
-		    && !iswalnum(buf_get_wch(buf, j))) {
+		    && !iswalnum(buf_get_wch(buf, j)))
+		{
 			break;
 		}
 		
@@ -254,7 +289,8 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 		++j;
 	}
 	
-	if (wt == WT_BASIC) {
+	if (wt == WT_BASIC)
+	{
 		size_t k = j;
 		while (k < buf->size && iswspace(buf_get_wch(buf, k)))
 			++k;
@@ -263,11 +299,13 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 			wt = WT_FUNC;
 	}
 	
-	for (size_t kw = 0; kw < ARRAY_SIZE(keywords); ++kw) {
+	for (size_t kw = 0; kw < ARRAY_SIZE(keywords); ++kw)
+	{
 		wchar_t cmp[64]; // read rationale for size 64 in C++ highlight.
 		buf_get_wstr(buf, cmp, *i, j - *i + 1);
 		
-		if (!wcscmp(keywords[kw], cmp)) {
+		if (!wcscmp(keywords[kw], cmp))
+		{
 			wt = WT_KEYWORD;
 			break;
 		}
@@ -276,7 +314,8 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	*out_lb = *i;
 	*out_ub = j;
 
-	switch (wt) {
+	switch (wt)
+	{
 	case WT_MACRO:
 		*out_fg = A_MACRO_FG;
 		*out_bg = A_MACRO_BG;

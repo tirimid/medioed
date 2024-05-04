@@ -30,14 +30,17 @@ void
 editor_bind_quit(void)
 {
 	bool mod_exists = false;
-	for (size_t i = 0; i < editor_p_bufs.size; ++i) {
-		if (editor_p_bufs.data[i]->flags & BF_MODIFIED) {
+	for (size_t i = 0; i < editor_p_bufs.size; ++i)
+	{
+		if (editor_p_bufs.data[i]->flags & BF_MODIFIED)
+		{
 			mod_exists = true;
 			break;
 		}
 	}
 	
-	if (mod_exists) {
+	if (mod_exists)
+	{
 		int confirm = prompt_yes_no(L"there are unsaved modified buffers! quit anyway?", false);
 		editor_redraw();
 		if (confirm != 1)
@@ -76,7 +79,8 @@ editor_bind_chg_frame_back(void)
 void
 editor_bind_focus_frame(void)
 {
-	if (editor_cur_frame != 0) {
+	if (editor_cur_frame != 0)
+	{
 		vec_frame_swap(&editor_frames, 0, editor_cur_frame);
 		editor_cur_frame = 0;
 		editor_reset_binds();
@@ -99,23 +103,28 @@ editor_bind_kill_frame(void)
 	editor_cur_frame = editor_cur_frame > 0 ? editor_cur_frame - 1 : 0;
 
 	// destroy orphaned buffers.
-	for (size_t i = 0; i < editor_p_bufs.size; ++i) {
+	for (size_t i = 0; i < editor_p_bufs.size; ++i)
+	{
 		bool orphan = true;
-		for (size_t j = 0; j < editor_frames.size; ++j) {
-			if (editor_p_bufs.data[i] == editor_frames.data[j].buf) {
+		for (size_t j = 0; j < editor_frames.size; ++j)
+		{
+			if (editor_p_bufs.data[i] == editor_frames.data[j].buf)
+			{
 				orphan = false;
 				break;
 			}
 		}
 
-		if (orphan) {
+		if (orphan)
+		{
 			buf_destroy(editor_p_bufs.data[i]);
 			free(editor_p_bufs.data[i]);
 			vec_p_buf_rm(&editor_p_bufs, i--);
 		}
 	}
 
-	if (editor_frames.size == 0) {
+	if (editor_frames.size == 0)
+	{
 		struct buf b = buf_create(true);
 		struct frame f = frame_create(CONF_SCRAP_NAME, editor_add_buf(&b));
 		editor_add_frame(&f);
@@ -140,7 +149,8 @@ editor_bind_open_file(void)
 	wcstombs(path, wpath, path_size);
 
 	struct stat s;
-	if (stat(path, &s) || !S_ISREG(s.st_mode)) {
+	if (stat(path, &s) || !S_ISREG(s.st_mode))
+	{
 		prompt_show(L"could not open file!");
 		editor_redraw();
 		free(path);
@@ -170,13 +180,15 @@ editor_bind_save_file(void)
 	uint8_t prev_flags = f->buf->flags;
 
 	wchar_t *w_path;
-	if (f->buf->src_type == BST_FRESH) {
+	if (f->buf->src_type == BST_FRESH)
+	{
 		f->buf->src_type = BST_FILE;
 		
 		w_path = prompt_ask(L"save to file: ", prompt_comp_path);
 		editor_redraw();
 
-		if (w_path) {
+		if (w_path)
+		{
 			size_t path_size = sizeof(wchar_t) * (wcslen(w_path) + 1);
 			char *path = malloc(path_size);
 			wcstombs(path, w_path, path_size);
@@ -186,18 +198,21 @@ editor_bind_save_file(void)
 
 			// force resave and allow editing of newly made file.
 			f->buf->flags |= BF_MODIFIED | BF_WRITABLE;
-		} else
+		}
+		else
 			f->buf->src = NULL;
 	}
 
 	// no path was given as source for new buffer, so the buffer state is
 	// reset to how it was before the save.
-	if (f->buf->src && !*(uint8_t *)f->buf->src) {
+	if (f->buf->src && !*(uint8_t *)f->buf->src)
+	{
 		prompt_show(L"no save path given, nothing will be done!");
 		editor_redraw();
 	}
 	
-	if (!f->buf->src || !*(uint8_t *)f->buf->src) {
+	if (!f->buf->src || !*(uint8_t *)f->buf->src)
+	{
 		f->buf->src_type = prev_type;
 		f->buf->flags = prev_flags;
 		
@@ -210,19 +225,22 @@ editor_bind_save_file(void)
 	if (prev_type == BST_FRESH)
 		mk_file(f->buf->src);
 
-	if (buf_save(f->buf)) {
+	if (buf_save(f->buf))
+	{
 		prompt_show(L"failed to write file!");
 		editor_redraw();
 		free(w_path);
 		return;
 	}
 
-	if (prev_type == BST_FRESH) {
+	if (prev_type == BST_FRESH)
+	{
 		free(f->name);
 		f->name = w_path;
 	}
 
-	if (!f->local_mode[0]) {
+	if (!f->local_mode[0])
+	{
 		free(f->local_mode);
 		f->local_mode = strdup(file_ext(f->buf->src));
 	}
@@ -262,7 +280,8 @@ editor_bind_nav_fwd_page(void)
 	
 	f->buf_start = f->csr;
 	while (f->buf_start > 0
-	       && buf_get_wch(f->buf, f->buf_start - 1) != L'\n') {
+	       && buf_get_wch(f->buf, f->buf_start - 1) != L'\n')
+	{
 		--f->buf_start;
 	}
 
@@ -335,7 +354,8 @@ ask_again:;
 	if (!ws_linum)
 		return;
 
-	if (!*ws_linum) {
+	if (!*ws_linum)
+	{
 		free(ws_linum);
 		prompt_show(L"expected a line number!");
 		editor_redraw();
@@ -347,8 +367,10 @@ ask_again:;
 	wcstombs(s_linum, ws_linum, s_linum_size);
 	free(ws_linum);
 
-	for (char const *c = s_linum; *c; ++c) {
-		if (!isdigit(*c)) {
+	for (char const *c = s_linum; *c; ++c)
+	{
+		if (!isdigit(*c))
+		{
 			free(s_linum);
 			prompt_show(L"invalid line number!");
 			editor_redraw();
@@ -376,7 +398,8 @@ editor_bind_del_back_ch(void)
 {
 	struct frame *f = &editor_frames.data[editor_cur_frame];
 
-	if (f->csr > 0 && f->buf->flags & BF_WRITABLE) {
+	if (f->csr > 0 && f->buf->flags & BF_WRITABLE)
+	{
 		frame_mv_csr_rel(f, 0, -1, true);
 		buf_erase(f->buf, f->csr, f->csr + 1);
 		frame_comp_boundary(f);
@@ -475,7 +498,8 @@ editor_bind_focus(void)
 	unsigned bsr = 0;
 	long dst_bsr = (long)csrr - (f->sr - 1) / 2;
 	dst_bsr = MAX(dst_bsr, 0);
-	while (f->buf_start < f->buf->size && bsr < dst_bsr) {
+	while (f->buf_start < f->buf->size && bsr < dst_bsr)
+	{
 		if (buf_get_wch(f->buf, f->buf_start++) == L'\n')
 			++bsr;
 	}
@@ -510,7 +534,8 @@ editor_bind_paste(void)
 	if (!(f->buf->flags & BF_WRITABLE))
 		return;
 	
-	if (!editor_clipbuf) {
+	if (!editor_clipbuf)
+	{
 		prompt_show(L"clipbuffer is empty!");
 		editor_redraw();
 		return;
@@ -527,7 +552,8 @@ editor_bind_undo(void)
 {
 	struct frame *f = &editor_frames.data[editor_cur_frame];
 
-	if (f->buf->hist.size == 0) {
+	if (f->buf->hist.size == 0)
+	{
 		prompt_show(L"no further undo information!");
 		editor_redraw();
 		return;
@@ -538,7 +564,8 @@ editor_bind_undo(void)
 		--bo;
 	
 	size_t csr_dst;
-	switch (bo->type) {
+	switch (bo->type)
+	{
 	case BOT_WRITE:
 		csr_dst = bo->lb;
 		break;
@@ -547,7 +574,8 @@ editor_bind_undo(void)
 		break;
 	}
 
-	if (buf_undo(f->buf)) {
+	if (buf_undo(f->buf))
+	{
 		prompt_show(L"failed to undo last operation!");
 		editor_redraw();
 		return;
@@ -588,7 +616,8 @@ ask_again:;
 	if (!ws_ln_cnt)
 		return;
 	
-	if (!*ws_ln_cnt) {
+	if (!*ws_ln_cnt)
+	{
 		free(ws_ln_cnt);
 		prompt_show(L"expected a line count!");
 		editor_redraw();
@@ -600,8 +629,10 @@ ask_again:;
 	wcstombs(s_ln_cnt, ws_ln_cnt, s_ln_cnt_size);
 	free(ws_ln_cnt);
 	
-	for (char const *c = s_ln_cnt; *c; ++c) {
-		if (!isdigit(*c)) {
+	for (char const *c = s_ln_cnt; *c; ++c)
+	{
+		if (!isdigit(*c))
+		{
 			free(s_ln_cnt);
 			prompt_show(L"invalid line count!");
 			editor_redraw();
@@ -611,7 +642,8 @@ ask_again:;
 	
 	unsigned ln_cnt = atoi(s_ln_cnt);
 	free(s_ln_cnt);
-	if (!ln_cnt) {
+	if (!ln_cnt)
+	{
 		prompt_show(L"cannot copy zero lines!");
 		editor_redraw();
 		goto ask_again;
@@ -627,7 +659,8 @@ ask_again:;
 		--reg_lb;
 	
 	size_t reg_ub = f->csr;
-	while (reg_ub < f->buf->size && ln_cnt > 0) {
+	while (reg_ub < f->buf->size && ln_cnt > 0)
+	{
 		while (buf_get_wch(f->buf, reg_ub) != L'\n')
 			++reg_ub;
 		--ln_cnt;
@@ -647,7 +680,8 @@ ask_again:;
 	if (!needle)
 		return;
 	
-	if (!*needle) {
+	if (!*needle)
+	{
 		free(needle);
 		prompt_show(L"expected a needle!");
 		editor_redraw();
@@ -657,7 +691,8 @@ ask_again:;
 	size_t search_pos, needle_len = wcslen(needle);
 	wchar_t *cmp_buf = malloc(sizeof(wchar_t) * (needle_len + 1));
 	struct frame *f = &editor_frames.data[editor_cur_frame];
-	for (search_pos = f->csr + 1; search_pos + needle_len <= f->buf->size; ++search_pos) {
+	for (search_pos = f->csr + 1; search_pos + needle_len <= f->buf->size; ++search_pos)
+	{
 		if (!wcscmp(buf_get_wstr(f->buf, cmp_buf, search_pos, needle_len + 1), needle))
 			break;
 	}
@@ -665,7 +700,8 @@ ask_again:;
 	free(cmp_buf);
 	free(needle);
 	
-	if (search_pos + needle_len > f->buf->size) {
+	if (search_pos + needle_len > f->buf->size)
+	{
 		prompt_show(L"did not find needle in haystack!");
 		editor_redraw();
 		return;
@@ -687,10 +723,12 @@ editor_bind_mac_end(void)
 {
 	if (keybd_is_rec_mac())
 		keybd_rec_mac_end();
-	else {
+	else
+	{
 		keybd_rec_mac_end();
 		
-		if (!keybd_cur_mac(NULL)) {
+		if (!keybd_cur_mac(NULL))
+		{
 			prompt_show(L"no macro specified to execute!");
 			editor_redraw();
 			return;
@@ -719,13 +757,15 @@ editor_bind_read_man_word(void)
 	csrr += f->pr;
 	csrc += f->pc;
 	
-	struct label_bounds bounds = {
+	struct label_bounds bounds =
+	{
 		.pr = csrr,
 		.pc = csrc + 1,
 		.sr = CONF_READ_MAN_SR,
 		.sc = CONF_READ_MAN_SC,
 	};
-	if (label_rebound(&bounds, csrc + 1, MAX(0, (long)csrc - 1), csrr)) {
+	if (label_rebound(&bounds, csrc + 1, MAX(0, (long)csrc - 1), csrr))
+	{
 		prompt_show(L"could not find valid anchoring for label!");
 		editor_redraw();
 		return;
@@ -734,14 +774,16 @@ editor_bind_read_man_word(void)
 	// manpages generally have alphanumeric chars, underscores, hyphens, and
 	// periods in their names; so only those are supported here.
 	
-	if (f->csr >= f->buf->size) {
+	if (f->csr >= f->buf->size)
+	{
 		prompt_show(L"cannot get manpage for null name!");
 		editor_redraw();
 		return;
 	}
 	
 	wchar_t wch = buf_get_wch(f->buf, f->csr);
-	if (!iswalnum(wch) && !wcschr(L"_-.", wch)) {
+	if (!iswalnum(wch) && !wcschr(L"_-.", wch))
+	{
 		prompt_show(L"cannot get manpage for unsupported name!");
 		editor_redraw();
 		return;
@@ -749,7 +791,8 @@ editor_bind_read_man_word(void)
 	
 	// get currently hovered word.
 	size_t word_start = f->csr;
-	while (word_start > 0) {
+	while (word_start > 0)
+	{
 		wchar_t wch = buf_get_wch(f->buf, word_start - 1);
 		if (!iswalnum(wch) && !wcschr(L"_-.", wch))
 			break;
@@ -757,7 +800,8 @@ editor_bind_read_man_word(void)
 	}
 	
 	size_t word_len = 1;
-	while (word_start + word_len < f->buf->size) {
+	while (word_start + word_len < f->buf->size)
+	{
 		wchar_t wch = buf_get_wch(f->buf, word_start + word_len);
 		if (!iswalnum(wch) && !wcschr(L"_-.", wch))
 			break;
@@ -777,9 +821,12 @@ editor_bind_read_man_word(void)
 	size_t cmd_len = 0, cmd_cap = 1;
 	size_t cmd_fmt_len = strlen(CONF_READ_MAN_CMD);
 	
-	for (size_t i = 0; i < cmd_fmt_len; ++i) {
-		if (CONF_READ_MAN_CMD[i] != '%') {
-			if (++cmd_len > cmd_cap) {
+	for (size_t i = 0; i < cmd_fmt_len; ++i)
+	{
+		if (CONF_READ_MAN_CMD[i] != '%')
+		{
+			if (++cmd_len > cmd_cap)
+			{
 				cmd_cap *= 2;
 				cmd = realloc(cmd, cmd_cap + 1);
 			}
@@ -787,18 +834,22 @@ editor_bind_read_man_word(void)
 			continue;
 		}
 		
-		switch (CONF_READ_MAN_CMD[i + 1]) {
+		switch (CONF_READ_MAN_CMD[i + 1])
+		{
 		case 0:
 		case '%':
-			if (++cmd_len > cmd_cap) {
+			if (++cmd_len > cmd_cap)
+			{
 				cmd_cap *= 2;
 				cmd = realloc(cmd, cmd_cap + 1);
 			}
 			cmd[cmd_len - 1] = '%';
 			break;
 		case 'w':
-			for (size_t j = 0; j < word_len; ++j) {
-				if (++cmd_len > cmd_cap) {
+			for (size_t j = 0; j < word_len; ++j)
+			{
+				if (++cmd_len > cmd_cap)
+				{
 					cmd_cap *= 2;
 					cmd = realloc(cmd, cmd_cap + 1);
 				}
@@ -822,7 +873,8 @@ editor_bind_read_man_word(void)
 	struct winsize sv_ws;
 	ioctl(0, TIOCGWINSZ, &sv_ws);
 	
-	struct winsize tmp_ws = {
+	struct winsize tmp_ws =
+	{
 		.ws_row = bounds.sr,
 		.ws_col = bounds.sc + 2,
 	};
@@ -832,7 +884,8 @@ editor_bind_read_man_word(void)
 	FILE *man_fp = popen(cmd, "r");
 	free(cmd);
 	
-	if (!man_fp) {
+	if (!man_fp)
+	{
 		ioctl(0, TIOCSWINSZ, &sv_ws);
 		editor_ignore_sigwinch = false;
 		prompt_show(L"failed to open pipe to man!");
@@ -844,8 +897,10 @@ editor_bind_read_man_word(void)
 	wchar_t *msg = malloc(sizeof(wchar_t));
 	size_t msg_size = 0, msg_cap = 1;
 	int ch;
-	while ((ch = fgetc(man_fp)) != EOF) {
-		if (++msg_size > msg_cap) {
+	while ((ch = fgetc(man_fp)) != EOF)
+	{
+		if (++msg_size > msg_cap)
+		{
 			msg_cap *= 2;
 			msg = realloc(msg, sizeof(wchar_t) * (msg_cap + 1));
 		}
@@ -855,7 +910,8 @@ editor_bind_read_man_word(void)
 	ioctl(0, TIOCSWINSZ, &sv_ws);
 	editor_ignore_sigwinch = false;
 	
-	if (pclose(man_fp)) {
+	if (pclose(man_fp))
+	{
 		prompt_show(L"man exited with error!");
 		editor_redraw();
 		free(msg);
@@ -864,7 +920,8 @@ editor_bind_read_man_word(void)
 	
 	// draw label with message.
 	editor_redraw();
-	if (label_show(CONF_READ_MAN_TITLE, msg, &bounds)) {
+	if (label_show(CONF_READ_MAN_TITLE, msg, &bounds))
+	{
 		prompt_show(L"failed to show label!");
 		editor_redraw();
 		free(msg);
@@ -881,7 +938,8 @@ editor_bind_file_exp(void)
 	char open_path[PATH_MAX] = {0};
 	
 	editor_redraw();
-	switch (file_exp_open(open_path, PATH_MAX - 1, ".")) {
+	switch (file_exp_open(open_path, PATH_MAX - 1, "."))
+	{
 	case FER_SUCCESS:
 		break;
 	case FER_FAIL:

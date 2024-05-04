@@ -3,7 +3,8 @@
 
 #include <stddef.h>
 
-enum file_exp_rc {
+enum file_exp_rc
+{
 	FER_SUCCESS = 0,
 	FER_FAIL,
 	FER_QUIT,

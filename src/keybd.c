@@ -8,7 +8,8 @@
 #include "conf.h"
 #include "util.h"
 
-struct bind {
+struct bind
+{
 	int const *key_seq;
 	size_t len;
 	void (*fn)(void);
@@ -43,15 +44,18 @@ keybd_bind(int const *key_seq, void (*fn)(void))
 	while (key_seq[len] != -1)
 		++len;
 	
-	for (size_t i = 0; i < binds.size; ++i) {
+	for (size_t i = 0; i < binds.size; ++i)
+	{
 		if (binds.data[i].len == len
-		    && !memcmp(key_seq, binds.data[i].key_seq, sizeof(int) * len)) {
+		    && !memcmp(key_seq, binds.data[i].key_seq, sizeof(int) * len))
+		{
 			binds.data[i].fn = fn;
 			return;
 		}
 	}
 
-	struct bind new = {
+	struct bind new =
+	{
 		.key_seq = key_seq,
 		.len = len,
 		.fn = fn,
@@ -69,7 +73,8 @@ keybd_organize(void)
 void
 keybd_rec_mac_begin(void)
 {
-	if (!exec_mac) {
+	if (!exec_mac)
+	{
 		rec_mac = true;
 		cur_mac_len = 0;
 	}
@@ -91,7 +96,8 @@ keybd_rec_mac_end(void)
 void
 keybd_exec_mac(void)
 {
-	if (!rec_mac && cur_mac_len) {
+	if (!rec_mac && cur_mac_len)
+	{
 		cur_mac_exec = 0;
 		exec_mac = true;
 	}
@@ -107,7 +113,8 @@ wint_t
 keybd_await_key_nb(void)
 {
 	wint_t k;
-	if (exec_mac) {
+	if (exec_mac)
+	{
 		// ignore the last key of the macro, as it is supposedly the one
 		// that invoked the macro execution, so not ignoring it causes
 		// infinite macro invocation.
@@ -115,15 +122,18 @@ keybd_await_key_nb(void)
 		// still contains part of the macro invocation bind.
 		if (cur_mac_exec < cur_mac_len - 1)
 			k = cur_mac[cur_mac_exec++];
-		else {
+		else
+		{
 			k = getwchar();
 			exec_mac = false;
 			cur_bind_len = 0;
 		}
-	} else
+	}
+	else
 		k = getwchar();
 	
-	if (rec_mac) {
+	if (rec_mac)
+	{
 		if (cur_mac_len < KEYBD_MAX_MAC_LEN)
 			cur_mac[cur_mac_len++] = k;
 	}
@@ -142,16 +152,19 @@ keybd_await_key(void)
 		cur_bind_len = 0;
 
 	ssize_t low = 0, high = binds.size - 1, mid;
-	while (low <= high) {
+	while (low <= high)
+	{
 		mid = (low + high) / 2;
 
-		struct bind cur_bind_b = {
+		struct bind cur_bind_b =
+		{
 			.key_seq = cur_bind,
 			.len = cur_bind_len,
 		};
 		
 		int cmp = cmp_binds(&cur_bind_b, &binds.data[mid]);
-		switch (cmp) {
+		switch (cmp)
+		{
 		case -1:
 			high = mid - 1;
 			break;
@@ -165,10 +178,12 @@ keybd_await_key(void)
 
 	mid = -1;
 found:
-	if (mid != -1) {
+	if (mid != -1)
+	{
 		struct bind const *b = &binds.data[mid];
 		
-		if (b->len == cur_bind_len) {
+		if (b->len == cur_bind_len)
+		{
 			b->fn();
 			cur_bind_len = 0;
 		}
@@ -185,9 +200,11 @@ keybd_key_dpy(wchar_t *out, int const *kbuf, size_t nk)
 {
 	*out = 0;
 	
-	for (size_t i = 0; i < nk; ++i) {
+	for (size_t i = 0; i < nk; ++i)
+	{
 		wchar_t const *spec_k_name;
-		switch (kbuf[i]) {
+		switch (kbuf[i])
+		{
 		case K_BACKSPC:
 			spec_k_name = L"BACKSPC";
 			break;
@@ -210,10 +227,13 @@ keybd_key_dpy(wchar_t *out, int const *kbuf, size_t nk)
 		
 		if (spec_k_name)
 			wcscat(out, spec_k_name);
-		else if (kbuf[i] <= 26) {
+		else if (kbuf[i] <= 26)
+		{
 			wchar_t new[] = {L'C', L'-', L'a' + kbuf[i] - 1, 0};
 			wcscat(out, new);
-		} else {
+		}
+		else
+		{
 			wchar_t new[] = {kbuf[i], 0};
 			wcscat(out, new);
 		}
@@ -248,7 +268,8 @@ cmp_binds(void const *a, void const *b)
 {
 	struct bind const *bind_a = a, *bind_b = b;
 
-	for (size_t i = 0; i < bind_a->len && i < bind_b->len; ++i) {
+	for (size_t i = 0; i < bind_a->len && i < bind_b->len; ++i)
+	{
 		if (bind_a->key_seq[i] > bind_b->key_seq[i])
 			return 1;
 		else if (bind_a->key_seq[i] < bind_b->key_seq[i])

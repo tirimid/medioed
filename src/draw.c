@@ -10,7 +10,8 @@
 
 #include "util.h"
 
-struct cell {
+struct cell
+{
 	wchar_t wch;
 	uint8_t fg, bg;
 };
@@ -52,9 +53,12 @@ void
 draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch,
           uint8_t fg, uint8_t bg)
 {
-	for (size_t i = pr; i < pr + sr; ++i) {
-		for (size_t j = pc; j < pc + sc; ++j) {
-			cells[ws.ws_col * i + j] = (struct cell){
+	for (size_t i = pr; i < pr + sr; ++i)
+	{
+		for (size_t j = pc; j < pc + sc; ++j)
+		{
+			cells[ws.ws_col * i + j] = (struct cell)
+			{
 				.wch = wch,
 				.fg = fg,
 				.bg = bg,
@@ -72,13 +76,16 @@ draw_put_wch(unsigned r, unsigned c, wchar_t wch)
 void
 draw_put_wstr(unsigned r, unsigned c, wchar_t const *wstr)
 {
-	for (wchar_t const *wc = wstr; *wc; ++wc) {
-		if (*wc != L'\n') {
+	for (wchar_t const *wc = wstr; *wc; ++wc)
+	{
+		if (*wc != L'\n')
+		{
 			cells[ws.ws_col * r + c].wch = *wc;
 			++c;
 		}
 
-		if (c >= ws.ws_col || *wc == L'\n') {
+		if (c >= ws.ws_col || *wc == L'\n')
+		{
 			c = 0;
 			++r;
 		}
@@ -94,11 +101,13 @@ draw_put_attr(unsigned r, unsigned c, uint8_t fg, uint8_t bg, unsigned n)
 	if (r >= ws.ws_row || c >= ws.ws_col)
 		return;
 	
-	for (unsigned i = 0; i < n; ++i) {
+	for (unsigned i = 0; i < n; ++i)
+	{
 		cells[ws.ws_col * r + c].fg = fg;
 		cells[ws.ws_col * r + c].bg = bg;
 
-		if (++c >= ws.ws_col) {
+		if (++c >= ws.ws_col)
+		{
 			c = 0;
 			++r;
 		}
@@ -115,8 +124,10 @@ draw_refresh(void)
 
 	fwprintf(stdout, L"\033[H\033[0m");
 	
-	for (size_t i = 0; i < ws.ws_row; ++i) {
-		for (size_t j = 0; j < ws.ws_col; ++j) {
+	for (size_t i = 0; i < ws.ws_row; ++i)
+	{
+		for (size_t j = 0; j < ws.ws_col; ++j)
+		{
 			uint8_t cur_fg = cells[ws.ws_col * i + j].fg;
 			uint8_t cur_bg = cells[ws.ws_col * i + j].bg;
 			

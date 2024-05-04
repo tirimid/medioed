@@ -3,7 +3,8 @@
 
 #include <wchar.h>
 
-struct label_bounds {
+struct label_bounds
+{
 	unsigned pr, pc;
 	unsigned sr, sc;
 };

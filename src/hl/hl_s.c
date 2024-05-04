@@ -25,7 +25,8 @@
 // same as C special chars but missing `.` for preprocessor directives.
 #define SPECIAL L"+-()[]<>{}!~*&/%=?:|;,"
 
-enum word_type {
+enum word_type
+{
 	WT_MACRO,
 	WT_REG,
 	WT_BASIC,
@@ -38,7 +39,8 @@ static int hl_char(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out
 static int hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 static int hl_special(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 
-static wchar_t const *regs[] = {
+static wchar_t const *regs[] =
+{
 	L"rax",
 	L"eax",
 	L"ax",
@@ -146,26 +148,38 @@ int
 hl_s_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
           uint8_t *out_fg, uint8_t *out_bg)
 {
-	for (size_t i = off; i < buf->size; ++i) {
-		if (buf_get_wch(buf, i) == L'.') {
+	for (size_t i = off; i < buf->size; ++i)
+	{
+		if (buf_get_wch(buf, i) == L'.')
+		{
 			if (!hl_preproc(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (buf_get_wch(buf, i) == L'"') {
+		}
+		else if (buf_get_wch(buf, i) == L'"')
+		{
 			if (!hl_string(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (buf_get_wch(buf, i) == L'\'') {
+		}
+		else if (buf_get_wch(buf, i) == L'\'')
+		{
 			if (!hl_char(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (i + 1 < buf->size
-		           && buf_get_wch(buf, i) == L'/'
-		           && wcschr(L"/*", buf_get_wch(buf, i + 1))) {
+		}
+		else if (i + 1 < buf->size
+		         && buf_get_wch(buf, i) == L'/'
+		         && wcschr(L"/*", buf_get_wch(buf, i + 1)))
+		{
 			if (!hl_comment(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (wcschr(SPECIAL, buf_get_wch(buf, i))) {
+		}
+		else if (wcschr(SPECIAL, buf_get_wch(buf, i)))
+		{
 			if (!hl_special(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
-		} else if (iswalpha(buf_get_wch(buf, i))
-		           || buf_get_wch(buf, i) == L'_') {
+		}
+		else if (iswalpha(buf_get_wch(buf, i))
+		         || buf_get_wch(buf, i) == L'_')
+		{
 			if (!hl_word(buf, &i, out_lb, out_ub, out_fg, out_bg))
 				return 0;
 		}
@@ -179,9 +193,11 @@ hl_preproc(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
            uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 1;
-	while (j < buf->size) {
+	while (j < buf->size)
+	{
 		if (buf_get_wch(buf, j) != L'_'
-		    && !iswalnum(buf_get_wch(buf, j))) {
+		    && !iswalnum(buf_get_wch(buf, j)))
+		{
 			break;
 		}
 		++j;
@@ -200,11 +216,15 @@ hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
            uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i + 2;
-	if (buf_get_wch(buf, *i + 1) == L'/') {
+	if (buf_get_wch(buf, *i + 1) == L'/')
+	{
 		while (j < buf->size && buf_get_wch(buf, j) != L'\n')
 			++j;
-	} else {
-		while (j < buf->size) {
+	}
+	else
+	{
+		while (j < buf->size)
+		{
 			wchar_t cmp[3];
 			if (!wcscmp(buf_get_wstr(buf, cmp, j, 3), L"*/"))
 				break;
@@ -225,12 +245,15 @@ hl_string(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
           uint8_t *out_fg, uint8_t *out_bg)
 {
 	size_t j = *i;
-	while (j < buf->size) {
+	while (j < buf->size)
+	{
 		++j;
-		if (buf_get_wch(buf, j) == L'\\') {
+		if (buf_get_wch(buf, j) == L'\\')
+		{
 			++j;
 			continue;
-		} else if (wcschr(L"\"\n", buf_get_wch(buf, j)))
+		}
+		else if (wcschr(L"\"\n", buf_get_wch(buf, j)))
 			break;
 	}
 	
@@ -252,7 +275,8 @@ hl_char(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	else
 		++j;
 	
-	if (j < buf->size && buf_get_wch(buf, j) == L'\'') {
+	if (j < buf->size && buf_get_wch(buf, j) == L'\'')
+	{
 		*out_lb = *i;
 		*out_ub = j + 1;
 		*out_fg = A_STRING_FG;
@@ -271,9 +295,11 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	enum word_type wt = WT_MACRO;
 	
 	size_t j = *i;
-	while (j < buf->size) {
+	while (j < buf->size)
+	{
 		if (buf_get_wch(buf, j) != L'_'
-		    && !iswalnum(buf_get_wch(buf, j))) {
+		    && !iswalnum(buf_get_wch(buf, j)))
+		{
 			break;
 		}
 		
@@ -283,11 +309,13 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 		++j;
 	}
 	
-	for (size_t reg = 0; reg < ARRAY_SIZE(regs); ++reg) {
+	for (size_t reg = 0; reg < ARRAY_SIZE(regs); ++reg)
+	{
 		wchar_t cmp[64]; // read rationale for size 64 in C++ highlight.
 		buf_get_wstr(buf, cmp, *i, j - *i + 1);
 		
-		if (!wcscmp(regs[reg], cmp)) {
+		if (!wcscmp(regs[reg], cmp))
+		{
 			wt = WT_REG;
 			break;
 		}
@@ -296,7 +324,8 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 	*out_lb = *i;
 	*out_ub = j;
 
-	switch (wt) {
+	switch (wt)
+	{
 	case WT_MACRO:
 		*out_fg = A_MACRO_FG;
 		*out_bg = A_MACRO_BG;

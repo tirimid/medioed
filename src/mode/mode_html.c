@@ -19,17 +19,14 @@
 // also, this slightly better mirrors emacs behavior.
 #define INDENT_SIZE 2
 
-static int open_diff(size_t ln, size_t ln_end);
 static void bind_indent(void);
 static void bind_new_line(void);
-static void bind_toggle_auto_indent(void);
 static void bind_mk_tag(void);
 
 static struct frame *mf;
-static bool auto_indent;
 
 static int html_bind_indent[] = {K_TAB, -1};
-static int html_bind_toggle_auto_indent[] = {K_CTL('w'), 'i', -1};
+static int html_bind_new_line[] = {K_RET, -1};
 static int html_bind_mk_tag[] = {K_CTL('w'), K_CTL('t'), -1};
 
 void
@@ -40,15 +37,12 @@ mode_html_init(struct frame *f)
 	
 	mu_set_base();
 	mu_set_pairing(PF_ANGLE | PF_DQUOTE);
-	
-	keybd_bind(conf_bind_new_line, bind_new_line);
+
 	keybd_bind(html_bind_indent, bind_indent);
-	keybd_bind(html_bind_toggle_auto_indent, bind_toggle_auto_indent);
+	keybd_bind(conf_bind_new_line, bind_new_line);
 	keybd_bind(html_bind_mk_tag, bind_mk_tag);
 	
 	keybd_organize();
-	
-	auto_indent = true;
 }
 
 void
@@ -66,111 +60,22 @@ mode_html_keypress(wint_t k)
 {
 }
 
-static int
-open_diff(size_t ln, size_t ln_end)
-{
-	int diff = 0;
-	
-	for (size_t i = ln; i < ln_end; ++i) {
-		wchar_t cmp_buf[3];
-		
-		if (i + 1 < ln_end && buf_get_wch(mf->buf, i) == L'<') {
-			switch (buf_get_wch(mf->buf, i + 1)) {
-			case L'!':
-			case L'>':
-				break;
-			case L'/':
-				--diff;
-				break;
-			default:
-				++diff;
-				break;
-			}
-		} else if (buf_get_wch(mf->buf, i) == L'<')
-			++diff;
-		else if (i + 1 < ln_end
-		         && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, i , 3), L"/>")) {
-			--diff;
-		}
-	}
-	
-	return diff ? SIGN(diff) : 0;
-}
-
 static void
 bind_indent(void)
 {
 	if (!(mf->buf->flags & BF_WRITABLE))
 		return;
 	
-	size_t ln = mf->csr;
-	while (ln > 0 && buf_get_wch(mf->buf, ln - 1) != L'\n')
-		--ln;
-	
-	size_t first_ch = ln;
-	while (first_ch < mf->buf->size
-	       && buf_get_wch(mf->buf, first_ch) != L'\n'
-	       && iswspace(buf_get_wch(mf->buf, first_ch))) {
-		++first_ch;
-	}
-	
-	unsigned nopen = 0;
-	for (size_t i = 0; i < ln; ++i) {
-		size_t ln_end = i;
-		while (ln_end < mf->buf->size
-		       && buf_get_wch(mf->buf, ln_end) != L'\n') {
-			++ln_end;
-		}
-		
-		int diff = open_diff(i, ln_end);
-		if (nopen && diff < 0)
-			--nopen;
-		else
-			nopen += diff;
-		
-		i = ln_end;
-	}
-	
-	size_t ln_end = ln;
-	while (ln_end < mf->buf->size && buf_get_wch(mf->buf, ln_end) != L'\n')
-		++ln_end;
-	
-	int diff = open_diff(ln, ln_end);
-	if (nopen && diff < 0)
-		--nopen;
-	
-	mu_finish_indent(ln, first_ch, 0, INDENT_SIZE * nopen);
+	// TODO: implement.
 }
 
 static void
 bind_new_line(void)
 {
-	if (auto_indent)
-		bind_indent();
+	if (!(mf->buf->flags & BF_WRITABLE))
+		return;
 	
-	buf_push_hist_brk(mf->buf);
-	
-	wchar_t cmp_buf[3];
-	if (auto_indent
-	    && mf->csr > 0
-	    && !wcscmp(buf_get_wstr(mf->buf, cmp_buf, mf->csr - 1, 3), L"><")) {
-		buf_write_wstr(mf->buf, mf->csr, L"\n\n");
-		mf->csr += 2;
-		bind_indent();
-		frame_mv_csr_rel(mf, -1, 0, false);
-	} else {
-		buf_write_wch(mf->buf, mf->csr, L'\n');	
-		frame_mv_csr_rel(mf, 0, !!(mf->buf->flags & BF_WRITABLE), true);
-	}
-	
-	if (auto_indent)
-		bind_indent();
-}
-
-static void
-bind_toggle_auto_indent(void)
-{
-	auto_indent = !auto_indent;
+	// TODO: implement.
 }
 
 static void
@@ -185,7 +90,8 @@ ask_again:;
 	if (!tag)
 		return;
 	
-	if (!*tag) {
+	if (!*tag)
+	{
 		free(tag);
 		prompt_show(L"cannot insert blank tag!");
 		editor_redraw();
@@ -194,8 +100,10 @@ ask_again:;
 	
 	size_t tag_len = wcslen(tag);
 	
-	for (size_t i = 0; i < tag_len; ++i) {
-		if (wcschr(L"<>", tag[i])) {
+	for (size_t i = 0; i < tag_len; ++i)
+	{
+		if (wcschr(L"<>", tag[i]))
+		{
 			free(tag);
 			prompt_show(L"tag contains invalid characters!");
 			editor_redraw();
@@ -207,7 +115,8 @@ ask_again:;
 	while (iswalnum(tag[cls_tag_len]))
 		++cls_tag_len;
 	
-	if (!cls_tag_len) {
+	if (!cls_tag_len)
+	{
 		free(tag);
 		prompt_show(L"cannot insert unclosable tag!");
 		editor_redraw();

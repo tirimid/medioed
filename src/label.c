@@ -24,7 +24,8 @@ label_rebound(struct label_bounds *bounds, unsigned anchor_l, unsigned anchor_r,
 	struct winsize ws;
 	ioctl(0, TIOCGWINSZ, &ws);
 	
-	struct label_bounds new = {
+	struct label_bounds new =
+	{
 		.sr = bounds->sr,
 		.sc = bounds->sc,
 	};
@@ -34,7 +35,8 @@ label_rebound(struct label_bounds *bounds, unsigned anchor_l, unsigned anchor_r,
 		new.pc = anchor_l;
 	else if (anchor_r <= ws.ws_col + bounds->sc)
 		new.pc = MAX((long)anchor_r - (long)bounds->sc + 1, 0);
-	else {
+	else
+	{
 		// could not get valid position with either horizontal anchor.
 		return 1;
 	}
@@ -61,33 +63,39 @@ label_show(wchar_t const *name, wchar_t const *msg,
 	// refuse to display if there isn't enough space to view the label at a
 	// specific, set size.
 	if (bounds->pc + bounds->sc > ws.ws_col
-	    || bounds->pr + bounds->sr > ws.ws_row) {
+	    || bounds->pr + bounds->sr > ws.ws_row)
+	{
 		return 1;
 	}
 	
 	size_t off = 0;
-	for (;;) {
+	for (;;)
+	{
 		draw_box(name, msg, off, bounds);
 		draw_refresh();
 		
 		wint_t k = keybd_await_key_nb();
-		switch (k) {
+		switch (k)
+		{
 		case WEOF:
 		case BIND_QUIT:
 			return 0;
-		case BIND_NAV_DOWN: {
+		case BIND_NAV_DOWN:
+		{
 			size_t sv_off = off;
 			
 			while (msg[off] && msg[off] != L'\n')
 				++off;
 			
-			if (!msg[off]) {
+			if (!msg[off])
+			{
 				off = sv_off;
 				break;
 			}
 			
 			// only advance if not on last line.
-			if (!msg[++off]) {
+			if (!msg[++off])
+			{
 				off = sv_off;
 				break;
 			}
@@ -123,8 +131,10 @@ draw_box(wchar_t const *name, wchar_t const *msg, size_t off,
 	
 	// write message.
 	unsigned r = 1, c = 0;
-	for (size_t i = off; msg[i]; ++i) {
-		if (msg[i] == L'\n' || c >= bounds->sc) {
+	for (size_t i = off; msg[i]; ++i)
+	{
+		if (msg[i] == L'\n' || c >= bounds->sc)
+		{
 			c = 0;
 			++r;
 			continue;
@@ -139,7 +149,8 @@ draw_box(wchar_t const *name, wchar_t const *msg, size_t off,
 		if (msg[i] != L'\t' && !iswprint(msg[i]))
 			continue;
 		
-		switch (msg[i]) {
+		switch (msg[i])
+		{
 		case L'\t':
 			c += CONF_TAB_SIZE - c % CONF_TAB_SIZE;
 			break;

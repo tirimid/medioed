@@ -8,24 +8,28 @@
 
 #include "util.h"
 
-enum buf_src_type {
+enum buf_src_type
+{
 	BST_FRESH = 0,
 	BST_FILE,
 };
 
-enum buf_flag {
+enum buf_flag
+{
 	BF_WRITABLE = 0x1,
 	BF_MODIFIED = 0x2,
 	BF_NO_HIST = 0x4,
 };
 
-enum buf_op_type {
+enum buf_op_type
+{
 	BOT_WRITE = 0,
 	BOT_ERASE,
 	BOT_BRK,
 };
 
-struct buf_op {
+struct buf_op
+{
 	wchar_t *data;
 	size_t lb, ub;
 	unsigned char type;
@@ -33,7 +37,8 @@ struct buf_op {
 
 VEC_DEF_PROTO(struct buf_op, buf_op)
 
-struct buf {
+struct buf
+{
 	// TODO: change name back and implement gap buffer system.
 	// name suffixed with `_` to raise errors where it was previously used,
 	// so that they can be changed.
