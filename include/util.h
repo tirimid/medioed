@@ -86,6 +86,8 @@
 #define VEC_DEF_PROTO_STATIC(t, name) VEC_DEF_PROTO_EX(t, name, static)
 #define VEC_DEF_IMPL_STATIC(t, name) VEC_DEF_IMPL_EX(t, name, static)
 
+VEC_DEF_PROTO(char *, str)
+
 char const *file_ext(char const *path);
 int mk_dir_rec(char const *dir);
 int mk_file(char const *path);

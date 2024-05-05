@@ -343,17 +343,28 @@ open_arg_files(int argc, int first_arg, char const *argv[])
 		struct stat s;
 		if ((stat(argv[i], &s) || !S_ISREG(s.st_mode)) && !flag_c)
 		{
-			// TODO: show which file failed to open.
-			prompt_show(L"failed to open file!");
+			size_t wmsg_len = strlen(argv[i]) + 22;
+			wchar_t *wmsg = malloc(sizeof(wchar_t) * wmsg_len);
+			mbstowcs(wmsg + 21, argv[i], wmsg_len);
+			wcsncpy(wmsg, L"failed to open file: ", 21);
+			
+			prompt_show(wmsg);
+			free(wmsg);
+			
 			continue;
 		}
 		else if (stat(argv[i], &s) && flag_c)
 		{
 			if (mk_file(argv[i]))
 			{
-				// TODO: show which file failed to be
-				// created.
-				prompt_show(L"failed to create file!");
+				size_t wmsg_len = strlen(argv[i]) + 24;
+				wchar_t *wmsg = malloc(sizeof(wchar_t) * wmsg_len);
+				mbstowcs(wmsg + 23, argv[i], wmsg_len);
+				wcsncpy(wmsg, L"failed to create file: ", 23);
+				
+				prompt_show(wmsg);
+				free(wmsg);
+				
 				continue;
 			}
 		}

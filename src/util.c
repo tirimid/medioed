@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+VEC_DEF_IMPL(char *, str)
+
 char const *
 file_ext(char const *path)
 {
