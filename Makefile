@@ -6,7 +6,7 @@ LIB_DIR := lib
 
 CC := gcc
 LD := gcc
-CFLAGS := -std=c99 -pedantic -I$(INC_DIR) -D_POSIX_C_SOURCE=200809 -D_GNU_SOURCE
+CFLAGS := -std=c99 -pedantic -I$(INC_DIR) -D_POSIX_C_SOURCE=200809 -D_GNU_SOURCE -O3
 LDFLAGS :=
 
 SRCS := $(shell find $(SRC_DIR) -name "*.c")
