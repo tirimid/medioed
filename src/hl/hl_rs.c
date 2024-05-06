@@ -95,8 +95,12 @@ static wchar_t const *keywords[] =
 };
 
 int
-hl_rs_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
-           uint8_t *out_fg, uint8_t *out_bg)
+hl_rs_find(struct buf const *buf,
+           size_t off,
+           size_t *out_lb,
+           size_t *out_ub,
+           uint8_t *out_fg,
+           uint8_t *out_bg)
 {
 	for (size_t i = off; i < buf->size; ++i)
 	{
@@ -152,8 +156,12 @@ hl_rs_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_string(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-          uint8_t *out_fg, uint8_t *out_bg)
+hl_string(struct buf const *buf,
+          size_t *i,
+          size_t *out_lb,
+          size_t *out_ub,
+          uint8_t *out_fg,
+          uint8_t *out_bg)
 {
 	size_t j = *i;
 	while (j < buf->size)
@@ -177,8 +185,12 @@ hl_string(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_rstring(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-           uint8_t *out_fg, uint8_t *out_bg)
+hl_rstring(struct buf const *buf,
+           size_t *i,
+           size_t *out_lb,
+           size_t *out_ub,
+           uint8_t *out_fg,
+           uint8_t *out_bg)
 {
 	size_t j = *i + 1;
 	while (j < buf->size && buf_get_wch(buf, j) == L'#')
@@ -221,8 +233,12 @@ hl_rstring(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_quote(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-         uint8_t *out_fg, uint8_t *out_bg)
+hl_quote(struct buf const *buf,
+         size_t *i,
+         size_t *out_lb,
+         size_t *out_ub,
+         uint8_t *out_fg,
+         uint8_t *out_bg)
 {
 	size_t j = *i + 1;
 	if (j < buf->size && buf_get_wch(buf, j) == L'\\')
@@ -248,8 +264,12 @@ hl_quote(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_ln_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-              uint8_t *out_fg, uint8_t *out_bg)
+hl_ln_comment(struct buf const *buf,
+              size_t *i,
+              size_t *out_lb,
+              size_t *out_ub,
+              uint8_t *out_fg,
+              uint8_t *out_bg)
 {
 	size_t j = *i + 2;
 	while (j < buf->size && buf_get_wch(buf, j) != L'\n')
@@ -264,8 +284,12 @@ hl_ln_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_blk_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-               uint8_t *out_fg, uint8_t *out_bg)
+hl_blk_comment(struct buf const *buf,
+               size_t *i,
+               size_t *out_lb,
+               size_t *out_ub,
+               uint8_t *out_fg,
+               uint8_t *out_bg)
 {
 	unsigned nopen = 1;
 	size_t j = *i + 2;
@@ -302,8 +326,12 @@ hl_blk_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_special(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-           uint8_t *out_fg, uint8_t *out_bg)
+hl_special(struct buf const *buf,
+           size_t *i,
+           size_t *out_lb,
+           size_t *out_ub,
+           uint8_t *out_fg,
+           uint8_t *out_bg)
 {
 	size_t j = *i + 1;
 	while (j < buf->size && wcschr(SPECIAL, buf_get_wch(buf, j)))
@@ -318,8 +346,12 @@ hl_special(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-        uint8_t *out_fg, uint8_t *out_bg)
+hl_word(struct buf const *buf,
+        size_t *i,
+        size_t *out_lb,
+        size_t *out_ub,
+        uint8_t *out_fg,
+        uint8_t *out_bg)
 {
 	enum word_type wt = WT_BASIC;
 

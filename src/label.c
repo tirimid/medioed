@@ -18,7 +18,9 @@
 static void draw_box(wchar_t const *name, wchar_t const *msg, size_t off, struct label_bounds const *bounds);
 
 int
-label_rebound(struct label_bounds *bounds, unsigned anchor_l, unsigned anchor_r,
+label_rebound(struct label_bounds *bounds,
+              unsigned anchor_l,
+              unsigned anchor_r,
               unsigned anchor_t)
 {
 	struct winsize ws;
@@ -54,7 +56,8 @@ label_rebound(struct label_bounds *bounds, unsigned anchor_l, unsigned anchor_r,
 }
 
 int
-label_show(wchar_t const *name, wchar_t const *msg,
+label_show(wchar_t const *name,
+           wchar_t const *msg,
            struct label_bounds const *bounds)
 {
 	struct winsize ws;
@@ -116,7 +119,9 @@ label_show(wchar_t const *name, wchar_t const *msg,
 }
 
 static void
-draw_box(wchar_t const *name, wchar_t const *msg, size_t off,
+draw_box(wchar_t const *name,
+         wchar_t const *msg,
+         size_t off,
          struct label_bounds const *bounds)
 {
 	// write label title.

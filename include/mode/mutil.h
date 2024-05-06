@@ -3,7 +3,8 @@
 
 #include "frame.h"
 
-enum pair_flags {
+enum pair_flags
+{
 	PF_PAREN = 0x1,
 	PF_BRACKET = 0x2,
 	PF_BRACE = 0x4,

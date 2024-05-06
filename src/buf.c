@@ -279,7 +279,10 @@ buf_get_wstr(struct buf const *b, wchar_t *dst, size_t ind, size_t n)
 }
 
 static void
-push_hist(struct buf *b, enum buf_op_type type, wchar_t const *data, size_t lb,
+push_hist(struct buf *b,
+          enum buf_op_type type,
+          wchar_t const *data,
+          size_t lb,
           size_t ub)
 {
 	if (b->flags & BF_NO_HIST)

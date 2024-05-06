@@ -23,7 +23,7 @@
 #define A_SPECIAL_BG CONF_A_SPECIAL_BG
 
 // same as C special chars but missing `.` for preprocessor directives.
-#define SPECIAL L"+-()[]<>{}!~*&/%=?:|;,"
+#define SPECIAL L"+-()[]<>{}!~*&/%=?:|;,^"
 
 enum word_type
 {
@@ -145,8 +145,12 @@ static wchar_t const *regs[] =
 };
 
 int
-hl_s_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
-          uint8_t *out_fg, uint8_t *out_bg)
+hl_s_find(struct buf const *buf,
+          size_t off,
+          size_t *out_lb,
+          size_t *out_ub,
+          uint8_t *out_fg,
+          uint8_t *out_bg)
 {
 	for (size_t i = off; i < buf->size; ++i)
 	{
@@ -189,8 +193,12 @@ hl_s_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_preproc(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-           uint8_t *out_fg, uint8_t *out_bg)
+hl_preproc(struct buf const *buf,
+           size_t *i,
+           size_t *out_lb,
+           size_t *out_ub,
+           uint8_t *out_fg,
+           uint8_t *out_bg)
 {
 	size_t j = *i + 1;
 	while (j < buf->size)
@@ -212,8 +220,12 @@ hl_preproc(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-           uint8_t *out_fg, uint8_t *out_bg)
+hl_comment(struct buf const *buf,
+           size_t *i,
+           size_t *out_lb,
+           size_t *out_ub,
+           uint8_t *out_fg,
+           uint8_t *out_bg)
 {
 	size_t j = *i + 2;
 	if (buf_get_wch(buf, *i + 1) == L'/')
@@ -241,8 +253,12 @@ hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_string(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-          uint8_t *out_fg, uint8_t *out_bg)
+hl_string(struct buf const *buf,
+          size_t *i,
+          size_t *out_lb,
+          size_t *out_ub,
+          uint8_t *out_fg,
+          uint8_t *out_bg)
 {
 	size_t j = *i;
 	while (j < buf->size)
@@ -266,8 +282,12 @@ hl_string(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_char(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-        uint8_t *out_fg, uint8_t *out_bg)
+hl_char(struct buf const *buf,
+        size_t *i,
+        size_t *out_lb,
+        size_t *out_ub,
+        uint8_t *out_fg,
+        uint8_t *out_bg)
 {
 	size_t j = *i + 1;
 	if (j < buf->size && buf_get_wch(buf, j) == L'\\')
@@ -289,8 +309,12 @@ hl_char(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-        uint8_t *out_fg, uint8_t *out_bg)
+hl_word(struct buf const *buf,
+        size_t *i,
+        size_t *out_lb,
+        size_t *out_ub,
+        uint8_t *out_fg,
+        uint8_t *out_bg)
 {
 	enum word_type wt = WT_MACRO;
 	
@@ -343,8 +367,12 @@ hl_word(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_special(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-           uint8_t *out_fg, uint8_t *out_bg)
+hl_special(struct buf const *buf,
+           size_t *i,
+           size_t *out_lb,
+           size_t *out_ub,
+           uint8_t *out_fg,
+           uint8_t *out_bg)
 {
 	size_t j = *i + 1;
 	while (j < buf->size && wcschr(SPECIAL, buf_get_wch(buf, j)))

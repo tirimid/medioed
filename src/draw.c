@@ -50,8 +50,13 @@ draw_clear(wchar_t wch, uint8_t fg, uint8_t bg)
 }
 
 void
-draw_fill(unsigned pr, unsigned pc, unsigned sr, unsigned sc, wchar_t wch,
-          uint8_t fg, uint8_t bg)
+draw_fill(unsigned pr,
+          unsigned pc,
+          unsigned sr,
+          unsigned sc,
+          wchar_t wch,
+          uint8_t fg,
+          uint8_t bg)
 {
 	for (size_t i = pr; i < pr + sr; ++i)
 	{

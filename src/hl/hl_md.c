@@ -24,8 +24,12 @@ static size_t first_ln_ch(struct buf const *buf, size_t pos);
 static size_t para_end(struct buf const *buf, size_t pos);
 
 int
-hl_md_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
-           uint8_t *out_fg, uint8_t *out_bg)
+hl_md_find(struct buf const *buf,
+           size_t off,
+           size_t *out_lb,
+           size_t *out_ub,
+           uint8_t *out_fg,
+           uint8_t *out_bg)
 {
 	for (size_t i = off; i < buf->size; ++i)
 	{
@@ -68,8 +72,12 @@ hl_md_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_code_block(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-              uint8_t *out_fg, uint8_t *out_bg)
+hl_code_block(struct buf const *buf,
+              size_t *i,
+              size_t *out_lb,
+              size_t *out_ub,
+              uint8_t *out_fg,
+              uint8_t *out_bg)
 {
 	if (first_ln_ch(buf, *i) != *i)
 		return 1;
@@ -110,8 +118,12 @@ hl_code_block(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_heading(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-           uint8_t *out_fg, uint8_t *out_bg)
+hl_heading(struct buf const *buf,
+           size_t *i,
+           size_t *out_lb,
+           size_t *out_ub,
+           uint8_t *out_fg,
+           uint8_t *out_bg)
 {
 	if (first_ln_ch(buf, *i) != *i)
 		return 1;
@@ -138,8 +150,12 @@ hl_heading(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_block(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-         uint8_t *out_fg, uint8_t *out_bg)
+hl_block(struct buf const *buf,
+         size_t *i,
+         size_t *out_lb,
+         size_t *out_ub,
+         uint8_t *out_fg,
+         uint8_t *out_bg)
 {
 	if (first_ln_ch(buf, *i) != *i)
 		return 1;
@@ -163,8 +179,12 @@ hl_block(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_ulist(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-         uint8_t *out_fg, uint8_t *out_bg)
+hl_ulist(struct buf const *buf,
+         size_t *i,
+         size_t *out_lb,
+         size_t *out_ub,
+         uint8_t *out_fg,
+         uint8_t *out_bg)
 {
 	if (first_ln_ch(buf, *i) != *i)
 		return 1;
@@ -188,8 +208,12 @@ hl_ulist(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_olist(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-         uint8_t *out_fg, uint8_t *out_bg)
+hl_olist(struct buf const *buf,
+         size_t *i,
+         size_t *out_lb,
+         size_t *out_ub,
+         uint8_t *out_fg,
+         uint8_t *out_bg)
 {
 	if (first_ln_ch(buf, *i) != *i)
 		return 1;

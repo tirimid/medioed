@@ -5,8 +5,10 @@
 #include <wchar.h>
 
 #include <dirent.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 
+#include "conf.h"
 #include "draw.h"
 #include "keybd.h"
 #include "util.h"
@@ -39,19 +41,65 @@ struct dir_node
 	unsigned char flags;
 };
 
+struct bounds
+{
+	unsigned pr, pc;
+	unsigned sr, sc;
+};
+
 static struct dir_node *dir_tree(char const *root_name, char const *root_dir);
 static void dir_node_unfold(struct dir_node *node);
 static void dir_node_fold(struct dir_node *node);
 static void dir_node_path(char *out_path, struct dir_node const *node);
 static void dir_node_destroy(struct dir_node *node);
+static void draw_box(struct bounds const *bounds, struct dir_node const *root, size_t first, size_t sel);
 
 VEC_DEF_IMPL_STATIC(struct dir_node *, p_dir_node)
 
 enum file_exp_rc
 file_exp_open(char *out_path, size_t n, char const *dir)
 {
-	// TODO: implement.
-	return FER_FAIL;
+	struct dir_node *root = dir_tree(".", dir);
+	if (!root)
+		return FER_FAIL;
+	
+	struct winsize ws;
+	ioctl(0, TIOCGWINSZ, &ws);
+	
+	struct bounds bounds =
+	{
+		.pr = 0,
+		.sc = MIN(ws.ws_col, CONF_FILE_EXP_SC),
+		.sr = ws.ws_row,
+	};
+	bounds.pc = ws.ws_col - bounds.sc;
+	
+	size_t first = 0, sel = 0;
+	for (;;)
+	{
+		draw_box(&bounds, root, first, sel);
+		draw_refresh();
+		
+		wint_t k = keybd_await_key_nb();
+		switch (k)
+		{
+		case WEOF:
+		case BIND_QUIT:
+			dir_node_destroy(root);
+			return FER_QUIT;
+		case BIND_NAV_DOWN:
+			// TODO: implement.
+			break;
+		case BIND_NAV_UP:
+			// TODO: implement.
+			break;
+		case BIND_RET:
+			// TODO: implement.
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 static struct dir_node *
@@ -165,4 +213,13 @@ dir_node_destroy(struct dir_node *node)
 	vec_p_dir_node_destroy(&node->children);
 	free(node->name);
 	free(node);
+}
+
+static void
+draw_box(struct bounds const *bounds,
+         struct dir_node const *root,
+         size_t first,
+         size_t sel)
+{
+	// TODO: implement.
 }

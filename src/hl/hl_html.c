@@ -17,8 +17,12 @@ static int hl_ent(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_
 static int hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub, uint8_t *out_fg, uint8_t *out_bg);
 
 int
-hl_html_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
-             uint8_t *out_fg, uint8_t *out_bg)
+hl_html_find(struct buf const *buf,
+             size_t off,
+             size_t *out_lb,
+             size_t *out_ub,
+             uint8_t *out_fg,
+             uint8_t *out_bg)
 {
 	for (size_t i = off; i < buf->size; ++i)
 	{
@@ -46,8 +50,12 @@ hl_html_find(struct buf const *buf, size_t off, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_tag(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-       uint8_t *out_fg, uint8_t *out_bg)
+hl_tag(struct buf const *buf,
+       size_t *i,
+       size_t *out_lb,
+       size_t *out_ub,
+       uint8_t *out_fg,
+       uint8_t *out_bg)
 {
 	size_t j = *i + 1;
 	while (j < buf->size && buf_get_wch(buf, j) != L'>')
@@ -65,8 +73,12 @@ hl_tag(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_ent(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-       uint8_t *out_fg, uint8_t *out_bg)
+hl_ent(struct buf const *buf,
+       size_t *i,
+       size_t *out_lb,
+       size_t *out_ub,
+       uint8_t *out_fg,
+       uint8_t *out_bg)
 {
 	size_t j = *i + 1;
 	while (j < buf->size && iswalnum(buf_get_wch(buf, j)))
@@ -86,8 +98,12 @@ hl_ent(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
 }
 
 static int
-hl_comment(struct buf const *buf, size_t *i, size_t *out_lb, size_t *out_ub,
-           uint8_t *out_fg, uint8_t *out_bg)
+hl_comment(struct buf const *buf,
+           size_t *i,
+           size_t *out_lb,
+           size_t *out_ub,
+           uint8_t *out_fg,
+           uint8_t *out_bg)
 {
 	size_t j = *i + 4;
 	wchar_t cmp[4];
