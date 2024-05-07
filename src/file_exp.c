@@ -271,6 +271,13 @@ draw_box(struct bounds const *bounds,
 			             node->name[j]);
 		}
 		
+		if (node->type == DNT_DIR && depth + name_len + 1 < bounds->sc)
+		{
+			draw_put_wch(bounds->pr + i - first,
+			             bounds->pc + depth + name_len,
+			             L'/');
+		}
+		
 		if (i == sel)
 		{
 			draw_put_attr(bounds->pr + i - first,
