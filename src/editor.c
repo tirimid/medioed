@@ -21,7 +21,7 @@
 // you may want to change the value of this, but you'll need to do some testing
 // and play around with values to find something good.
 // check `sigwinch_handler()` for more information.
-#define WIN_RESIZE_SPIN 10000000
+#define WIN_RESIZE_SPIN 50000000
 
 extern bool flag_c;
 

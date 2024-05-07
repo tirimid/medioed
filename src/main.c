@@ -18,9 +18,10 @@ bool flag_c = false, flag_d = false, flag_r = false;
 
 int
 main(int argc, char const *argv[])
-{	
+{
 	int ch;
-	while ((ch = getopt(argc, (char *const *)argv, "cdhr")) != -1) {
+	while ((ch = getopt(argc, (char *const *)argv, "cdhr")) != -1)
+	{
 		switch (ch)
 		{
 		case 'c':
