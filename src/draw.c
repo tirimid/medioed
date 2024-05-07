@@ -60,8 +60,14 @@ draw_fill(unsigned pr,
 {
 	for (size_t i = pr; i < pr + sr; ++i)
 	{
+		if (i >= ws.ws_row)
+			break;
+		
 		for (size_t j = pc; j < pc + sc; ++j)
 		{
+			if (j >= ws.ws_col)
+				break;
+			
 			cells[ws.ws_col * i + j] = (struct cell)
 			{
 				.wch = wch,
@@ -75,6 +81,9 @@ draw_fill(unsigned pr,
 void
 draw_put_wch(unsigned r, unsigned c, wchar_t wch)
 {
+	if (c >= ws.ws_col || r >= ws.ws_row)
+		return;
+	
 	cells[ws.ws_col * r + c].wch = wch;
 }
 
@@ -147,10 +156,19 @@ draw_refresh(void)
 	}
 }
 
+struct win_size
+draw_win_size(void)
+{
+	return (struct win_size)
+	{
+		.sr = ws.ws_row,
+		.sc = ws.ws_col,
+	};
+}
+
 static void
 sigwinch_handler(int arg)
 {
-	struct winsize old_ws = ws;
 	ioctl(0, TIOCGWINSZ, &ws);
 	cells = realloc(cells, sizeof(struct cell) * ws.ws_row * ws.ws_col);
 }

@@ -7,7 +7,6 @@
 #include <wctype.h>
 
 #include <dirent.h>
-#include <sys/ioctl.h>
 
 #include "conf.h"
 #include "draw.h"
@@ -42,14 +41,13 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, size_t *))
 {
 	draw_box(msg);
 
-	struct winsize ws;
-	ioctl(0, TIOCGWINSZ, &ws);
+	struct win_size ws = draw_win_size();
 
 	// determine where the response should be rendered.
-	unsigned render_row = ws.ws_row - 1, render_col = 0;
+	unsigned render_row = ws.sr - 1, render_col = 0;
 	for (wchar_t const *c = msg; *c; ++c)
 	{
-		if (*c == L'\n' || ++render_col > ws.ws_col)
+		if (*c == L'\n' || ++render_col > ws.sc)
 			render_col = 0;
 	}
 
@@ -81,7 +79,9 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, size_t *))
 		case BIND_DEL:
 			if (csr > 0)
 			{
-				memmove(resp + csr - 1, resp + csr, sizeof(wchar_t) * (resp_len - csr));
+				memmove(resp + csr - 1,
+				        resp + csr,
+				        sizeof(wchar_t) * (resp_len - csr));
 				--resp_len;
 				--csr;
 			}
@@ -92,7 +92,9 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, size_t *))
 			break;
 		default:
 			resp = realloc(resp, sizeof(wchar_t) * (++resp_len + 1));
-			memmove(resp + csr + 1, resp + csr, sizeof(wchar_t) * (resp_len - csr));
+			memmove(resp + csr + 1,
+			        resp + csr,
+			        sizeof(wchar_t) * (resp_len - csr));
 			resp[csr++] = k;
 			break;
 		}
@@ -100,13 +102,24 @@ prompt_ask(wchar_t const *msg, void (*comp)(wchar_t **, size_t *, size_t *))
 		// interactively render response.
 		if (csr < draw_start)
 			draw_start = csr;
-		else if (csr - draw_start >= ws.ws_col - render_col - 1)
-			draw_start = csr - ws.ws_col + render_col + 1;
+		else if (csr - draw_start >= ws.sc - render_col - 1)
+			draw_start = csr - ws.sc + render_col + 1;
 
-		draw_fill(ws.ws_row - 1, render_col, 1, ws.ws_col - render_col, L' ', CONF_A_GNORM_FG, CONF_A_GNORM_BG);
-		for (size_t i = 0; i < resp_len - draw_start && i < ws.ws_col - render_col; ++i)
+		draw_fill(ws.sr - 1,
+		          render_col, 1,
+		          ws.sc - render_col,
+		          L' ',
+		          CONF_A_GNORM_FG,
+		          CONF_A_GNORM_BG);
+		
+		for (size_t i = 0; i < resp_len - draw_start && i < ws.sc - render_col; ++i)
 			draw_put_wch(render_row, render_col + i, resp[draw_start + i]);
-		draw_put_attr(render_row, render_col + csr - draw_start, CONF_A_GHIGH_FG, CONF_A_GHIGH_BG, 1);
+		
+		draw_put_attr(render_row,
+		              render_col + csr - draw_start,
+		              CONF_A_GHIGH_FG,
+		              CONF_A_GHIGH_BG,
+		              1);
 
 		draw_refresh();
 	}
@@ -268,20 +281,25 @@ prompt_comp_path(wchar_t **resp, size_t *rlen, size_t *csr)
 static void
 draw_box(wchar_t const *text)
 {
-	struct winsize ws;
-	ioctl(0, TIOCGWINSZ, &ws);
+	struct win_size ws = draw_win_size();
 
 	size_t text_rows = 1, line_width = 0;
 	for (wchar_t const *c = text; *c; ++c)
 	{
-		if (++line_width >= ws.ws_col || *c == L'\n')
+		if (++line_width >= ws.sc || *c == L'\n')
 		{
 			line_width = 0;
 			++text_rows;
 		}
 	}
 
-	size_t box_top = ws.ws_row - text_rows;
-	draw_fill(box_top, 0, text_rows, ws.ws_col, L' ', CONF_A_GNORM_FG, CONF_A_GNORM_BG);
+	size_t box_top = ws.sr - text_rows;
+	draw_fill(box_top,
+	          0,
+	          text_rows,
+	          ws.sc,
+	          L' ',
+	          CONF_A_GNORM_FG,
+	          CONF_A_GNORM_BG);
 	draw_put_wstr(box_top, 0, text);
 }

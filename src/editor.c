@@ -8,7 +8,6 @@
 #include <wchar.h>
 #include <wctype.h>
 
-#include <sys/ioctl.h>
 #include <sys/stat.h>
 
 #include "buf.h"
@@ -18,6 +17,11 @@
 #include "frame.h"
 #include "keybd.h"
 #include "prompt.h"
+
+// you may want to change the value of this, but you'll need to do some testing
+// and play around with values to find something good.
+// check `sigwinch_handler()` for more information.
+#define WIN_RESIZE_SPIN 10000000
 
 extern bool flag_c;
 
@@ -158,11 +162,9 @@ editor_redraw(void)
 		wchar_t dpy[(KEYBD_MAX_DPY_LEN + 1) * KEYBD_MAX_MAC_LEN];
 		keybd_key_dpy(dpy, src, len);
 		
-		struct winsize ws;
-		ioctl(0, TIOCGWINSZ, &ws);
-		
+		struct win_size ws = draw_win_size();
 		size_t draw_start = 0, draw_len = wcslen(dpy);
-		while (draw_len > ws.ws_col)
+		while (draw_len > ws.sc)
 		{
 			wchar_t const *next = wcschr(dpy + draw_start, L' ') + 1;
 			if (!next)
@@ -175,8 +177,8 @@ editor_redraw(void)
 			draw_len -= ndiff;
 		}
 		
-		draw_put_wstr(ws.ws_row - 1, 0, dpy + draw_start);
-		draw_put_attr(ws.ws_row - 1, 0, CONF_A_GHIGH_FG, CONF_A_GHIGH_BG, draw_len);
+		draw_put_wstr(ws.sr - 1, 0, dpy + draw_start);
+		draw_put_attr(ws.sr - 1, 0, CONF_A_GHIGH_FG, CONF_A_GHIGH_BG, draw_len);
 	}
 	
 	draw_refresh();
@@ -229,8 +231,7 @@ editor_add_frame(struct frame *f)
 void
 editor_arrange_frames(void)
 {
-	struct winsize ws;
-	ioctl(0, TIOCGWINSZ, &ws);
+	struct win_size ws = draw_win_size();
 
 	struct frame *f;
 	
@@ -238,27 +239,27 @@ editor_arrange_frames(void)
 	{
 		f = &editor_frames.data[editor_cur_frame];
 		f->pr = f->pc = 0;
-		f->sr = ws.ws_row;
-		f->sc = ws.ws_col;
+		f->sr = ws.sr;
+		f->sc = ws.sc;
 		return;
 	}
 	
 	f = &editor_frames.data[0];
 	f->pr = f->pc = 0;
-	f->sr = ws.ws_row;
-	f->sc = editor_frames.size == 1 ? ws.ws_col : CONF_MNUM * ws.ws_col / CONF_MDENOM;
+	f->sr = ws.sr;
+	f->sc = editor_frames.size == 1 ? ws.sc : CONF_MNUM * ws.sc / CONF_MDENOM;
 
 	for (size_t i = 1; i < editor_frames.size; ++i)
 	{
 		f = &editor_frames.data[i];
 
-		f->sr = ws.ws_row / (editor_frames.size - 1);
+		f->sr = ws.sr / (editor_frames.size - 1);
 		f->pr = (i - 1) * f->sr;
-		f->pc = CONF_MNUM * ws.ws_col / CONF_MDENOM;
-		f->sc = ws.ws_col - f->pc;
+		f->pc = CONF_MNUM * ws.sc / CONF_MDENOM;
+		f->sc = ws.sc - f->pc;
 
-		if (f->pr + f->sr > ws.ws_row || i == editor_frames.size - 1)
-			f->sr = ws.ws_row - f->pr;
+		if (f->pr + f->sr > ws.sr || i == editor_frames.size - 1)
+			f->sr = ws.sr - f->pr;
 	}
 }
 
@@ -386,6 +387,16 @@ sigwinch_handler(int arg)
 {
 	if (editor_ignore_sigwinch)
 		return;
+	
+	// small wait necessary for window size to stabilize.
+	// sometimes, when resized, I've noticed that the terminal emulator will
+	// switch to a certain window size, then almost instantly switch to
+	// something else.
+	// spinning for a bit will allow the window to settle on its final size,
+	// before doing any kind of rendering or draw system changes, so that the
+	// visual output doesn't fuck itself until an update.
+	for (int volatile i = 0; i < WIN_RESIZE_SPIN; ++i)
+		;
 	
 	old_sigwinch_handler(arg);
 	editor_arrange_frames();

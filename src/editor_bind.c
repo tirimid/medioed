@@ -935,10 +935,10 @@ editor_bind_read_man_word(void)
 void
 editor_bind_file_exp(void)
 {
-	char open_path[PATH_MAX] = {0};
+	char path[PATH_MAX + 1] = {0};
 	
 	editor_redraw();
-	switch (file_exp_open(open_path, PATH_MAX - 1, "."))
+	switch (file_exp_open(path, PATH_MAX, "."))
 	{
 	case FER_SUCCESS:
 		break;
@@ -951,5 +951,19 @@ editor_bind_file_exp(void)
 		return;
 	}
 	
-	// TODO: open file.
+	size_t wpath_len = strlen(path) + 1;
+	wchar_t *wpath = malloc(sizeof(wchar_t) * wpath_len);
+	mbstowcs(wpath, path, wpath_len);
+	
+	struct buf buf = buf_from_file(path);
+	struct frame frame = frame_create(wpath, editor_add_buf(&buf));
+	editor_add_frame(&frame);
+	
+	editor_cur_frame = editor_frames.size - 1;
+	editor_reset_binds();
+	editor_set_global_mode();
+	editor_arrange_frames();
+	editor_redraw();
+	
+	free(wpath);
 }

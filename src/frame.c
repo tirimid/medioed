@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <wctype.h>
 
-#include <sys/ioctl.h>
-
 #include "conf.h"
 #include "draw.h"
 #include "util.h"
@@ -21,13 +19,12 @@ VEC_DEF_IMPL(struct frame, frame)
 struct frame
 frame_create(wchar_t const *name, struct buf *buf)
 {
-	struct winsize ws;
-	ioctl(0, TIOCGWINSZ, &ws);
+	struct win_size ws = draw_win_size();
 
 	unsigned ber, bec;
 	buf_pos(buf, buf->size, &ber, &bec);
 	unsigned linum_width = 0;
-	for (unsigned i = MIN(ber, ws.ws_row - 1) + 1; i > 0; i /= 10)
+	for (unsigned i = MIN(ber, ws.sr - 1) + 1; i > 0; i /= 10)
 		++linum_width;
 
 	char *local_mode;
@@ -56,8 +53,8 @@ frame_create(wchar_t const *name, struct buf *buf)
 		.name = wcsdup(name),
 		.pr = 0,
 		.pc = 0,
-		.sr = ws.ws_row,
-		.sc = ws.ws_col,
+		.sr = ws.sr,
+		.sc = ws.sc,
 		.buf = buf,
 		.csr = 0,
 		.buf_start = 0,
@@ -100,11 +97,21 @@ frame_draw(struct frame const *f, unsigned long flags)
 		draw_marks[f->sc] = 0;
 	
 	draw_put_wstr(f->pr, f->pc + f->sc - draw_mark_len, draw_marks);
-	draw_put_attr(f->pr, f->pc, flags & FDF_ACTIVE ? CONF_A_GHIGH_FG : CONF_A_GNORM_FG,
-	              flags & FDF_ACTIVE ? CONF_A_GHIGH_BG : CONF_A_GNORM_BG, f->sc);
+	
+	draw_put_attr(f->pr,
+	              f->pc,
+	              flags & FDF_ACTIVE ? CONF_A_GHIGH_FG : CONF_A_GNORM_FG,
+	              flags & FDF_ACTIVE ? CONF_A_GHIGH_BG : CONF_A_GNORM_BG,
+	              f->sc);
 
 	// fill frame.
-	draw_fill(f->pr + 1, f->pc, f->sr - 1, f->sc, L' ', CONF_A_NORM_FG, CONF_A_NORM_BG);
+	draw_fill(f->pr + 1,
+	          f->pc,
+	          f->sr - 1,
+	          f->sc,
+	          L' ',
+	          CONF_A_NORM_FG,
+	          CONF_A_NORM_BG);
 
 	// write margins.
 	unsigned befr, befc;
@@ -118,7 +125,12 @@ frame_draw(struct frame const *f, unsigned long flags)
 		for (unsigned j = 1, end = MIN(befr + 1, f->sr); j < end; ++j)
 		{
 			draw_put_wch(f->pr + j, f->pc + draw_col, conf_mtab[i].wch);
-			draw_put_attr(f->pr + j, f->pc + draw_col, conf_mtab[i].fg, conf_mtab[i].bg, 1);
+			
+			draw_put_attr(f->pr + j,
+			              f->pc + draw_col,
+			              conf_mtab[i].fg,
+			              conf_mtab[i].bg,
+			              1);
 		}
 	}
 
@@ -131,7 +143,9 @@ frame_draw(struct frame const *f, unsigned long flags)
 		{
 			wchar_t draw_text[16];
 			swprintf(draw_text, 16, L"%u", bsr + linum_ind);
-			draw_put_wstr(f->pr + i, f->pc + CONF_GUTTER_LEFT + f->linum_width - wcslen(draw_text), draw_text);
+			draw_put_wstr(f->pr + i,
+			              f->pc + CONF_GUTTER_LEFT + f->linum_width - wcslen(draw_text),
+			              draw_text);
 		}
 
 		draw_line(f, &i, &draw_csr);
@@ -139,7 +153,13 @@ frame_draw(struct frame const *f, unsigned long flags)
 	
 	// draw gutter.
 	for (unsigned i = 1; i < f->sr; ++i)
-		draw_put_attr(f->pr + i, f->pc, CONF_A_LINUM_FG, CONF_A_LINUM_BG, GUTTER + f->linum_width);
+	{
+		draw_put_attr(f->pr + i,
+		              f->pc,
+		              CONF_A_LINUM_FG,
+		              CONF_A_LINUM_BG,
+		              GUTTER + f->linum_width);
+	}
 
 	// execute highlight.
 	for (size_t i = 0; i < conf_htab_size; ++i)
@@ -155,7 +175,12 @@ done_highlight:;
 	// draw cursor.
 	unsigned csrr, csrc;
 	frame_pos(f, f->csr, &csrr, &csrc);
-	draw_put_attr(f->pr + csrr, f->pc + csrc, CONF_A_CURSOR_FG, CONF_A_CURSOR_BG, 1);
+	
+	draw_put_attr(f->pr + csrr,
+	              f->pc + csrc,
+	              CONF_A_CURSOR_FG,
+	              CONF_A_CURSOR_BG,
+	              1);
 }
 
 void
@@ -319,14 +344,26 @@ draw_line(struct frame const *f, unsigned *line, size_t *draw_csr)
 			
 			for (unsigned i = 0; i < nch && c + i < right_edge; ++i)
 				draw_put_wch(f->pr + *line, f->pc + left_edge + c + i, L' ');
-			draw_put_attr(f->pr + *line, f->pc + left_edge + c, CONF_A_NORM_FG, CONF_A_NORM_BG, nch);
+			
+			draw_put_attr(f->pr + *line,
+			              f->pc + left_edge + c,
+			              CONF_A_NORM_FG,
+			              CONF_A_NORM_BG,
+			              nch);
+			
 			c += CONF_TAB_SIZE - c % CONF_TAB_SIZE;
 			
 			break;
 		}
 		default:
 			draw_put_wch(f->pr + *line, f->pc + left_edge + c, wch);
-			draw_put_attr(f->pr + *line, f->pc + left_edge + c, CONF_A_NORM_FG, CONF_A_NORM_BG, 1);
+			
+			draw_put_attr(f->pr + *line,
+			              f->pc + left_edge + c,
+			              CONF_A_NORM_FG,
+			              CONF_A_NORM_BG,
+			              1);
+			
 			++c;
 			break;
 		}

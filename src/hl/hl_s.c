@@ -335,8 +335,12 @@ hl_word(struct buf const *buf,
 	
 	for (size_t reg = 0; reg < ARRAY_SIZE(regs); ++reg)
 	{
-		wchar_t cmp[64]; // read rationale for size 64 in C++ highlight.
-		buf_get_wstr(buf, cmp, *i, j - *i + 1);
+		size_t len = j - *i + 1;
+		if (len > 64)
+			break;
+		
+		wchar_t cmp[64];
+		buf_get_wstr(buf, cmp, *i, len);
 		
 		if (!wcscmp(regs[reg], cmp))
 		{

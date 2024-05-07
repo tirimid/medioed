@@ -476,11 +476,12 @@ hl_word(struct buf const *buf,
 	
 	for (size_t kw = 0; kw < ARRAY_SIZE(keywords); ++kw)
 	{
-		// no need for exact size match.
-		// maybe in C++26 they'll add a 64-character long keyword, at
-		// which point this will need to be increased.
+		size_t len = j - *i + 1;
+		if (len > 64)
+			break;
+		
 		wchar_t cmp[64];
-		buf_get_wstr(buf, cmp, *i, j - *i + 1);
+		buf_get_wstr(buf, cmp, *i, len);
 		
 		if (!wcscmp(keywords[kw], cmp))
 		{

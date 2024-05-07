@@ -3,8 +3,6 @@
 #include <string.h>
 #include <wctype.h>
 
-#include <sys/ioctl.h>
-
 #include "conf.h"
 #include "draw.h"
 #include "editor.h"
@@ -23,9 +21,7 @@ label_rebound(struct label_bounds *bounds,
               unsigned anchor_r,
               unsigned anchor_t)
 {
-	struct winsize ws;
-	ioctl(0, TIOCGWINSZ, &ws);
-	
+	struct win_size ws = draw_win_size();
 	struct label_bounds new =
 	{
 		.sr = bounds->sr,
@@ -33,9 +29,9 @@ label_rebound(struct label_bounds *bounds,
 	};
 	
 	// left-hand anchoring is preferred.
-	if (anchor_l + bounds->sc <= ws.ws_col)
+	if (anchor_l + bounds->sc <= ws.sc)
 		new.pc = anchor_l;
-	else if (anchor_r <= ws.ws_col + bounds->sc)
+	else if (anchor_r <= ws.sc + bounds->sc)
 		new.pc = MAX((long)anchor_r - (long)bounds->sc + 1, 0);
 	else
 	{
@@ -44,11 +40,11 @@ label_rebound(struct label_bounds *bounds,
 	}
 	
 	new.pr = anchor_t;
-	while (new.pr > 0 && new.pr + bounds->sr > ws.ws_row)
+	while (new.pr > 0 && new.pr + bounds->sr > ws.sr)
 		--new.pr;
 	
 	// could not get valid position with vertical anchor.
-	if (new.pr + bounds->sr > ws.ws_row)
+	if (new.pr + bounds->sr > ws.sr)
 		return 1;
 	
 	*bounds = new;
@@ -60,16 +56,12 @@ label_show(wchar_t const *name,
            wchar_t const *msg,
            struct label_bounds const *bounds)
 {
-	struct winsize ws;
-	ioctl(0, TIOCGWINSZ, &ws);
+	struct win_size ws = draw_win_size();
 	
 	// refuse to display if there isn't enough space to view the label at a
 	// specific, set size.
-	if (bounds->pc + bounds->sc > ws.ws_col
-	    || bounds->pr + bounds->sr > ws.ws_row)
-	{
+	if (bounds->pc + bounds->sc > ws.sc || bounds->pr + bounds->sr > ws.sr)
 		return 1;
-	}
 	
 	size_t off = 0;
 	for (;;)
@@ -127,12 +119,25 @@ draw_box(wchar_t const *name,
 	// write label title.
 	size_t name_len = wcslen(name);
 	for (unsigned i = 0; i < bounds->sc; ++i)
-		draw_put_wch(bounds->pr, bounds->pc + i, i < name_len ? name[i] : L' ');
-	draw_put_attr(bounds->pr, bounds->pc, CONF_A_GHIGH_FG, CONF_A_GHIGH_BG, bounds->sc);
+	{
+		draw_put_wch(bounds->pr,
+		             bounds->pc + i,
+		             i < name_len ? name[i] : L' ');
+	}
+	draw_put_attr(bounds->pr,
+	              bounds->pc,
+	              CONF_A_GHIGH_FG,
+	              CONF_A_GHIGH_BG,
+	              bounds->sc);
 	
 	// fill label.
-	draw_fill(bounds->pr + 1, bounds->pc, bounds->sr - 1, bounds->sc, L' ',
-	          CONF_A_GHIGH_BG, CONF_A_GHIGH_FG);
+	draw_fill(bounds->pr + 1,
+	          bounds->pc,
+	          bounds->sr - 1,
+	          bounds->sc,
+	          L' ',
+	          CONF_A_GHIGH_BG,
+	          CONF_A_GHIGH_FG);
 	
 	// write message.
 	unsigned r = 1, c = 0;

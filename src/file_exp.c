@@ -2,10 +2,10 @@
 
 #include <limits.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <wchar.h>
 
 #include <dirent.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
 
 #include "conf.h"
@@ -26,19 +26,12 @@ enum dir_node_type
 	DNT_DIR,
 };
 
-enum dir_node_flag
-{
-	// directory flags.
-	DNF_UNFOLDED = 0x1,
-};
-
 struct dir_node
 {
 	struct dir_node const *parent;
 	struct vec_p_dir_node children;
 	char *name;
 	unsigned char type;
-	unsigned char flags;
 };
 
 struct bounds
@@ -53,26 +46,29 @@ static void dir_node_fold(struct dir_node *node);
 static void dir_node_path(char *out_path, struct dir_node const *node);
 static void dir_node_destroy(struct dir_node *node);
 static void draw_box(struct bounds const *bounds, struct dir_node const *root, size_t first, size_t sel);
+static struct dir_node const *dir_node_next(struct dir_node const *node);
+static size_t dir_node_depth(struct dir_node const *node);
+static int dir_node_cmp(void const *vp_lhs, void const *vp_rhs);
+static size_t dir_tree_size(struct dir_node const *root);
+static struct dir_node *dir_tree_nth(struct dir_node *root, size_t n);
 
 VEC_DEF_IMPL_STATIC(struct dir_node *, p_dir_node)
 
 enum file_exp_rc
 file_exp_open(char *out_path, size_t n, char const *dir)
 {
-	struct dir_node *root = dir_tree(".", dir);
+	struct dir_node *root = dir_tree(dir, dir);
 	if (!root)
 		return FER_FAIL;
 	
-	struct winsize ws;
-	ioctl(0, TIOCGWINSZ, &ws);
-	
+	struct win_size ws = draw_win_size();
 	struct bounds bounds =
 	{
 		.pr = 0,
-		.sc = MIN(ws.ws_col, CONF_FILE_EXP_SC),
-		.sr = ws.ws_row,
+		.sc = MIN(ws.sc, CONF_FILE_EXP_SC),
+		.sr = ws.sr,
 	};
-	bounds.pc = ws.ws_col - bounds.sc;
+	bounds.pc = ws.sc - bounds.sc;
 	
 	size_t first = 0, sel = 0;
 	for (;;)
@@ -88,14 +84,35 @@ file_exp_open(char *out_path, size_t n, char const *dir)
 			dir_node_destroy(root);
 			return FER_QUIT;
 		case BIND_NAV_DOWN:
-			// TODO: implement.
+			sel += sel < dir_tree_size(root) - 1;
+			first += sel >= bounds.sr + first;
 			break;
 		case BIND_NAV_UP:
-			// TODO: implement.
+			sel -= sel > 0;
+			first -= sel < first;
 			break;
 		case BIND_RET:
-			// TODO: implement.
+		{
+			struct dir_node *sel_node = dir_tree_nth(root, sel);
+			if (!sel_node)
+			{
+				dir_node_destroy(root);
+				return FER_FAIL;
+			}
+			
+			if (sel_node->type == DNT_FILE)
+			{
+				dir_node_path(out_path, sel_node);
+				return FER_SUCCESS;
+			}
+			
+			if (sel_node->children.size)
+				dir_node_fold(sel_node);
+			else
+				dir_node_unfold(sel_node);
+			
 			break;
+		}
 		default:
 			break;
 		}
@@ -116,7 +133,6 @@ dir_tree(char const *root_name, char const *root_dir)
 		.children = vec_p_dir_node_create(),
 		.name = strdup(root_name),
 		.type = DNT_DIR,
-		.flags = 0,
 	};
 	
 	struct dirent *dir_ent;
@@ -136,11 +152,15 @@ dir_tree(char const *root_name, char const *root_dir)
 			.children = vec_p_dir_node_create(),
 			.name = strdup(dir_ent->d_name),
 			.type = dir_ent->d_type == DT_DIR ? DNT_DIR : DNT_FILE,
-			.flags = 0,
 		};
 		
 		vec_p_dir_node_add(&root->children, &child);
 	}
+	
+	qsort(root->children.data,
+	      root->children.size,
+	      sizeof(struct dir_node *),
+	      dir_node_cmp);
 	
 	closedir(dir_p);
 	
@@ -153,9 +173,6 @@ dir_node_unfold(struct dir_node *node)
 	if (node->type != DNT_DIR)
 		return;
 	
-	if (node->flags & DNF_UNFOLDED)
-		return;
-	
 	char path[PATH_MAX + 1];
 	dir_node_path(path, node);
 	
@@ -163,17 +180,22 @@ dir_node_unfold(struct dir_node *node)
 	if (!new)
 		return;
 	
+	vec_p_dir_node_destroy(&node->children);
+	free(node->name);
+	
+	for (size_t i = 0; i < new->children.size; ++i)
+		new->children.data[i]->parent = node;
+	
 	new->parent = node->parent;
 	*node = *new;
+	
+	free(new);
 }
 
 static void
 dir_node_fold(struct dir_node *node)
 {
 	if (node->type != DNT_DIR)
-		return;
-	
-	if (!(node->flags & DNF_UNFOLDED))
 		return;
 	
 	for (size_t i = 0; i < node->children.size; ++i)
@@ -221,5 +243,117 @@ draw_box(struct bounds const *bounds,
          size_t first,
          size_t sel)
 {
-	// TODO: implement.
+	// fill explorer.
+	draw_fill(bounds->pr,
+	          bounds->pc,
+	          bounds->sr,
+	          bounds->sc,
+	          L' ',
+	          CONF_A_GHIGH_BG,
+	          CONF_A_GHIGH_FG);
+	
+	// draw files and directories.
+	struct dir_node const *node = root;
+	for (size_t i = 0; node; ++i, node = dir_node_next(node))
+	{
+		if (i < first)
+			continue;
+		
+		if (i >= bounds->sr + first)
+			break;
+		
+		unsigned depth = CONF_FILE_EXP_NEST_DEPTH * dir_node_depth(node);
+		size_t name_len = strlen(node->name);
+		for (unsigned j = 0; j < name_len && j + depth < bounds->sc; ++j)
+		{
+			draw_put_wch(bounds->pr + i - first,
+			             bounds->pc + j + depth,
+			             node->name[j]);
+		}
+		
+		if (i == sel)
+		{
+			draw_put_attr(bounds->pr + i - first,
+			              bounds->pc,
+			              CONF_A_GHIGH_FG,
+			              CONF_A_GHIGH_BG,
+			              bounds->sc);
+		}
+	}
+}
+
+static struct dir_node const *
+dir_node_next(struct dir_node const *node)
+{
+	if (node->children.size)
+		return node->children.data[0];
+	
+	if (!node->parent)
+		return NULL;
+	
+	size_t node_ind = 0;
+	while (node->parent->children.data[node_ind] != node)
+		++node_ind;
+	
+	if (node_ind < node->parent->children.size - 1)
+		return node->parent->children.data[node_ind + 1];
+	
+	// hack to allow upwards-recursive call to `dir_node_next()` without
+	// having to implement a bunch of checks, by temporarily tricking the
+	// parent node into thinking it has no children.
+	// casting const away isn't an issue since nothing is actually modified in
+	// the end.
+	struct dir_node *parent_mut = (struct dir_node *)node->parent;
+	
+	size_t sv_nchildren = node->parent->children.size;
+	parent_mut->children.size = 0;
+	struct dir_node const *next_parent = dir_node_next(node->parent);
+	parent_mut->children.size = sv_nchildren;
+	
+	return next_parent;
+}
+
+static size_t
+dir_node_depth(struct dir_node const *node)
+{
+	if (!node)
+		return 0;
+	
+	size_t depth = 0;
+	while (node = node->parent)
+		++depth;
+	
+	return depth;
+}
+
+static int
+dir_node_cmp(void const *vp_lhs, void const *vp_rhs)
+{
+	struct dir_node const *const *lhs = vp_lhs, *const *rhs = vp_rhs;
+	return strcmp((*lhs)->name, (*rhs)->name);
+}
+
+static size_t
+dir_tree_size(struct dir_node const *root)
+{
+	size_t nnodes = 0;
+	for (struct dir_node const *node = root; node; node = dir_node_next(node))
+		++nnodes;
+	return nnodes;
+}
+
+static struct dir_node *
+dir_tree_nth(struct dir_node *root, size_t n)
+{
+	struct dir_node *node = root;
+	for (size_t i = 0; i < n; ++i)
+	{
+		// casting away const is fine since nothing here is actually
+		// modified, and the caller doesn't care how the nth node is
+		// obtained as long as it's correct.
+		node = (struct dir_node *)dir_node_next(node);
+		if (!node)
+			return NULL;
+	}
+	return node;
 }

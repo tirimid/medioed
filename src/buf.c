@@ -192,7 +192,9 @@ buf_write_wch(struct buf *b, size_t ind, wchar_t wch)
 		b->conts_ = realloc(b->conts_, sizeof(wchar_t) * b->cap);
 	}
 
-	memmove(b->conts_ + ind + 1, b->conts_ + ind, sizeof(wchar_t) * (b->size - ind));
+	memmove(b->conts_ + ind + 1,
+	        b->conts_ + ind,
+	        sizeof(wchar_t) * (b->size - ind));
 	b->conts_[ind] = wch;
 	++b->size;
 	b->flags |= BF_MODIFIED;
@@ -220,7 +222,9 @@ buf_write_wstr(struct buf *b, size_t ind, wchar_t const *wstr)
 		b->conts_ = realloc(b->conts_, sizeof(wchar_t) * b->cap);
 	}
 
-	memmove(b->conts_ + ind + len, b->conts_ + ind, sizeof(wchar_t) * (b->size - ind));
+	memmove(b->conts_ + ind + len,
+	        b->conts_ + ind,
+	        sizeof(wchar_t) * (b->size - ind));
 	memcpy(b->conts_ + ind, wstr, sizeof(wchar_t) * len);
 	b->size += len;
 	b->flags |= BF_MODIFIED;
@@ -273,6 +277,13 @@ buf_get_wch(struct buf const *b, size_t ind)
 wchar_t *
 buf_get_wstr(struct buf const *b, wchar_t *dst, size_t ind, size_t n)
 {
+	n = MIN(n, b->size - ind);
+	if (ind >= b->size || !n)
+	{
+		dst[0] = 0;
+		return dst;
+	}
+	
 	wcsncpy(dst, &b->conts_[ind], n - 1);
 	dst[n - 1] = 0;
 	return dst;

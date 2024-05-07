@@ -57,7 +57,8 @@
 
 // file explorer options.
 #define CONF_FILE_EXP_NAME L"*file explorer*"
-#define CONF_FILE_EXP_SC 25
+#define CONF_FILE_EXP_SC 40
+#define CONF_FILE_EXP_NEST_DEPTH 2
 
 // greeter options.
 #define CONF_GREET_NAME L"*greeter*"

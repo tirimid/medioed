@@ -69,7 +69,8 @@
 	acc_level void \
 	vec_##name##_rm(struct vec_##name *v, size_t ind) \
 	{ \
-		memmove(&v->data[ind], &v->data[ind + 1], \
+		memmove(&v->data[ind], \
+		        &v->data[ind + 1], \
 		        sizeof(t) * (v->size - ind - 1)); \
 		--v->size; \
 	} \
