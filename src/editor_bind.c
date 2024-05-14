@@ -876,7 +876,7 @@ editor_bind_read_man_word(void)
 	struct winsize tmp_ws =
 	{
 		.ws_row = bounds.sr,
-		.ws_col = bounds.sc + 2,
+		.ws_col = bounds.sc + 1,
 	};
 	editor_ignore_sigwinch = true;
 	ioctl(0, TIOCSWINSZ, &tmp_ws);
