@@ -59,7 +59,7 @@ int const conf_bind_file_exp[] = {K_CTL('c'), 'd', -1};
 
 // language mode extensions.
 static char const *ext_c[] = {"c", "h", NULL};
-static char const *ext_cc[] = {"cc", "hh", NULL};
+static char const *ext_cc[] = {"cc", "hh", "cpp", "hpp", NULL};
 static char const *ext_cs[] = {"cs", NULL};
 static char const *ext_html[] = {"html", NULL};
 static char const *ext_lua[] = {"lua", NULL};
