@@ -1,5 +1,9 @@
 # medioed
 
+*NOTE: I am in the process of creating a new personal text editor that works in
+a fundamentally different way. As it stands, this project is effectively
+discontinued for now.*
+
 ## Introduction
 
 medioed, or (Medio)cre Text (Ed)itor, is a text editor program I'm making
